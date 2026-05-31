@@ -36,6 +36,7 @@ type Model struct {
 	paramsLoaded bool
 	width        int
 	height       int
+	scrollOffset int
 }
 
 // New constructs the initial Model.

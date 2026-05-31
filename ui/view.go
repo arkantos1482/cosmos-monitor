@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -41,15 +43,38 @@ func (m Model) View() string {
 		loadingBar = styleDim.Render("  fetching…") + "\n"
 	}
 
-	hint := styleDim.Render(" r:refresh  q:quit")
+	hint := styleDim.Render(" r:refresh  q:quit  ↑↓/jk:scroll  pgup/pgdn  g:top")
 
-	_ = h // height used for future scroll support
-
-	return lipgloss.JoinVertical(lipgloss.Left,
+	full := lipgloss.JoinVertical(lipgloss.Left,
 		header,
 		grid,
 		validatorTable,
 		govStrip,
 		loadingBar+hint,
 	)
+
+	lines := strings.Split(full, "\n")
+	totalLines := len(lines)
+
+	// clamp scroll so the last screen-full is the maximum
+	visibleLines := h - 1
+	if visibleLines < 1 {
+		visibleLines = 1
+	}
+	maxOffset := totalLines - visibleLines
+	if maxOffset < 0 {
+		maxOffset = 0
+	}
+	offset := m.scrollOffset
+	if offset > maxOffset {
+		offset = maxOffset
+		m.scrollOffset = offset
+	}
+
+	end := offset + visibleLines
+	if end > totalLines {
+		end = totalLines
+	}
+
+	return strings.Join(lines[offset:end], "\n")
 }

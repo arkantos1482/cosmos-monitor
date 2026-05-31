@@ -54,6 +54,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "r":
 			m.loading = true
 			return m, fetchAllCmd(m.config)
+		case "up", "k":
+			if m.scrollOffset > 0 {
+				m.scrollOffset--
+			}
+		case "down", "j":
+			m.scrollOffset++
+		case "pgup":
+			m.scrollOffset -= m.height / 2
+			if m.scrollOffset < 0 {
+				m.scrollOffset = 0
+			}
+		case "pgdown":
+			m.scrollOffset += m.height / 2
+		case "home", "g":
+			m.scrollOffset = 0
 		}
 
 	case snapshotMsg:
