@@ -181,17 +181,14 @@ func printAll(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemS
 		row("history serve window", fmtInt(p.HistoryServeWindow))
 	}
 	row("ERC20 enabled", boolStr(p.ERC20Enabled))
-	if p.HardforkLondon != "" || p.HardforkShanghai != "" || p.HardforkCancun != "" {
-		fmt.Fprintf(out, "  %-18s\n", "hardfork heights")
-		if p.HardforkLondon != "" {
-			fmt.Fprintf(out, "    %-14s  %s\n", "London", p.HardforkLondon)
-		}
-		if p.HardforkShanghai != "" {
-			fmt.Fprintf(out, "    %-14s  %s\n", "Shanghai", p.HardforkShanghai)
-		}
-		if p.HardforkCancun != "" {
-			fmt.Fprintf(out, "    %-14s  %s\n", "Cancun", p.HardforkCancun)
-		}
+	if p.HardforkLondon != "" {
+		row("London height", p.HardforkLondon)
+	}
+	if p.HardforkShanghai != "" {
+		row("Shanghai height", p.HardforkShanghai)
+	}
+	if p.HardforkCancun != "" {
+		row("Cancun height", p.HardforkCancun)
 	}
 
 	// ── 5. TOKEN PAIRS ────────────────────────────────────────────────────────
@@ -434,8 +431,5 @@ func truncate(s string, n int) string {
 func fmtFraction(s string) string {
 	v := 0.0
 	fmt.Sscanf(s, "%f", &v)
-	if v == 0 {
-		return s
-	}
 	return fmt.Sprintf("%.4f%%", v*100)
 }
