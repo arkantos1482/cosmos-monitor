@@ -39,11 +39,15 @@ func renderApplication(s *unifiedSnapshot, width, height int) string {
 	// Inflation
 	lines = append(lines, fmt.Sprintf("%-12s %.2f%%", label("Inflation"), chain.Inflation*100))
 
+	// Reward per block (pmtrewards module)
+	p := chain.Params
+	if p.RewardPerBlockAmount != "" {
+		lines = append(lines, fmt.Sprintf("%-12s %s", label("Reward/blk"), fetch.FormatCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)))
+	}
+
 	// Community pool
 	lines = append(lines, fmt.Sprintf("%-12s %s", label("Community"), chain.CommunityPool))
 
-	// Params
-	p := chain.Params
 	lines = append(lines, fmt.Sprintf("%-12s %.2f%%", label("Comm. tax"), p.CommunityTax*100))
 	lines = append(lines, fmt.Sprintf("%-12s %.0f%%", label("Goal bond"), p.GoalBonded*100))
 

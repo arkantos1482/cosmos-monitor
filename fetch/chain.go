@@ -98,6 +98,9 @@ type ChainParams struct {
 	MinGasPrice        float64
 	Elasticity         int64
 	ERC20Enabled       bool
+	// pmtrewards module
+	RewardPerBlockAmount string
+	RewardPerBlockDenom  string
 }
 
 // --- RPC response types ---
@@ -319,6 +322,17 @@ type erc20ParamsResp struct {
 type distributionParamsResp struct {
 	Params struct {
 		CommunityTax string `json:"community_tax"`
+	} `json:"params"`
+}
+
+type pmtRewardsParamsResp struct {
+	Params struct {
+		Enabled        bool   `json:"enabled"`
+		RewardPerBlock struct {
+			Denom  string `json:"denom"`
+			Amount string `json:"amount"`
+		} `json:"reward_per_block"`
+		PoolAddress string `json:"pool_address"`
 	} `json:"params"`
 }
 
@@ -779,6 +793,12 @@ func FetchParams(rest string) ChainParams {
 	var dp distributionParamsResp
 	if err := doJSON(rest+"/cosmos/distribution/v1beta1/params", &dp); err == nil {
 		p.CommunityTax = parseFloat(dp.Params.CommunityTax)
+	}
+
+	var pmtr pmtRewardsParamsResp
+	if err := doJSON(rest+"/cosmos/evm/pmtrewards/v1/params", &pmtr); err == nil {
+		p.RewardPerBlockAmount = pmtr.Params.RewardPerBlock.Amount
+		p.RewardPerBlockDenom = pmtr.Params.RewardPerBlock.Denom
 	}
 
 	return p
