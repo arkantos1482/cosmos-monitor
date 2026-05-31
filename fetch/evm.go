@@ -99,9 +99,16 @@ func FetchEVM(endpoint string) EVMSnapshot {
 		snap.QueuedTx = hexToUint64(txpool.Queued)
 	}
 
-	var peerHex string
-	if err := evmCall(endpoint, "net_peerCount", &peerHex); err == nil {
-		snap.PeerCount = hexToUint64(peerHex)
+	// net_peerCount returns a plain integer on this chain, not a hex string.
+	var peerRaw json.RawMessage
+	if err := evmCall(endpoint, "net_peerCount", &peerRaw); err == nil {
+		s := strings.Trim(string(peerRaw), `"`)
+		if strings.HasPrefix(s, "0x") || strings.HasPrefix(s, "0X") {
+			snap.PeerCount = hexToUint64(s)
+		} else {
+			v, _ := strconv.ParseUint(s, 10, 64)
+			snap.PeerCount = v
+		}
 	}
 
 	return snap
