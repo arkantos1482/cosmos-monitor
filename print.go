@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -11,17 +10,18 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/fetch"
 )
 
-// out is the print target; replaced with an \r\n-translating writer in raw mode.
-var out io.Writer = os.Stdout
+func printAll(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, docker fetch.DockerSnapshot) {
+	section    := func(name string)         { fmt.Fprintf(w, "\n%s\n", name) }
+	subsection := func(name string)         { fmt.Fprintf(w, "  %s\n", name) }
+	row        := func(label, value string) { fmt.Fprintf(w, "    %-20s  %s\n", label, value) }
 
-func printAll(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, docker fetch.DockerSnapshot) {
 	p := chain.Params
 
 	syncStr := "synced"
 	if chain.CatchingUp {
 		syncStr = "CATCHING UP"
 	}
-	fmt.Fprintf(out, "pmtop  %s  %s  height %s  %s UTC\n",
+	fmt.Fprintf(w, "pmtop  %s  %s  height %s  %s UTC\n",
 		chain.Moniker, syncStr, fmtInt(chain.BlockHeight), time.Now().UTC().Format("15:04:05"))
 
 	// ── 1. HEALTH ────────────────────────────────────────────────────────────
@@ -172,7 +172,7 @@ func printAll(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemS
 		subsection("Precompiles")
 		row("active", fmt.Sprintf("%d", len(p.ActiveStaticPrecompiles)))
 		for _, pc := range p.ActiveStaticPrecompiles {
-			fmt.Fprintf(out, "    %s\n", pc)
+			fmt.Fprintf(w, "    %s\n", pc)
 		}
 	}
 
@@ -194,14 +194,14 @@ func printAll(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemS
 	// ── 5. TOKEN PAIRS ────────────────────────────────────────────────────────
 	section(fmt.Sprintf("5. TOKEN PAIRS  (%d)", len(chain.TokenPairs)))
 	if len(chain.TokenPairs) == 0 {
-		fmt.Fprintln(out, "  none registered")
+		fmt.Fprintln(w, "  none registered")
 	}
 	for _, tp := range chain.TokenPairs {
 		enabled := "yes"
 		if !tp.Enabled {
 			enabled = "no"
 		}
-		fmt.Fprintf(out, "  %-30s  %-42s  %s\n", tp.Denom, tp.ERC20Addr, enabled)
+		fmt.Fprintf(w, "  %-30s  %-42s  %s\n", tp.Denom, tp.ERC20Addr, enabled)
 	}
 
 	// ── 6. VALIDATORS ─────────────────────────────────────────────────────────
@@ -211,7 +211,7 @@ func printAll(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemS
 	sort.Slice(vals, func(i, j int) bool {
 		return vals[i].VotingPowerPercent > vals[j].VotingPowerPercent
 	})
-	fmt.Fprintf(out, "  %-20s  %6s  %10s  %10s  %14s  %14s  %8s  %10s  %s\n",
+	fmt.Fprintf(w, "  %-20s  %6s  %10s  %10s  %14s  %14s  %8s  %10s  %s\n",
 		"moniker", "vp%", "commission", "missed", "outstanding", "earned", "tombstoned", "status", "jailed")
 	for _, v := range vals {
 		tombStr := "no"
@@ -231,7 +231,7 @@ func printAll(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemS
 		if earned == "" {
 			earned = "–"
 		}
-		fmt.Fprintf(out, "  %-20s  %5.1f%%  %9.1f%%  %10d  %14s  %14s  %8s  %10s  %s\n",
+		fmt.Fprintf(w, "  %-20s  %5.1f%%  %9.1f%%  %10d  %14s  %14s  %8s  %10s  %s\n",
 			truncate(v.Moniker, 20),
 			v.VotingPowerPercent,
 			v.Commission*100,
@@ -292,11 +292,11 @@ func printAll(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemS
 	if len(chain.VotingProposals) > 0 {
 		subsection("Active Proposals (voting period)")
 		for _, pr := range chain.VotingProposals {
-			fmt.Fprintf(out, "  #%-4d  %-40s  ends %s\n",
+			fmt.Fprintf(w, "  #%-4d  %-40s  ends %s\n",
 				pr.ID, truncate(pr.Title, 40), pr.VotingEnd.Format("2006-01-02"))
 			t := pr.Tally
 			if t.Yes != "" || t.No != "" || t.Abstain != "" || t.NoWithVeto != "" {
-				fmt.Fprintf(out, "         yes %-14s  no %-14s  abstain %-14s  veto %s\n",
+				fmt.Fprintf(w, "         yes %-14s  no %-14s  abstain %-14s  veto %s\n",
 					t.Yes, t.No, t.Abstain, t.NoWithVeto)
 			}
 		}
@@ -305,13 +305,13 @@ func printAll(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemS
 	if len(chain.DepositProposals) > 0 {
 		subsection("Deposit-Period Proposals")
 		for _, pr := range chain.DepositProposals {
-			fmt.Fprintf(out, "  #%-4d  %-40s  deposit ends %s\n",
+			fmt.Fprintf(w, "  #%-4d  %-40s  deposit ends %s\n",
 				pr.ID, truncate(pr.Title, 40), pr.DepositEnd.Format("2006-01-02"))
 		}
 	}
 
 	if len(chain.VotingProposals)+len(chain.DepositProposals) == 0 {
-		fmt.Fprintln(out, "  none active")
+		fmt.Fprintln(w, "  none active")
 	}
 
 	// ── 9. UPGRADE ────────────────────────────────────────────────────────────
@@ -331,23 +331,11 @@ func printAll(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemS
 	row("active clients", fmt.Sprintf("%d", chain.IBCClientCount))
 
 	// ── footer ────────────────────────────────────────────────────────────────
-	fmt.Fprintln(out)
-	fmt.Fprintln(out, "r  refresh    q  quit")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "r  refresh    q  quit")
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
-
-func section(name string) {
-	fmt.Fprintf(out, "\n%s\n", name)
-}
-
-func subsection(name string) {
-	fmt.Fprintf(out, "  %s\n", name)
-}
-
-func row(label, value string) {
-	fmt.Fprintf(out, "    %-20s  %s\n", label, value)
-}
 
 func fmtInt(n int64) string {
 	if n <= 0 {

@@ -14,6 +14,9 @@ import (
 	"golang.org/x/term"
 )
 
+// out is the terminal print target; replaced with \r\n-translating writer in raw mode.
+var out io.Writer = os.Stdout
+
 // lfcrlfWriter translates bare \n to \r\n, required in raw terminal mode.
 type lfcrlfWriter struct{ w io.Writer }
 
@@ -28,6 +31,7 @@ func main() {
 	rest      := flag.String("rest",      "http://localhost:1317",  "Cosmos REST/LCD endpoint")
 	evm       := flag.String("evm",       "http://localhost:8545",  "EVM JSON-RPC endpoint")
 	container := flag.String("container", "evmd-node",              "Docker container name")
+	webAddr   := flag.String("web",       "",                       "address to serve web UI (e.g. :7777); empty = disabled")
 	flag.Parse()
 
 	doFetch := func() (fetch.ChainSnapshot, fetch.EVMSnapshot, fetch.SystemSnapshot, fetch.DockerSnapshot) {
@@ -48,6 +52,10 @@ func main() {
 		wg.Wait()
 		chain.Params = params
 		return chain, evSnap, sys, docker
+	}
+
+	if *webAddr != "" {
+		startWeb(*webAddr, doFetch)
 	}
 
 	fd := int(os.Stdin.Fd())
@@ -76,7 +84,7 @@ func main() {
 		fmt.Fprintln(out, "fetching…")
 		chain, ev, sys, docker := doFetch()
 		fmt.Fprint(out, "\033[H\033[2J")
-		printAll(chain, ev, sys, docker)
+		printAll(out, chain, ev, sys, docker)
 	}
 
 	refresh()
