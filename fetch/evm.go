@@ -82,7 +82,12 @@ func FetchEVM(endpoint string) EVMSnapshot {
 
 	var gasPriceHex string
 	if err := evmCall(endpoint, "eth_gasPrice", &gasPriceHex); err == nil {
-		snap.GasPrice = gasPriceHex
+		gp := hexToUint64(gasPriceHex)
+		if gp == 0 {
+			snap.GasPrice = "0"
+		} else {
+			snap.GasPrice = FormatCoin(fmt.Sprintf("%d", gp), "apmt")
+		}
 	}
 
 	var txpool struct {

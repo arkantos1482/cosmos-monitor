@@ -90,6 +90,7 @@ type ChainParams struct {
 	MinSignedPerWindow float64
 	BlocksPerYear      int64
 	GoalBonded         float64
+	CommunityTax       float64
 	VotingPeriod       time.Duration
 	Quorum             float64
 	Threshold          float64
@@ -242,9 +243,11 @@ type ibcClientsResp struct {
 }
 
 type validatorRewardsResp struct {
-	Rewards []struct {
-		Denom  string `json:"denom"`
-		Amount string `json:"amount"`
+	Rewards struct {
+		Rewards []struct {
+			Denom  string `json:"denom"`
+			Amount string `json:"amount"`
+		} `json:"rewards"`
 	} `json:"rewards"`
 }
 
@@ -313,16 +316,22 @@ type erc20ParamsResp struct {
 	} `json:"params"`
 }
 
+type distributionParamsResp struct {
+	Params struct {
+		CommunityTax string `json:"community_tax"`
+	} `json:"params"`
+}
+
 func parseDuration(s string) time.Duration {
-	// Cosmos uses nanosecond strings like "1814400000000000"
-	ns, err := strconv.ParseInt(strings.TrimSuffix(s, "s"), 10, 64)
-	if err == nil {
-		// it was nanoseconds
+	// Modern Cosmos SDK returns Go duration strings like "1814400s", "24h0m0s".
+	if d, err := time.ParseDuration(s); err == nil {
+		return d
+	}
+	// Older versions returned nanoseconds as a plain integer.
+	if ns, err := strconv.ParseInt(s, 10, 64); err == nil {
 		return time.Duration(ns)
 	}
-	// try Go duration parse
-	d, _ := time.ParseDuration(s)
-	return d
+	return 0
 }
 
 func parseFloat(s string) float64 {
@@ -335,6 +344,69 @@ func parseInt64(s string) int64 {
 	return v
 }
 
+// convertDenom normalises a raw Cosmos coin amount to a human display unit.
+// Recognises standard SI prefixes:
+//
+//	a (atto  = 10⁻¹⁸) → "apmt" becomes "PMT", divided by 1e18
+//	n (nano  = 10⁻⁹)
+//	u (micro = 10⁻⁶) → "uatom" becomes "ATOM", divided by 1e6
+//	m (milli = 10⁻³)
+func convertDenom(v float64, denom string) (float64, string) {
+	if len(denom) == 0 {
+		return v, denom
+	}
+	switch denom[0] {
+	case 'a':
+		return v / 1e18, strings.ToUpper(denom[1:])
+	case 'n':
+		return v / 1e9, strings.ToUpper(denom[1:])
+	case 'u':
+		return v / 1e6, strings.ToUpper(denom[1:])
+	case 'm':
+		return v / 1e3, strings.ToUpper(denom[1:])
+	}
+	return v, strings.ToUpper(denom)
+}
+
+// formatDisplayAmount renders a post-conversion float as a compact human string.
+func formatDisplayAmount(v float64) string {
+	switch {
+	case v >= 1e12:
+		return fmt.Sprintf("%.2fT", v/1e12)
+	case v >= 1e9:
+		return fmt.Sprintf("%.2fB", v/1e9)
+	case v >= 1e6:
+		return fmt.Sprintf("%.2fM", v/1e6)
+	case v >= 1e3:
+		return fmt.Sprintf("%.2fK", v/1e3)
+	case v >= 0.001:
+		return fmt.Sprintf("%.4f", v)
+	case v > 0:
+		return fmt.Sprintf("%.3e", v)
+	default:
+		return "0"
+	}
+}
+
+// FormatCoin converts a raw Cosmos amount string + on-chain denom to a
+// human-readable display string, e.g. "400000000000000000000000000" + "apmt"
+// → "400.00M PMT".
+func FormatCoin(rawAmount, denom string) string {
+	v, _ := strconv.ParseFloat(rawAmount, 64)
+	displayVal, displayDenom := convertDenom(v, denom)
+	if displayDenom == "" {
+		return formatDisplayAmount(displayVal)
+	}
+	return formatDisplayAmount(displayVal) + " " + displayDenom
+}
+
+// NormalizeCoin returns the display float value and display denom for a raw
+// Cosmos coin, useful when the caller needs the numeric value for calculations.
+func NormalizeCoin(rawAmount, denom string) (float64, string) {
+	v, _ := strconv.ParseFloat(rawAmount, 64)
+	return convertDenom(v, denom)
+}
+
 func formatCoins(coins []struct {
 	Denom  string `json:"denom"`
 	Amount string `json:"amount"`
@@ -344,29 +416,10 @@ func formatCoins(coins []struct {
 	}
 	for _, c := range coins {
 		if c.Denom == preferDenom || preferDenom == "" {
-			return fmt.Sprintf("%s %s", formatAmount(c.Amount), c.Denom)
+			return FormatCoin(c.Amount, c.Denom)
 		}
 	}
-	c := coins[0]
-	return fmt.Sprintf("%s %s", formatAmount(c.Amount), c.Denom)
-}
-
-func formatAmount(amt string) string {
-	// strip trailing zeros but keep it readable
-	v, err := strconv.ParseFloat(amt, 64)
-	if err != nil {
-		return amt
-	}
-	if v > 1e9 {
-		return fmt.Sprintf("%.2fB", v/1e9)
-	}
-	if v > 1e6 {
-		return fmt.Sprintf("%.2fM", v/1e6)
-	}
-	if v > 1e3 {
-		return fmt.Sprintf("%.2fK", v/1e3)
-	}
-	return fmt.Sprintf("%.4f", v)
+	return FormatCoin(coins[0].Amount, coins[0].Denom)
 }
 
 const bech32Charset = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
@@ -623,7 +676,7 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 
 			var rewards validatorRewardsResp
 			if err := doJSON(fmt.Sprintf("%s/cosmos/distribution/v1beta1/validators/%s/outstanding_rewards", rest, val.OperatorAddr), &rewards); err == nil {
-				res.rewards = formatCoins(rewards.Rewards, "")
+				res.rewards = formatCoins(rewards.Rewards.Rewards, "")
 			}
 
 			var comm validatorCommissionResp
@@ -717,6 +770,11 @@ func FetchParams(rest string) ChainParams {
 	var erc20p erc20ParamsResp
 	if err := doJSON(rest+"/evmos/erc20/v1/params", &erc20p); err == nil {
 		p.ERC20Enabled = erc20p.Params.EnableErc20
+	}
+
+	var dp distributionParamsResp
+	if err := doJSON(rest+"/cosmos/distribution/v1beta1/params", &dp); err == nil {
+		p.CommunityTax = parseFloat(dp.Params.CommunityTax)
 	}
 
 	return p

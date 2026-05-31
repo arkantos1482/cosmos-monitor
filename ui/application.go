@@ -2,7 +2,8 @@ package ui
 
 import (
 	"fmt"
-	"strconv"
+
+	"github.com/arkantos1482/cosmos-monitor/fetch"
 )
 
 func renderApplication(s *unifiedSnapshot, width, height int) string {
@@ -19,22 +20,21 @@ func renderApplication(s *unifiedSnapshot, width, height int) string {
 	lines := []string{title, ""}
 
 	// Supply
-	supplyStr := formatTokenAmount(chain.TotalSupply, chain.TotalSupplyDenom)
+	supplyStr := fetch.FormatCoin(chain.TotalSupply, chain.TotalSupplyDenom)
 	lines = append(lines, fmt.Sprintf("%-12s %s", label("Supply"), supplyStr))
 
-	// Bonded
-	bondedF, _ := strconv.ParseFloat(chain.BondedTokens, 64)
-	totalF, _ := strconv.ParseFloat(chain.TotalSupply, 64)
+	// Bonded — convert both to display units for the percentage calculation
+	bondedF, _ := fetch.NormalizeCoin(chain.BondedTokens, chain.TotalSupplyDenom)
+	totalF, _ := fetch.NormalizeCoin(chain.TotalSupply, chain.TotalSupplyDenom)
 	var bondedPct float64
 	if totalF > 0 {
 		bondedPct = bondedF / totalF * 100
 	}
-	bondedStr := formatTokenAmount(chain.BondedTokens, chain.TotalSupplyDenom)
+	bondedStr := fetch.FormatCoin(chain.BondedTokens, chain.TotalSupplyDenom)
 	lines = append(lines, fmt.Sprintf("%-12s %s  %.1f%%", label("Bonded"), bondedStr, bondedPct))
 
 	// bonded bar
-	barStr := bar(bondedPct/100, 12)
-	lines = append(lines, fmt.Sprintf("%-12s %s", "", barStr))
+	lines = append(lines, fmt.Sprintf("%-12s %s", "", bar(bondedPct/100, 12)))
 
 	// Inflation
 	lines = append(lines, fmt.Sprintf("%-12s %.2f%%", label("Inflation"), chain.Inflation*100))
@@ -44,6 +44,7 @@ func renderApplication(s *unifiedSnapshot, width, height int) string {
 
 	// Params
 	p := chain.Params
+	lines = append(lines, fmt.Sprintf("%-12s %.2f%%", label("Comm. tax"), p.CommunityTax*100))
 	lines = append(lines, fmt.Sprintf("%-12s %.0f%%", label("Goal bond"), p.GoalBonded*100))
 
 	// Unbonding time
@@ -56,28 +57,4 @@ func renderApplication(s *unifiedSnapshot, width, height int) string {
 
 	content := joinLines(lines)
 	return panelStyle.Width(width).Height(height).Render(content)
-}
-
-func formatTokenAmount(amount, denom string) string {
-	f, err := strconv.ParseFloat(amount, 64)
-	if err != nil || amount == "" {
-		return dim("?")
-	}
-	var s string
-	switch {
-	case f >= 1e12:
-		s = fmt.Sprintf("%.2fT", f/1e12)
-	case f >= 1e9:
-		s = fmt.Sprintf("%.2fB", f/1e9)
-	case f >= 1e6:
-		s = fmt.Sprintf("%.2fM", f/1e6)
-	case f >= 1e3:
-		s = fmt.Sprintf("%.2fK", f/1e3)
-	default:
-		s = fmt.Sprintf("%.4f", f)
-	}
-	if denom != "" {
-		s += " " + denom
-	}
-	return s
 }
