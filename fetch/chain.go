@@ -43,6 +43,8 @@ type ChainSnapshot struct {
 
 	IBCClientCount int
 
+	PrecisebankRemainder string
+
 	Params ChainParams
 
 	Err error
@@ -97,10 +99,16 @@ type ChainParams struct {
 	EVMDenom           string
 	MinGasPrice        float64
 	Elasticity         int64
+	NoBaseFee                bool
+	BaseFeeChangeDenominator int64
 	ERC20Enabled       bool
+	ActiveStaticPrecompiles []string
+	HistoryServeWindow      int64
 	// pmtrewards module
 	RewardPerBlockAmount string
 	RewardPerBlockDenom  string
+	PMTRewardsEnabled    bool
+	PMTRewardsPoolAddress string
 }
 
 // --- RPC response types ---
@@ -302,15 +310,26 @@ type govTallyParamsResp struct {
 
 type feemarketParamsResp struct {
 	Params struct {
-		MinGasPrice           string `json:"min_gas_price"`
-		ElasticityMultiplier  int64  `json:"elasticity_multiplier"`
+		NoBaseFee                bool   `json:"no_base_fee"`
+		BaseFeeChangeDenominator int64  `json:"base_fee_change_denominator"`
+		MinGasPrice              string `json:"min_gas_price"`
+		ElasticityMultiplier     int64  `json:"elasticity_multiplier"`
 	} `json:"params"`
 }
 
 type evmParamsResp struct {
 	Params struct {
-		EvmDenom string `json:"evm_denom"`
+		EvmDenom                string   `json:"evm_denom"`
+		ActiveStaticPrecompiles []string `json:"active_static_precompiles"`
+		HistoryServeWindow      int64    `json:"history_serve_window"`
 	} `json:"params"`
+}
+
+type precisebankRemainderResp struct {
+	Remainder struct {
+		Denom  string `json:"denom"`
+		Amount string `json:"amount"`
+	} `json:"remainder"`
 }
 
 type erc20ParamsResp struct {
@@ -669,6 +688,12 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 		snap.IBCClientCount = len(ibcClients.ClientStates)
 	}
 
+	// precisebank remainder
+	var pbr precisebankRemainderResp
+	if err := doJSON(rest+"/cosmos/evm/precisebank/v1/remainder", &pbr); err == nil {
+		snap.PrecisebankRemainder = FormatCoin(pbr.Remainder.Amount, pbr.Remainder.Denom)
+	}
+
 	// per-validator rewards and commission (concurrent, max 10 workers)
 	type valResult struct {
 		valoper  string
@@ -778,11 +803,15 @@ func FetchParams(rest string) ChainParams {
 	if err := doJSON(rest+"/cosmos/evm/feemarket/v1/params", &fmp); err == nil {
 		p.MinGasPrice = parseFloat(fmp.Params.MinGasPrice)
 		p.Elasticity = fmp.Params.ElasticityMultiplier
+		p.NoBaseFee = fmp.Params.NoBaseFee
+		p.BaseFeeChangeDenominator = fmp.Params.BaseFeeChangeDenominator
 	}
 
 	var ep evmParamsResp
 	if err := doJSON(rest+"/cosmos/evm/vm/v1/params", &ep); err == nil {
 		p.EVMDenom = ep.Params.EvmDenom
+		p.ActiveStaticPrecompiles = ep.Params.ActiveStaticPrecompiles
+		p.HistoryServeWindow = ep.Params.HistoryServeWindow
 	}
 
 	var erc20p erc20ParamsResp
@@ -799,6 +828,8 @@ func FetchParams(rest string) ChainParams {
 	if err := doJSON(rest+"/cosmos/evm/pmtrewards/v1/params", &pmtr); err == nil {
 		p.RewardPerBlockAmount = pmtr.Params.RewardPerBlock.Amount
 		p.RewardPerBlockDenom = pmtr.Params.RewardPerBlock.Denom
+		p.PMTRewardsEnabled = pmtr.Params.Enabled
+		p.PMTRewardsPoolAddress = pmtr.Params.PoolAddress
 	}
 
 	return p

@@ -64,10 +64,37 @@ All endpoints are polled from the node itself (localhost). Endpoints that return
 | Endpoint | Used for | Key fields |
 |----------|----------|------------|
 | `GET /cosmos/evm/vm/v1/params` | VM/EVM module params | `params.{evm_denom,extra_eips,active_static_precompiles,history_serve_window}` |
-| `GET /cosmos/evm/vm/v1/base_fee` | base fee (alternate) | `base_fee` |
-| `GET /cosmos/evm/vm/v1/account/{address}` | Ethereum account | `balance,code_hash,nonce` |
-| `GET /cosmos/evm/vm/v1/balance/{address}` | EVM denom balance | `balance` |
-| `GET /cosmos/evm/vm/v1/code/{address}` | contract bytecode | `code` (hex) |
+| `GET /cosmos/evm/vm/v1/base_fee` | base fee (same as feemarket but checks London hardfork status) | `base_fee` (math.Int) |
+| `GET /cosmos/evm/vm/v1/min_gas_price` | global min gas price (converted to 18 decimal EVM precision) | `min_gas_price` (math.Int) |
+| `GET /cosmos/evm/vm/v1/config` | EVM chain config (hardfork heights, etc.) | `config` (ChainConfig object) |
+| `GET /cosmos/evm/vm/v1/account/{address}` | Ethereum account (EVM-facing view) | `balance`, `code_hash`, `nonce` |
+| `GET /cosmos/evm/vm/v1/cosmos_account/{address}` | Cosmos account info for an Ethereum address | `cosmos_address`, `sequence`, `account_number` |
+| `GET /cosmos/evm/vm/v1/validator_account/{cons_address}` | Cosmos account info for a validator consensus address | `account_address`, `sequence`, `account_number` |
+| `GET /cosmos/evm/vm/v1/balances/{address}` | EVM denom balance | `balance` |
+| `GET /cosmos/evm/vm/v1/storage/{address}/{key}` | contract storage slot value | `value` (hex hash) |
+| `GET /cosmos/evm/vm/v1/codes/{address}` | contract bytecode | `code` (bytes) |
+| `GET /cosmos/evm/vm/v1/eth_call` | simulate an Ethereum call (debug/read-only) | `hash`, `logs`, `ret`, `vm_error`, `gas_used` |
+| `GET /cosmos/evm/vm/v1/estimate_gas` | estimate gas for a transaction | `gas`, `ret`, `vm_error` |
+| `GET /cosmos/evm/vm/v1/trace_tx` | debug_traceTransaction | `data` (serialized bytes) |
+| `GET /cosmos/evm/vm/v1/trace_block` | debug_traceBlockByNumber / debug_traceBlockByHash | `data` (serialized bytes) |
+| `GET /cosmos/evm/vm/v1/trace_call` | debug_traceCall | `data` (serialized bytes) |
+
+#### x/precisebank — `/cosmos/evm/precisebank/v1/`
+
+> Tracks sub-integer (fractional) token amounts for EVM ↔ Cosmos denomination conversion at 18-decimal precision.
+
+| Endpoint | Used for | Key fields |
+|----------|----------|------------|
+| `GET /cosmos/evm/precisebank/v1/remainder` | amount held in reserve but not yet in circulation (fractional remainder) | `remainder` (Coin: `denom`, `amount`) |
+| `GET /cosmos/evm/precisebank/v1/fractional_balance/{address}` | fractional (sub-integer) balance of an address | `fractional_balance` (Coin: `denom`, `amount`) |
+
+#### x/pmtrewards — `/cosmos/evm/pmtrewards/v1/`
+
+> PMT-specific rewards module parameters.
+
+| Endpoint | Used for | Key fields |
+|----------|----------|------------|
+| `GET /cosmos/evm/pmtrewards/v1/params` | PMT rewards module params | `params` (Params object) |
 
 #### x/erc20 — `/cosmos/evm/erc20/v1/`
 
