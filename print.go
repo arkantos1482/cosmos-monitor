@@ -2,12 +2,17 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/arkantos1482/cosmos-monitor/fetch"
 )
+
+// out is the print target; replaced with an \r\n-translating writer in raw mode.
+var out io.Writer = os.Stdout
 
 func printAll(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, docker fetch.DockerSnapshot) {
 	p := chain.Params
@@ -17,7 +22,7 @@ func printAll(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemS
 	if chain.CatchingUp {
 		syncStr = "CATCHING UP"
 	}
-	fmt.Printf("pmtop  %s  %s  height %s  %s UTC\n\n",
+	fmt.Fprintf(out, "pmtop  %s  %s  height %s  %s UTC\n\n",
 		chain.Moniker, syncStr, fmtInt(chain.BlockHeight), time.Now().UTC().Format("15:04:05"))
 
 	// ── node ─────────────────────────────────────────────────────────────────
@@ -121,21 +126,21 @@ func printAll(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemS
 	if len(p.ActiveStaticPrecompiles) > 0 {
 		row("precompiles", fmt.Sprintf("%d active", len(p.ActiveStaticPrecompiles)))
 		for _, pc := range p.ActiveStaticPrecompiles {
-			fmt.Printf("    %s\n", pc)
+			fmt.Fprintf(out, "    %s\n", pc)
 		}
 	}
 
 	// ── token pairs ───────────────────────────────────────────────────────────
 	section(fmt.Sprintf("TOKEN PAIRS  (%d)", len(chain.TokenPairs)))
 	if len(chain.TokenPairs) == 0 {
-		fmt.Println("  none registered")
+		fmt.Fprintln(out, "  none registered")
 	}
 	for _, tp := range chain.TokenPairs {
 		enabled := ""
 		if !tp.Enabled {
 			enabled = "  [disabled]"
 		}
-		fmt.Printf("  %-30s  %s%s\n", tp.Denom, tp.ERC20Addr, enabled)
+		fmt.Fprintf(out, "  %-30s  %s%s\n", tp.Denom, tp.ERC20Addr, enabled)
 	}
 
 	// ── ibc ───────────────────────────────────────────────────────────────────
@@ -147,7 +152,7 @@ func printAll(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemS
 	if chain.PrecisebankRemainder != "" {
 		row("remainder", chain.PrecisebankRemainder)
 	} else {
-		fmt.Println("  n/a")
+		fmt.Fprintln(out, "  n/a")
 	}
 
 	// ── slashing ──────────────────────────────────────────────────────────────
@@ -171,7 +176,7 @@ func printAll(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemS
 		row("proposals", "none active")
 	} else {
 		for _, pr := range chain.Proposals {
-			fmt.Printf("  #%d  %-40s  %s  ends %s\n",
+			fmt.Fprintf(out, "  #%d  %-40s  %s  ends %s\n",
 				pr.ID, pr.Title, pr.Status, pr.VotingEnd.Format("2006-01-02"))
 		}
 	}
@@ -195,7 +200,7 @@ func printAll(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemS
 	sort.Slice(vals, func(i, j int) bool {
 		return vals[i].VotingPowerPercent > vals[j].VotingPowerPercent
 	})
-	fmt.Printf("  %-20s  %6s  %10s  %8s  %10s  %14s  %14s  %s\n",
+	fmt.Fprintf(out, "  %-20s  %6s  %10s  %8s  %10s  %14s  %14s  %s\n",
 		"moniker", "vp%", "commission", "missed", "tombstoned", "outstanding", "earned", "status")
 	for _, v := range vals {
 		tombStr := "no"
@@ -214,7 +219,7 @@ func printAll(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemS
 		if earned == "" {
 			earned = "–"
 		}
-		fmt.Printf("  %-20s  %5.1f%%  %9.1f%%  %8d  %10s  %14s  %14s  %s\n",
+		fmt.Fprintf(out, "  %-20s  %5.1f%%  %9.1f%%  %8d  %10s  %14s  %14s  %s\n",
 			truncate(v.Moniker, 20),
 			v.VotingPowerPercent,
 			v.Commission*100,
@@ -227,18 +232,18 @@ func printAll(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemS
 	}
 
 	// ── footer ────────────────────────────────────────────────────────────────
-	fmt.Println()
-	fmt.Println("r  refresh    q  quit")
+	fmt.Fprintln(out, )
+	fmt.Fprintln(out, "r  refresh    q  quit")
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 func section(name string) {
-	fmt.Printf("\n%s\n", name)
+	fmt.Fprintf(out, "\n%s\n", name)
 }
 
 func row(label, value string) {
-	fmt.Printf("  %-18s  %s\n", label, value)
+	fmt.Fprintf(out, "  %-18s  %s\n", label, value)
 }
 
 func fmtInt(n int64) string {

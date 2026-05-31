@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"sync"
@@ -11,6 +13,15 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/fetch"
 	"golang.org/x/term"
 )
+
+// lfcrlfWriter translates bare \n to \r\n, required in raw terminal mode.
+type lfcrlfWriter struct{ w io.Writer }
+
+func (t *lfcrlfWriter) Write(p []byte) (int, error) {
+	translated := bytes.ReplaceAll(p, []byte("\n"), []byte("\r\n"))
+	_, err := t.w.Write(translated)
+	return len(p), err
+}
 
 func main() {
 	rpc       := flag.String("rpc",       "http://localhost:26657", "CometBFT RPC endpoint")
@@ -48,6 +59,10 @@ func main() {
 	}
 	defer restore()
 
+	if rawErr == nil {
+		out = &lfcrlfWriter{w: os.Stdout}
+	}
+
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
@@ -57,10 +72,10 @@ func main() {
 	}()
 
 	refresh := func() {
-		fmt.Print("\033[H\033[2J")
-		fmt.Println("fetching…")
+		fmt.Fprint(out, "\033[H\033[2J")
+		fmt.Fprintln(out, "fetching…")
 		chain, ev, sys, docker := doFetch()
-		fmt.Print("\033[H\033[2J")
+		fmt.Fprint(out, "\033[H\033[2J")
 		printAll(chain, ev, sys, docker)
 	}
 
