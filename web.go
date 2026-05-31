@@ -55,8 +55,13 @@ func startWeb(addr string, doFetch func() (fetch.ChainSnapshot, fetch.EVMSnapsho
 		var ess, ext bytes.Buffer
 		printEssentials(&ess, chain, ev, sys, docker)
 		printAll(&ext, chain, ev, sys, docker)
+		// drop the header line from extended — essentials already shows it
+		extStr := ext.String()
+		if i := strings.IndexByte(extStr, '\n'); i >= 0 {
+			extStr = extStr[i+1:]
+		}
 		return `<div class="panels"><pre>` + ansiToHTML(ess.String()) +
-			`</pre><pre>` + ansiToHTML(ext.String()) + `</pre></div>`
+			`</pre><pre>` + ansiToHTML(extStr) + `</pre></div>`
 	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
