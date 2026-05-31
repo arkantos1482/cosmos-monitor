@@ -344,9 +344,64 @@ func printAll(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys 
 	section("10. IBC")
 	row("active clients", fmt.Sprintf("%d", chain.IBCClientCount))
 
-	// ── footer ────────────────────────────────────────────────────────────────
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "r  refresh    q  quit")
+}
+
+func printEssentials(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, docker fetch.DockerSnapshot) {
+	row     := func(label, value string) { fmt.Fprintf(w, "  %s%-12s%s  %s\n", ansiDim, label, ansiReset, value) }
+	section := func(name string)         { fmt.Fprintf(w, "\n%s\n", clr(ansiBold+ansiCyan, name)) }
+
+	syncStr := clr(ansiGreen, "synced")
+	if chain.CatchingUp {
+		syncStr = clr(ansiRed, "CATCHING UP")
+	}
+	fmt.Fprintf(w, "%s  %s  height %s  %s UTC\n",
+		clr(ansiBold+ansiWhite, "pmtop  "+chain.Moniker),
+		syncStr, fmtInt(chain.BlockHeight), time.Now().UTC().Format("15:04:05"))
+
+	section("HEALTH")
+	memUsed := uint64(0)
+	if sys.MemTotal > sys.MemAvail {
+		memUsed = sys.MemTotal - sys.MemAvail
+	}
+	row("load", fmt.Sprintf("%.2f / %.2f / %.2f", sys.LoadAvg1, sys.LoadAvg5, sys.LoadAvg15))
+	row("ram",  fmt.Sprintf("%s / %s  (%s%%)", fmtBytes(memUsed), fmtBytes(sys.MemTotal), fmtPct(memUsed, sys.MemTotal)))
+	row("disk", fmt.Sprintf("%s / %s  (%s%%)", fmtBytes(sys.DiskUsed), fmtBytes(sys.DiskTotal), fmtPct(sys.DiskUsed, sys.DiskTotal)))
+	nodeStatus := clr(ansiRed, "stopped")
+	if docker.Running {
+		nodeStatus = clr(ansiGreen, "running")
+	}
+	nodeInfo := fmt.Sprintf("%s  %.1f%% CPU", nodeStatus, docker.CPUPercent)
+	if !docker.StartedAt.IsZero() {
+		nodeInfo += "  up " + fmtUptime(docker.StartedAt)
+	}
+	row("node", nodeInfo)
+
+	section("CHAIN")
+	row("height",   fmtInt(chain.BlockHeight))
+	row("interval", fmtDur(chain.BlockInterval))
+	if !chain.LatestBlockTime.IsZero() {
+		row("lag", fmtDur(time.Since(chain.LatestBlockTime)))
+	}
+	row("peers", fmt.Sprintf("%d cosmos  %d evm", chain.PeerCount, ev.PeerCount))
+
+	section("VALIDATORS")
+	vals := make([]fetch.ValidatorInfo, len(chain.Validators))
+	copy(vals, chain.Validators)
+	sort.Slice(vals, func(i, j int) bool { return vals[i].VotingPowerPercent > vals[j].VotingPowerPercent })
+	for _, v := range vals {
+		flags := ""
+		if v.Jailed {
+			flags += "  " + clr(ansiRed, "JAILED")
+		}
+		if v.Tombstoned {
+			flags += "  " + clr(ansiRed, "TOMBSTONED")
+		}
+		fmt.Fprintf(w, "  %-16s  %5.1f%%  %d missed  %s%s\n",
+			truncate(v.Moniker, 16), v.VotingPowerPercent,
+			v.MissedBlocks, strings.ToLower(v.Status), flags)
+	}
+	fmt.Fprintln(w)
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────

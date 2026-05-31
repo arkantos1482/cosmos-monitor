@@ -32,12 +32,12 @@ pre{white-space:pre-wrap;word-break:break-word}
 .y  {color:var(--yellow)}
 .c  {color:var(--cyan)}
 .w  {color:var(--white)}
-#data.htmx-request{opacity:.35;transition:opacity .3s .2s}
+.panels{display:grid;grid-template-columns:auto 1fr;gap:0 3rem;align-items:start}
 </style>
 </head>
 <body>
 <div id="data" hx-get="/fragment" hx-trigger="every 5s" hx-swap="innerHTML">
-<pre>{{CONTENT}}</pre>
+{{CONTENT}}
 </div>
 </body>
 </html>

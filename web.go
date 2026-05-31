@@ -50,21 +50,23 @@ func ansiToHTML(s string) string {
 }
 
 func startWeb(addr string, doFetch func() (fetch.ChainSnapshot, fetch.EVMSnapshot, fetch.SystemSnapshot, fetch.DockerSnapshot)) {
-	render := func() string {
+	panels := func() string {
 		chain, ev, sys, docker := doFetch()
-		var buf bytes.Buffer
-		printAll(&buf, chain, ev, sys, docker)
-		return ansiToHTML(buf.String())
+		var ess, ext bytes.Buffer
+		printEssentials(&ess, chain, ev, sys, docker)
+		printAll(&ext, chain, ev, sys, docker)
+		return `<div class="panels"><pre>` + ansiToHTML(ess.String()) +
+			`</pre><pre>` + ansiToHTML(ext.String()) + `</pre></div>`
 	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprint(w, strings.ReplaceAll(pageTemplate, "{{CONTENT}}", render()))
+		fmt.Fprint(w, strings.ReplaceAll(pageTemplate, "{{CONTENT}}", panels()))
 	})
 
 	http.HandleFunc("/fragment", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprintf(w, "<pre>%s</pre>", render())
+		fmt.Fprint(w, panels())
 	})
 
 	go func() {
