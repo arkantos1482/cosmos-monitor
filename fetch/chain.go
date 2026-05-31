@@ -381,8 +381,12 @@ func formatDisplayAmount(v float64) string {
 		return fmt.Sprintf("%.2fK", v/1e3)
 	case v >= 0.001:
 		return fmt.Sprintf("%.4f", v)
+	case v >= 1e-7:
+		// Use fixed-point with 6 decimals: "0.000113" fits in narrow columns better
+		// than scientific notation "1.13e-04" which truncates badly.
+		return fmt.Sprintf("%.6f", v)
 	case v > 0:
-		return fmt.Sprintf("%.3e", v)
+		return fmt.Sprintf("%.2e", v)
 	default:
 		return "0"
 	}
