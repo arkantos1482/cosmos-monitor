@@ -591,13 +591,13 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 
 	// base fee
 	var bf baseFeeResp
-	if err := doJSON(rest+"/ethermint/feemarket/v1/base_fee", &bf); err == nil {
+	if err := doJSON(rest+"/cosmos/evm/feemarket/v1/base_fee", &bf); err == nil {
 		snap.BaseFee = bf.BaseFee
 	}
 
 	// block gas
 	var bg blockGasResp
-	if err := doJSON(rest+"/ethermint/feemarket/v1/block_gas", &bg); err == nil {
+	if err := doJSON(rest+"/cosmos/evm/feemarket/v1/block_gas", &bg); err == nil {
 		snap.BlockGas, _ = strconv.ParseUint(bg.Gas, 10, 64)
 	}
 
@@ -639,7 +639,7 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 
 	// token pairs
 	var tp tokenPairsResp
-	if err := doJSON(rest+"/evmos/erc20/v1/token_pairs", &tp); err == nil {
+	if err := doJSON(rest+"/cosmos/evm/erc20/v1/token_pairs", &tp); err == nil {
 		for _, pair := range tp.TokenPairs {
 			snap.TokenPairs = append(snap.TokenPairs, TokenPairInfo{
 				Denom:     pair.Denom,
@@ -761,18 +761,18 @@ func FetchParams(rest string) ChainParams {
 	}
 
 	var fmp feemarketParamsResp
-	if err := doJSON(rest+"/ethermint/feemarket/v1/params", &fmp); err == nil {
+	if err := doJSON(rest+"/cosmos/evm/feemarket/v1/params", &fmp); err == nil {
 		p.MinGasPrice = parseFloat(fmp.Params.MinGasPrice)
 		p.Elasticity = fmp.Params.ElasticityMultiplier
 	}
 
 	var ep evmParamsResp
-	if err := doJSON(rest+"/ethermint/evm/v1/params", &ep); err == nil {
+	if err := doJSON(rest+"/cosmos/evm/vm/v1/params", &ep); err == nil {
 		p.EVMDenom = ep.Params.EvmDenom
 	}
 
 	var erc20p erc20ParamsResp
-	if err := doJSON(rest+"/evmos/erc20/v1/params", &erc20p); err == nil {
+	if err := doJSON(rest+"/cosmos/evm/erc20/v1/params", &erc20p); err == nil {
 		p.ERC20Enabled = erc20p.Params.EnableErc20
 	}
 
