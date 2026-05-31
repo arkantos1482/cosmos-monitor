@@ -10,19 +10,33 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/fetch"
 )
 
+const (
+	ansiReset  = "\033[0m"
+	ansiBold   = "\033[1m"
+	ansiDim    = "\033[2m"
+	ansiRed    = "\033[31m"
+	ansiGreen  = "\033[32m"
+	ansiYellow = "\033[33m"
+	ansiCyan   = "\033[36m"
+	ansiWhite  = "\033[97m"
+)
+
+func clr(code, s string) string { return code + s + ansiReset }
+
 func printAll(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, docker fetch.DockerSnapshot) {
-	section    := func(name string)         { fmt.Fprintf(w, "\n%s\n", name) }
-	subsection := func(name string)         { fmt.Fprintf(w, "  %s\n", name) }
-	row        := func(label, value string) { fmt.Fprintf(w, "    %-20s  %s\n", label, value) }
+	section    := func(name string)         { fmt.Fprintf(w, "\n%s\n", clr(ansiBold+ansiCyan, name)) }
+	subsection := func(name string)         { fmt.Fprintf(w, "  %s\n", clr(ansiYellow, name)) }
+	row        := func(label, value string) { fmt.Fprintf(w, "    %s%-20s%s  %s\n", ansiDim, label, ansiReset, value) }
 
 	p := chain.Params
 
-	syncStr := "synced"
+	syncStr := clr(ansiGreen, "synced")
 	if chain.CatchingUp {
-		syncStr = "CATCHING UP"
+		syncStr = clr(ansiRed, "CATCHING UP")
 	}
-	fmt.Fprintf(w, "pmtop  %s  %s  height %s  %s UTC\n",
-		chain.Moniker, syncStr, fmtInt(chain.BlockHeight), time.Now().UTC().Format("15:04:05"))
+	fmt.Fprintf(w, "%s  %s  height %s  %s UTC\n",
+		clr(ansiBold+ansiWhite, "pmtop  "+chain.Moniker),
+		syncStr, fmtInt(chain.BlockHeight), time.Now().UTC().Format("15:04:05"))
 
 	// ── 1. HEALTH ────────────────────────────────────────────────────────────
 	section("1. HEALTH")
@@ -37,9 +51,9 @@ func printAll(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys 
 	row("disk", fmt.Sprintf("%s / %s  (%s%%)", fmtBytes(sys.DiskUsed), fmtBytes(sys.DiskTotal), fmtPct(sys.DiskUsed, sys.DiskTotal)))
 
 	subsection("Container")
-	status := "stopped"
+	status := clr(ansiRed, "stopped")
 	if docker.Running {
-		status = "running"
+		status = clr(ansiGreen, "running")
 	}
 	row("status",   status)
 	row("cpu",      fmt.Sprintf("%.1f%%", docker.CPUPercent))
@@ -129,9 +143,9 @@ func printAll(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys 
 	// ── 4. EVM ────────────────────────────────────────────────────────────────
 	section("4. EVM")
 
-	evSyncStr := "synced"
+	evSyncStr := clr(ansiGreen, "synced")
 	if ev.Syncing {
-		evSyncStr = "syncing"
+		evSyncStr = clr(ansiYellow, "syncing")
 	}
 
 	subsection("Identity")
@@ -216,12 +230,12 @@ func printAll(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys 
 	for _, v := range vals {
 		tombStr := "no"
 		if v.Tombstoned {
-			tombStr = "YES"
+			tombStr = clr(ansiRed, "YES")
 		}
 		st := strings.ToLower(v.Status)
 		jailed := ""
 		if v.Jailed {
-			jailed = "JAILED"
+			jailed = clr(ansiRed, "JAILED")
 		}
 		outstanding := v.OutstandingRewards
 		if outstanding == "" {

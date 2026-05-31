@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>pmtop</title>
+<script src="https://unpkg.com/htmx.org@2.0.3/dist/htmx.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--fg:#c9d1d9;
+  --red:#ff7b72;--green:#3fb950;--yellow:#e3b341;--cyan:#79c0ff;--white:#f0f6fc;--dim:#6e7681
+}
+html{scrollbar-color:#30363d #161b22}
+body{
+  background:var(--bg);color:var(--fg);
+  font-family:'Cascadia Code','Fira Code','JetBrains Mono',ui-monospace,monospace;
+  font-size:13px;line-height:1.65;
+  padding:1.75rem 2rem;
+  -webkit-font-smoothing:antialiased
+}
+body::before{
+  content:'';position:fixed;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--cyan) 0%,var(--green) 100%);
+  z-index:10
+}
+pre{white-space:pre-wrap;word-break:break-word}
+.b  {font-weight:700}
+.dim{color:var(--dim)}
+.r  {color:var(--red)}
+.g  {color:var(--green)}
+.y  {color:var(--yellow)}
+.c  {color:var(--cyan)}
+.w  {color:var(--white)}
+#data.htmx-request{opacity:.35;transition:opacity .3s .2s}
+</style>
+</head>
+<body>
+<div id="data" hx-get="/fragment" hx-trigger="every 5s" hx-swap="innerHTML">
+<pre>{{CONTENT}}</pre>
+</div>
+</body>
+</html>
