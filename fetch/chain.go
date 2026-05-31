@@ -3,6 +3,7 @@ package fetch
 import (
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -29,12 +30,14 @@ type ChainSnapshot struct {
 	TotalSupply      string
 	TotalSupplyDenom string
 	Inflation        float64
+	AnnualProvisions string
 	CommunityPool    string
 
 	BaseFee  string
 	BlockGas uint64
 
-	Proposals []ProposalInfo
+	VotingProposals []ProposalInfo
+	DepositProposals []ProposalInfo
 
 	UpgradeName   string
 	UpgradeHeight int64
@@ -43,11 +46,17 @@ type ChainSnapshot struct {
 
 	IBCClientCount int
 
-	PrecisebankRemainder string
-
 	Params ChainParams
 
 	Err error
+}
+
+// ProposalTally holds the vote counts for a proposal.
+type ProposalTally struct {
+	Yes        string
+	No         string
+	Abstain    string
+	NoWithVeto string
 }
 
 // ValidatorInfo holds per-validator data.
@@ -74,6 +83,7 @@ type ProposalInfo struct {
 	Status     string
 	VotingEnd  time.Time
 	DepositEnd time.Time
+	Tally      ProposalTally
 }
 
 // TokenPairInfo holds ERC20 token pair data.
@@ -90,12 +100,15 @@ type ChainParams struct {
 	BondDenom          string
 	SignedBlocksWindow int64
 	MinSignedPerWindow float64
+	SlashFractionDowntime   string
+	SlashFractionDoubleSign string
 	BlocksPerYear      int64
 	GoalBonded         float64
 	CommunityTax       float64
 	VotingPeriod       time.Duration
 	Quorum             float64
 	Threshold          float64
+	VetoThreshold      float64
 	EVMDenom           string
 	MinGasPrice        float64
 	Elasticity         int64
@@ -104,6 +117,9 @@ type ChainParams struct {
 	ERC20Enabled       bool
 	ActiveStaticPrecompiles []string
 	HistoryServeWindow      int64
+	HardforkLondon          string
+	HardforkShanghai        string
+	HardforkCancun          string
 	// pmtrewards module
 	RewardPerBlockAmount string
 	RewardPerBlockDenom  string
@@ -205,6 +221,10 @@ type inflationResp struct {
 	Inflation string `json:"inflation"`
 }
 
+type annualProvisionsResp struct {
+	AnnualProvisions string `json:"annual_provisions"`
+}
+
 type communityPoolResp struct {
 	Pool []struct {
 		Denom  string `json:"denom"`
@@ -232,6 +252,15 @@ type proposalsResp struct {
 		VotingEndTime  string `json:"voting_end_time"`
 		DepositEndTime string `json:"deposit_end_time"`
 	} `json:"proposals"`
+}
+
+type proposalTallyResp struct {
+	Tally struct {
+		Yes        string `json:"yes"`
+		No         string `json:"no"`
+		Abstain    string `json:"abstain"`
+		NoWithVeto string `json:"no_with_veto"`
+	} `json:"tally"`
 }
 
 type upgradePlanResp struct {
@@ -283,8 +312,10 @@ type stakingParamsResp struct {
 
 type slashingParamsResp struct {
 	Params struct {
-		SignedBlocksWindow string `json:"signed_blocks_window"`
-		MinSignedPerWindow string `json:"min_signed_per_window"`
+		SignedBlocksWindow      string `json:"signed_blocks_window"`
+		MinSignedPerWindow      string `json:"min_signed_per_window"`
+		SlashFractionDowntime   string `json:"slash_fraction_downtime"`
+		SlashFractionDoubleSign string `json:"slash_fraction_double_sign"`
 	} `json:"params"`
 }
 
@@ -303,8 +334,9 @@ type govVotingParamsResp struct {
 
 type govTallyParamsResp struct {
 	TallyParams struct {
-		Quorum    string `json:"quorum"`
-		Threshold string `json:"threshold"`
+		Quorum        string `json:"quorum"`
+		Threshold     string `json:"threshold"`
+		VetoThreshold string `json:"veto_threshold"`
 	} `json:"tally_params"`
 }
 
@@ -323,13 +355,6 @@ type evmParamsResp struct {
 		ActiveStaticPrecompiles []string `json:"active_static_precompiles"`
 		HistoryServeWindow      int64    `json:"history_serve_window"`
 	} `json:"params"`
-}
-
-type precisebankRemainderResp struct {
-	Remainder struct {
-		Denom  string `json:"denom"`
-		Amount string `json:"amount"`
-	} `json:"remainder"`
 }
 
 type erc20ParamsResp struct {
@@ -415,8 +440,7 @@ func formatDisplayAmount(v float64) string {
 	case v >= 0.001:
 		return fmt.Sprintf("%.4f", v)
 	case v >= 1e-7:
-		// Use fixed-point with 6 decimals: "0.000113" fits in narrow columns better
-		// than scientific notation "1.13e-04" which truncates badly.
+		// Fixed-point is easier to read in narrow columns than scientific notation.
 		return fmt.Sprintf("%.6f", v)
 	case v > 0:
 		return fmt.Sprintf("%.2e", v)
@@ -503,6 +527,37 @@ func consAddrFromPubkey(pubkeyBase64 string) string {
 	}
 	h := sha256.Sum256(b)
 	return fmt.Sprintf("%x", h[:20])
+}
+
+// parseProposal converts a raw proposal entry from the proposals API into a ProposalInfo.
+func parseProposal(p struct {
+	ProposalID string `json:"proposal_id"`
+	ID         string `json:"id"`
+	Title      string `json:"title"`
+	Content    struct {
+		Title string `json:"title"`
+	} `json:"content"`
+	Status         string `json:"status"`
+	VotingEndTime  string `json:"voting_end_time"`
+	DepositEndTime string `json:"deposit_end_time"`
+}) ProposalInfo {
+	idStr := p.ProposalID
+	if idStr == "" {
+		idStr = p.ID
+	}
+	id, _ := strconv.ParseUint(idStr, 10, 64)
+	title := p.Content.Title
+	if title == "" {
+		title = p.Title
+	}
+	info := ProposalInfo{
+		ID:     id,
+		Title:  title,
+		Status: p.Status,
+	}
+	info.VotingEnd, _ = time.Parse(time.RFC3339Nano, p.VotingEndTime)
+	info.DepositEnd, _ = time.Parse(time.RFC3339Nano, p.DepositEndTime)
+	return info
 }
 
 // FetchChain fetches all chain data from CometBFT RPC and Cosmos REST.
@@ -616,6 +671,12 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 		snap.Inflation = parseFloat(inf.Inflation)
 	}
 
+	// annual provisions
+	var ap annualProvisionsResp
+	if err := doJSON(rest+"/cosmos/mint/v1beta1/annual-provisions", &ap); err == nil {
+		snap.AnnualProvisions = ap.AnnualProvisions
+	}
+
 	// community pool
 	var cp communityPoolResp
 	if err := doJSON(rest+"/cosmos/distribution/v1beta1/community_pool", &cp); err == nil {
@@ -638,29 +699,43 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 	var votingProps, depositProps proposalsResp
 	doJSON(fmt.Sprintf("%s/cosmos/gov/v1beta1/proposals?proposal_status=2", rest), &votingProps)
 	doJSON(fmt.Sprintf("%s/cosmos/gov/v1beta1/proposals?proposal_status=1", rest), &depositProps)
-	// also try v1 endpoints in case v1beta1 returns no proposals
 	if len(votingProps.Proposals)+len(depositProps.Proposals) == 0 {
 		doJSON(fmt.Sprintf("%s/cosmos/gov/v1/proposals?proposal_status=2", rest), &votingProps)
 		doJSON(fmt.Sprintf("%s/cosmos/gov/v1/proposals?proposal_status=1", rest), &depositProps)
 	}
-	for _, p := range append(votingProps.Proposals, depositProps.Proposals...) {
-		idStr := p.ProposalID
-		if idStr == "" {
-			idStr = p.ID
+
+	// parse voting proposals
+	for _, p := range votingProps.Proposals {
+		snap.VotingProposals = append(snap.VotingProposals, parseProposal(p))
+	}
+	// parse deposit proposals
+	for _, p := range depositProps.Proposals {
+		snap.DepositProposals = append(snap.DepositProposals, parseProposal(p))
+	}
+
+	// fetch tallies for voting-period proposals concurrently
+	if len(snap.VotingProposals) > 0 {
+		tallies := make([]ProposalTally, len(snap.VotingProposals))
+		var twg sync.WaitGroup
+		for i, vp := range snap.VotingProposals {
+			twg.Add(1)
+			go func(idx int, id uint64) {
+				defer twg.Done()
+				var tr proposalTallyResp
+				if err := doJSON(fmt.Sprintf("%s/cosmos/gov/v1beta1/proposals/%d/tally", rest, id), &tr); err == nil {
+					tallies[idx] = ProposalTally{
+						Yes:        tr.Tally.Yes,
+						No:         tr.Tally.No,
+						Abstain:    tr.Tally.Abstain,
+						NoWithVeto: tr.Tally.NoWithVeto,
+					}
+				}
+			}(i, vp.ID)
 		}
-		id, _ := strconv.ParseUint(idStr, 10, 64)
-		title := p.Content.Title // v1beta1
-		if title == "" {
-			title = p.Title // v1
+		twg.Wait()
+		for i := range snap.VotingProposals {
+			snap.VotingProposals[i].Tally = tallies[i]
 		}
-		pi := ProposalInfo{
-			ID:     id,
-			Title:  title,
-			Status: p.Status,
-		}
-		pi.VotingEnd, _ = time.Parse(time.RFC3339Nano, p.VotingEndTime)
-		pi.DepositEnd, _ = time.Parse(time.RFC3339Nano, p.DepositEndTime)
-		snap.Proposals = append(snap.Proposals, pi)
 	}
 
 	// upgrade plan
@@ -688,16 +763,10 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 		snap.IBCClientCount = len(ibcClients.ClientStates)
 	}
 
-	// precisebank remainder
-	var pbr precisebankRemainderResp
-	if err := doJSON(rest+"/cosmos/evm/precisebank/v1/remainder", &pbr); err == nil {
-		snap.PrecisebankRemainder = FormatCoin(pbr.Remainder.Amount, pbr.Remainder.Denom)
-	}
-
 	// per-validator rewards and commission (concurrent, max 10 workers)
 	type valResult struct {
-		valoper  string
-		rewards  string
+		valoper    string
+		rewards    string
 		commEarned string
 	}
 	valList := make([]ValidatorInfo, 0, len(allVals))
@@ -780,6 +849,8 @@ func FetchParams(rest string) ChainParams {
 	if err := doJSON(rest+"/cosmos/slashing/v1beta1/params", &slp); err == nil {
 		p.SignedBlocksWindow = parseInt64(slp.Params.SignedBlocksWindow)
 		p.MinSignedPerWindow = parseFloat(slp.Params.MinSignedPerWindow)
+		p.SlashFractionDowntime = slp.Params.SlashFractionDowntime
+		p.SlashFractionDoubleSign = slp.Params.SlashFractionDoubleSign
 	}
 
 	var mp mintParamsResp
@@ -797,6 +868,7 @@ func FetchParams(rest string) ChainParams {
 	if err := doJSON(rest+"/cosmos/gov/v1beta1/params/tallying", &gtp); err == nil {
 		p.Quorum = parseFloat(gtp.TallyParams.Quorum)
 		p.Threshold = parseFloat(gtp.TallyParams.Threshold)
+		p.VetoThreshold = parseFloat(gtp.TallyParams.VetoThreshold)
 	}
 
 	var fmp feemarketParamsResp
@@ -812,6 +884,16 @@ func FetchParams(rest string) ChainParams {
 		p.EVMDenom = ep.Params.EvmDenom
 		p.ActiveStaticPrecompiles = ep.Params.ActiveStaticPrecompiles
 		p.HistoryServeWindow = ep.Params.HistoryServeWindow
+	}
+
+	// EVM chain config for hardfork heights
+	var evmConfigRaw struct {
+		Config map[string]json.RawMessage `json:"config"`
+	}
+	if err := doJSON(rest+"/cosmos/evm/vm/v1/config", &evmConfigRaw); err == nil {
+		p.HardforkLondon = rawToString(evmConfigRaw.Config["london_block"])
+		p.HardforkShanghai = rawToString(evmConfigRaw.Config["shanghai_time"])
+		p.HardforkCancun = rawToString(evmConfigRaw.Config["cancun_time"])
 	}
 
 	var erc20p erc20ParamsResp
@@ -833,4 +915,17 @@ func FetchParams(rest string) ChainParams {
 	}
 
 	return p
+}
+
+// rawToString converts a json.RawMessage to a trimmed string, stripping quotes.
+// Handles both JSON strings ("123") and JSON numbers (123).
+func rawToString(raw json.RawMessage) string {
+	if raw == nil {
+		return ""
+	}
+	s := strings.Trim(string(raw), `"`)
+	if s == "null" || s == "" {
+		return ""
+	}
+	return s
 }
