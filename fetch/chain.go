@@ -70,10 +70,12 @@ type ValidatorInfo struct {
 	VotingPowerTokens  string
 	VotingPowerPercent float64
 	Commission         float64
-	MissedBlocks       int64
-	OutstandingRewards string
-	CommissionEarned   string
-	ProposerPriority   int64
+	MissedBlocks           int64
+	OutstandingRewards     string // formatted display string
+	OutstandingRewardsAmt  string // raw base-denom amount for summing
+	OutstandingRewardsDenom string
+	CommissionEarned       string
+	ProposerPriority       int64
 }
 
 // ProposalInfo holds governance proposal data.
@@ -121,10 +123,12 @@ type ChainParams struct {
 	HardforkShanghai        string
 	HardforkCancun          string
 	// pmtrewards module
-	RewardPerBlockAmount string
-	RewardPerBlockDenom  string
-	PMTRewardsEnabled    bool
-	PMTRewardsPoolAddress string
+	RewardPerBlockAmount      string
+	RewardPerBlockDenom       string
+	PMTRewardsEnabled         bool
+	PMTRewardsPoolAddress     string
+	PMTRewardsPoolBalanceAmt  string // raw base-denom amount
+	PMTRewardsPoolBalanceDenom string
 }
 
 // --- RPC response types ---
@@ -765,9 +769,11 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 
 	// per-validator rewards and commission (concurrent, max 10 workers)
 	type valResult struct {
-		valoper    string
-		rewards    string
-		commEarned string
+		valoper      string
+		rewards      string
+		rewardsAmt   string
+		rewardsDenom string
+		commEarned   string
 	}
 	valList := make([]ValidatorInfo, 0, len(allVals))
 	for _, v := range allVals {
@@ -789,6 +795,10 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 			var rewards validatorRewardsResp
 			if err := doJSON(fmt.Sprintf("%s/cosmos/distribution/v1beta1/validators/%s/outstanding_rewards", rest, val.OperatorAddr), &rewards); err == nil {
 				res.rewards = formatCoins(rewards.Rewards.Rewards, "")
+				if len(rewards.Rewards.Rewards) > 0 {
+					res.rewardsAmt = rewards.Rewards.Rewards[0].Amount
+					res.rewardsDenom = rewards.Rewards.Rewards[0].Denom
+				}
 			}
 
 			var comm validatorCommissionResp
@@ -812,6 +822,8 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 	for i, v := range valList {
 		if r, ok := rewardMap[v.OperatorAddr]; ok {
 			valList[i].OutstandingRewards = r.rewards
+			valList[i].OutstandingRewardsAmt = r.rewardsAmt
+			valList[i].OutstandingRewardsDenom = r.rewardsDenom
 			valList[i].CommissionEarned = r.commEarned
 		}
 		// VP%
@@ -912,6 +924,23 @@ func FetchParams(rest string) ChainParams {
 		p.RewardPerBlockDenom = pmtr.Params.RewardPerBlock.Denom
 		p.PMTRewardsEnabled = pmtr.Params.Enabled
 		p.PMTRewardsPoolAddress = pmtr.Params.PoolAddress
+	}
+
+	if p.PMTRewardsPoolAddress != "" {
+		var poolBal struct {
+			Balances []struct {
+				Denom  string `json:"denom"`
+				Amount string `json:"amount"`
+			} `json:"balances"`
+		}
+		if err := doJSON(fmt.Sprintf("%s/cosmos/bank/v1beta1/balances/%s", rest, p.PMTRewardsPoolAddress), &poolBal); err == nil {
+			for _, b := range poolBal.Balances {
+				if p.PMTRewardsPoolBalanceAmt == "" || b.Denom == p.BondDenom {
+					p.PMTRewardsPoolBalanceAmt = b.Amount
+					p.PMTRewardsPoolBalanceDenom = b.Denom
+				}
+			}
+		}
 	}
 
 	return p

@@ -102,43 +102,66 @@ func printAll(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys 
 		bondPct = bondedF / totalF * 100
 	}
 
-	subsection("Supply")
-	row("total supply", fetch.FormatCoin(chain.TotalSupply, chain.TotalSupplyDenom))
-	row("bonded",       fetch.FormatCoin(chain.BondedTokens, denom))
-	row("not bonded",   fetch.FormatCoin(chain.NotBondedTokens, denom))
-	row("bonded %",     fmt.Sprintf("%.2f%%", bondPct))
-
-	subsection("Inflation")
-	row("rate",        fmt.Sprintf("%.4f%%", chain.Inflation*100))
-	row("goal bonded", fmt.Sprintf("%.1f%%", p.GoalBonded*100))
-	if p.BlocksPerYear > 0 {
-		row("blocks / year", fmtInt(p.BlocksPerYear))
-	}
-	if chain.AnnualProvisions != "" && chain.AnnualProvisions != "0" {
-		row("annual provisions", fetch.FormatCoin(chain.AnnualProvisions, denom))
-	}
-
-	subsection("Staking Params")
+	subsection("Supply & Staking")
+	row("total supply",   fetch.FormatCoin(chain.TotalSupply, chain.TotalSupplyDenom))
+	row("bonded",         fmt.Sprintf("%s  (%.2f%%, goal %.0f%%)", fetch.FormatCoin(chain.BondedTokens, denom), bondPct, p.GoalBonded*100))
+	row("not bonded",     fetch.FormatCoin(chain.NotBondedTokens, denom))
 	row("unbonding time", fmtDurFull(p.UnbondingTime))
 	if p.MaxValidators > 0 {
 		row("max validators", fmt.Sprintf("%d", p.MaxValidators))
 	}
-	if denom != "" {
-		row("bond denom", denom)
+	if p.BlocksPerYear > 0 {
+		row("blocks / year", fmtInt(p.BlocksPerYear))
 	}
 
-	subsection("Distribution")
+	subsection("Distribution Model")
+	communityTaxStr := fmt.Sprintf("%.2f%%", p.CommunityTax*100)
+	if p.CommunityTax == 0 {
+		communityTaxStr += "  → 100% of tx fees flow to validators"
+	}
+	row("community tax",  communityTaxStr)
 	row("community pool", chain.CommunityPool)
-	row("community tax",  fmt.Sprintf("%.4f%%", p.CommunityTax*100))
+	row("inflation",      fmt.Sprintf("%.2f%%  (mint rewards inactive)", chain.Inflation*100))
 
 	subsection("PMT Rewards")
-	row("enabled", boolStr(p.PMTRewardsEnabled))
-	if p.RewardPerBlockAmount != "" && p.RewardPerBlockDenom != "" {
-		row("reward / block", fetch.FormatCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom))
+	row("status", pmtRewardsStatus(p, chain.BlockInterval))
+	if p.RewardPerBlockAmount != "" {
+		row("rate", fetch.FormatCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)+"/block")
+		if p.BlocksPerYear > 0 {
+			rewardF, _ := fetch.NormalizeCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)
+			_, displayDenom := fetch.NormalizeCoin("0", p.RewardPerBlockDenom)
+			annual := rewardF * float64(p.BlocksPerYear)
+			row("annual emissions", fmt.Sprintf("~%.0f %s/year  (%s blocks × %s)",
+				annual, displayDenom, fmtInt(p.BlocksPerYear),
+				fetch.FormatCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)))
+		}
+	}
+	if p.PMTRewardsPoolBalanceAmt != "" {
+		row("pool balance", fetch.FormatCoin(p.PMTRewardsPoolBalanceAmt, p.PMTRewardsPoolBalanceDenom)+poolRunway(p, chain.BlockInterval))
+	} else {
+		row("pool balance", clr(ansiRed, "0 PMT  — pool empty"))
 	}
 	if p.PMTRewardsPoolAddress != "" {
 		row("pool address", p.PMTRewardsPoolAddress)
 	}
+
+	subsection("Validator Earnings  (unclaimed)")
+	var totalOutF float64
+	var outDenom string
+	for _, v := range chain.Validators {
+		if v.OutstandingRewardsAmt != "" {
+			f, d := fetch.NormalizeCoin(v.OutstandingRewardsAmt, v.OutstandingRewardsDenom)
+			totalOutF += f
+			outDenom = d
+		}
+	}
+	if outDenom != "" {
+		row("total outstanding", fmt.Sprintf("%.6f %s  across %d validators", totalOutF, outDenom, len(chain.Validators)))
+	}
+	row("commission rate", fmt.Sprintf("%.0f%%  of staking rewards", func() float64 {
+		if len(chain.Validators) > 0 { return chain.Validators[0].Commission * 100 }
+		return 0
+	}()))
 
 	// ── 4. EVM ────────────────────────────────────────────────────────────────
 	section("4. EVM")
@@ -347,45 +370,118 @@ func printAll(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys 
 	fmt.Fprintln(w)
 }
 
-func printEssentials(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, docker fetch.DockerSnapshot) {
-	row     := func(label, value string) { fmt.Fprintf(w, "  %s%-12s%s  %s\n", ansiDim, label, ansiReset, value) }
-	section := func(name string)         { fmt.Fprintf(w, "\n%s\n", clr(ansiBold+ansiCyan, name)) }
-
-	syncStr := clr(ansiGreen, "synced")
-	if chain.CatchingUp {
-		syncStr = clr(ansiRed, "CATCHING UP")
+// pmtRewardsStatus returns a colored status string describing the PMT rewards pool state.
+func pmtRewardsStatus(p fetch.ChainParams, blockInterval time.Duration) string {
+	if !p.PMTRewardsEnabled {
+		return clr(ansiDim, "disabled")
 	}
-	fmt.Fprintf(w, "%s  %s  height %s  %s UTC\n",
+	if p.PMTRewardsPoolBalanceAmt == "" || p.PMTRewardsPoolBalanceAmt == "0" {
+		return clr(ansiRed, "ENABLED — pool EMPTY  (validators receive no PMT rewards)")
+	}
+	rateStr := fetch.FormatCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom) + "/block"
+	poolStr := fetch.FormatCoin(p.PMTRewardsPoolBalanceAmt, p.PMTRewardsPoolBalanceDenom)
+	return clr(ansiGreen, "●") + " distributing  " + rateStr + "   pool " + poolStr + poolRunway(p, blockInterval)
+}
+
+// poolRunway returns a "  (~Nd left)" suffix when the runway can be computed, else "".
+func poolRunway(p fetch.ChainParams, blockInterval time.Duration) string {
+	if blockInterval <= 0 || p.RewardPerBlockAmount == "" || p.PMTRewardsPoolBalanceAmt == "" {
+		return ""
+	}
+	poolF, _   := fetch.NormalizeCoin(p.PMTRewardsPoolBalanceAmt, p.PMTRewardsPoolBalanceDenom)
+	rewardF, _ := fetch.NormalizeCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)
+	if rewardF <= 0 || poolF <= 0 {
+		return ""
+	}
+	blocksPerDay := 86400.0 / blockInterval.Seconds()
+	days := poolF / (rewardF * blocksPerDay)
+	if days < 30 {
+		return fmt.Sprintf("  (%s~%.0fd left%s)", ansiRed, days, ansiReset)
+	}
+	return fmt.Sprintf("  (~%.0fd left)", days)
+}
+
+func printEssentials(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, docker fetch.DockerSnapshot) {
+	p := chain.Params
+
+	// sec prints a section header with optional inline summary
+	sec := func(name, summary string) {
+		if summary != "" {
+			fmt.Fprintf(w, "\n%s %s   %s\n", clr(ansiDim, "──"), clr(ansiBold+ansiCyan, name), summary)
+		} else {
+			fmt.Fprintf(w, "\n%s %s\n", clr(ansiDim, "──"), clr(ansiBold+ansiCyan, name))
+		}
+	}
+	line := func(parts ...string) { fmt.Fprintf(w, "  %s\n", strings.Join(parts, "   ")) }
+	kv   := func(k, v string) string { return clr(ansiDim, k) + " " + v }
+
+	// ── header
+	syncStr := clr(ansiGreen, "● synced")
+	if chain.CatchingUp {
+		syncStr = clr(ansiRed, "● CATCHING UP")
+	}
+	fmt.Fprintf(w, "%s  %s  %s  %s UTC\n",
 		clr(ansiBold+ansiWhite, "pmtop  "+chain.Moniker),
 		syncStr, fmtInt(chain.BlockHeight), time.Now().UTC().Format("15:04:05"))
 
-	section("HEALTH")
+	// ── SYSTEM
+	sec("SYSTEM", "")
 	memUsed := uint64(0)
 	if sys.MemTotal > sys.MemAvail {
 		memUsed = sys.MemTotal - sys.MemAvail
 	}
-	row("load", fmt.Sprintf("%.2f / %.2f / %.2f", sys.LoadAvg1, sys.LoadAvg5, sys.LoadAvg15))
-	row("ram",  fmt.Sprintf("%s / %s  (%s%%)", fmtBytes(memUsed), fmtBytes(sys.MemTotal), fmtPct(memUsed, sys.MemTotal)))
-	row("disk", fmt.Sprintf("%s / %s  (%s%%)", fmtBytes(sys.DiskUsed), fmtBytes(sys.DiskTotal), fmtPct(sys.DiskUsed, sys.DiskTotal)))
 	nodeStatus := clr(ansiRed, "stopped")
 	if docker.Running {
-		nodeStatus = clr(ansiGreen, "running")
+		nodeStatus = clr(ansiGreen, "● running")
 	}
-	nodeInfo := fmt.Sprintf("%s  %.1f%% CPU", nodeStatus, docker.CPUPercent)
+	uptimeStr := ""
 	if !docker.StartedAt.IsZero() {
-		nodeInfo += "  up " + fmtUptime(docker.StartedAt)
+		uptimeStr = kv("up", fmtUptime(docker.StartedAt))
 	}
-	row("node", nodeInfo)
+	line(nodeStatus,
+		kv("cpu", fmt.Sprintf("%.1f%%", docker.CPUPercent)),
+		kv("ram", fmtPct(memUsed, sys.MemTotal)+"%"),
+		kv("disk", fmtPct(sys.DiskUsed, sys.DiskTotal)+"%"),
+		kv("restarts", fmt.Sprintf("%d", docker.RestartCount)),
+		uptimeStr)
+	line(kv("load", fmt.Sprintf("%.2f/%.2f/%.2f", sys.LoadAvg1, sys.LoadAvg5, sys.LoadAvg15)),
+		kv("ram", fmt.Sprintf("%s/%s", fmtBytes(memUsed), fmtBytes(sys.MemTotal))),
+		kv("disk", fmt.Sprintf("%s/%s", fmtBytes(sys.DiskUsed), fmtBytes(sys.DiskTotal))),
+		kv("height", fmtInt(chain.BlockHeight)),
+		kv("interval", fmtDur(chain.BlockInterval)),
+		kv("peers", fmt.Sprintf("%d/%d", chain.PeerCount, ev.PeerCount)))
 
-	section("CHAIN")
-	row("height",   fmtInt(chain.BlockHeight))
-	row("interval", fmtDur(chain.BlockInterval))
-	if !chain.LatestBlockTime.IsZero() {
-		row("lag", fmtDur(time.Since(chain.LatestBlockTime)))
+	// ── VALIDATORS
+	bondedCount, jailedCount, belowThreshold := 0, 0, 0
+	for _, v := range chain.Validators {
+		if v.Status == "BONDED" {
+			bondedCount++
+		}
+		if v.Jailed {
+			jailedCount++
+		}
+		if v.Status == "BONDED" && p.SignedBlocksWindow > 0 {
+			maxMissed := int64(float64(p.SignedBlocksWindow) * (1 - p.MinSignedPerWindow))
+			if v.MissedBlocks > maxMissed {
+				belowThreshold++
+			}
+		}
 	}
-	row("peers", fmt.Sprintf("%d cosmos  %d evm", chain.PeerCount, ev.PeerCount))
+	totalVals := len(chain.Validators)
+	bondedStr := clr(ansiGreen, fmt.Sprintf("%d/%d bonded", bondedCount, totalVals))
+	if bondedCount < totalVals {
+		bondedStr = clr(ansiRed, fmt.Sprintf("%d/%d bonded", bondedCount, totalVals))
+	}
+	jailedStr := fmt.Sprintf("%d jailed", jailedCount)
+	if jailedCount > 0 {
+		jailedStr = clr(ansiRed, jailedStr)
+	}
+	belowStr := fmt.Sprintf("%d below threshold", belowThreshold)
+	if belowThreshold > 0 {
+		belowStr = clr(ansiYellow, belowStr)
+	}
+	sec("VALIDATORS", bondedStr+"   "+jailedStr+"   "+belowStr)
 
-	section("VALIDATORS")
 	vals := make([]fetch.ValidatorInfo, len(chain.Validators))
 	copy(vals, chain.Validators)
 	sort.Slice(vals, func(i, j int) bool { return vals[i].VotingPowerPercent > vals[j].VotingPowerPercent })
@@ -397,10 +493,38 @@ func printEssentials(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapsho
 		if v.Tombstoned {
 			flags += "  " + clr(ansiRed, "TOMBSTONED")
 		}
-		fmt.Fprintf(w, "  %-16s  %5.1f%%  %d missed  %s%s\n",
+		missedStr := fmt.Sprintf("%d missed", v.MissedBlocks)
+		if p.SignedBlocksWindow > 0 {
+			maxMissed := int64(float64(p.SignedBlocksWindow) * (1 - p.MinSignedPerWindow))
+			if v.MissedBlocks > maxMissed {
+				missedStr = clr(ansiRed, missedStr)
+			}
+		}
+		earned := v.OutstandingRewards
+		if earned == "" {
+			earned = "–"
+		}
+		fmt.Fprintf(w, "  %-16s  %5.1f%%  %-14s  %s  earned %s%s\n",
 			truncate(v.Moniker, 16), v.VotingPowerPercent,
-			v.MissedBlocks, strings.ToLower(v.Status), flags)
+			missedStr, strings.ToLower(v.Status), earned, flags)
 	}
+
+	// ── TOKENOMICS
+	sec("TOKENOMICS", "")
+	denom := p.BondDenom
+	if denom == "" {
+		denom = chain.TotalSupplyDenom
+	}
+	bondedF, _ := fetch.NormalizeCoin(chain.BondedTokens, denom)
+	totalF, _  := fetch.NormalizeCoin(chain.TotalSupply, chain.TotalSupplyDenom)
+	bondPct := 0.0
+	if totalF > 0 {
+		bondPct = bondedF / totalF * 100
+	}
+	line(kv("supply", fetch.FormatCoin(chain.TotalSupply, chain.TotalSupplyDenom)),
+		kv("bonded", fmt.Sprintf("%s  %.1f%%  (goal %.0f%%)",
+			fetch.FormatCoin(chain.BondedTokens, denom), bondPct, p.GoalBonded*100)))
+	line(kv("rewards", pmtRewardsStatus(p, chain.BlockInterval)))
 	fmt.Fprintln(w)
 }
 
