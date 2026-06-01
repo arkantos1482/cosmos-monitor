@@ -120,7 +120,11 @@ func FetchEVM(endpoint string) EVMSnapshot {
 
 	var clientVer string
 	if err := evmCall(endpoint, "web3_clientVersion", &clientVer); err == nil {
-		snap.ClientVersion = clientVer
+		// response may be multi-line; keep only the first line
+		if i := strings.IndexByte(clientVer, '\n'); i >= 0 {
+			clientVer = clientVer[:i]
+		}
+		snap.ClientVersion = strings.TrimSpace(clientVer)
 	}
 
 	var listening bool
