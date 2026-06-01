@@ -53,7 +53,7 @@ func startWeb(addr string, doFetch func() (fetch.ChainSnapshot, fetch.EVMSnapsho
 	panels := func() string {
 		chain, ev, sys, docker := doFetch()
 		var buf bytes.Buffer
-		printAll(&buf, chain, ev, sys, docker)
+		printEssentials(&buf, chain, ev, sys, docker)
 		return `<pre>` + ansiToHTML(buf.String()) + `</pre>`
 	}
 
