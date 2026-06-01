@@ -1,0 +1,322 @@
+{{define "page"}}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>pmtop — {{.Moniker}}</title>
+<script src="https://unpkg.com/htmx.org@2.0.3/dist/htmx.min.js"></script>
+<style>
+:root {
+  --bg:#0d1117; --surface:#161b22; --border:#30363d;
+  --fg:#c9d1d9; --dim:#6e7681; --bright:#f0f6fc;
+  --red:#ff7b72; --green:#3fb950; --yellow:#e3b341;
+  --cyan:#79c0ff; --orange:#ffa657;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--bg);color:var(--fg);
+  font-family:'Cascadia Code','Fira Code','JetBrains Mono',ui-monospace,monospace;
+  font-size:13px;line-height:1.6;
+}
+body::before{
+  content:'';position:fixed;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--cyan),var(--green));z-index:10;
+}
+.page{padding:1.5rem 2rem;max-width:1400px;margin:0 auto}
+
+/* status bar */
+.statusbar{
+  display:flex;align-items:center;gap:1rem;flex-wrap:wrap;
+  padding:.6rem 1rem;background:var(--surface);
+  border:1px solid var(--border);border-radius:6px;margin-bottom:1.25rem;
+}
+.statusbar .name{font-weight:700;color:var(--bright);font-size:14px;margin-right:.5rem}
+.statusbar .time{margin-left:auto;color:var(--dim);font-size:12px}
+
+/* badges */
+.badge{
+  display:inline-block;padding:1px 8px;border-radius:12px;
+  font-size:11px;font-weight:600;border:1px solid currentColor;white-space:nowrap;
+}
+.badge-green{color:var(--green);background:#0d2a0d}
+.badge-red{color:var(--red);background:#2a0d0d}
+.badge-yellow{color:var(--yellow);background:#2a220d}
+.badge-dim{color:var(--dim);border-color:var(--border)}
+
+/* section heading */
+.section{font-size:11px;font-weight:700;color:var(--cyan);text-transform:uppercase;
+  letter-spacing:.08em;margin:1.25rem 0 .6rem;padding-bottom:.35rem;
+  border-bottom:1px solid var(--border)}
+
+/* grids */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1rem}
+@media(max-width:900px){.grid-3{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.grid-2,.grid-3{grid-template-columns:1fr}}
+
+/* card */
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:6px;padding:1rem;
+}
+.card-title{
+  font-size:10px;font-weight:700;letter-spacing:.07em;
+  color:var(--cyan);text-transform:uppercase;
+  margin-bottom:.6rem;padding-bottom:.4rem;border-bottom:1px solid var(--border);
+}
+
+/* key-value rows */
+.kv{display:flex;justify-content:space-between;align-items:baseline;padding:2px 0;gap:1rem}
+.kv-label{color:var(--dim);white-space:nowrap;flex-shrink:0}
+.kv-value{color:var(--bright);text-align:right;word-break:break-all}
+
+/* meter bar */
+.meter{background:var(--border);border-radius:3px;height:6px;overflow:hidden;margin:4px 0 8px}
+.meter-fill{height:100%;border-radius:3px}
+
+/* validator table */
+.val-wrap{overflow-x:auto;margin-bottom:1rem}
+.val-table{width:100%;border-collapse:collapse;white-space:nowrap}
+.val-table th{
+  text-align:left;font-size:11px;color:var(--dim);font-weight:500;
+  padding:5px 10px;border-bottom:1px solid var(--border);
+}
+.val-table td{padding:5px 10px;border-bottom:1px solid #1c2128}
+.val-table tr:last-child td{border-bottom:none}
+.val-table tr:hover td{background:#1c2128}
+
+/* text colours */
+.t-green{color:var(--green)} .t-red{color:var(--red)} .t-yellow{color:var(--yellow)}
+.t-dim{color:var(--dim)} .t-bright{color:var(--bright)} .t-cyan{color:var(--cyan)}
+</style>
+</head>
+<body>
+<div id="data" hx-get="/fragment" hx-trigger="every 5s" hx-swap="innerHTML">
+{{template "fragment" .}}
+</div>
+</body>
+</html>
+{{end}}
+
+{{define "fragment"}}
+<div class="page">
+
+{{/* ── status bar ────────────────────────────────────────────────────────── */}}
+<div class="statusbar">
+  <span class="name">pmtop  {{.Moniker}}</span>
+  {{if .Synced}}<span class="badge badge-green">● synced</span>
+  {{else}}<span class="badge badge-red">● CATCHING UP</span>{{end}}
+  <span class="badge badge-dim">height {{.BlockHeight}}</span>
+  <span class="badge badge-dim">cosmos peers {{.PeerCount}}</span>
+  <span class="badge badge-dim">evm peers {{.EVMPeerCount}}</span>
+  <span class="time">{{.TimeUTC}}</span>
+</div>
+
+{{/* ── SYSTEM ─────────────────────────────────────────────────────────────── */}}
+<div class="section">System</div>
+<div class="grid-2">
+  <div class="card">
+    <div class="card-title">OS</div>
+    <div class="kv"><span class="kv-label">load 1m / 5m / 15m</span>
+      <span class="kv-value">{{printf "%.2f / %.2f / %.2f" .Load1 .Load5 .Load15}}</span></div>
+    <div class="kv"><span class="kv-label">RAM</span>
+      <span class="kv-value">{{.MemUsed}} / {{.MemTotal}}</span></div>
+    <div class="meter"><div class="meter-fill" style="width:{{.MemPct}}%;background:{{mmColor .MemPct}}"></div></div>
+    <div class="kv"><span class="kv-label">disk</span>
+      <span class="kv-value">{{.DiskUsed}} / {{.DiskTotal}}</span></div>
+    <div class="meter"><div class="meter-fill" style="width:{{.DiskPct}}%;background:{{mmColor .DiskPct}}"></div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Container</div>
+    <div class="kv"><span class="kv-label">status</span>
+      <span class="kv-value">{{if .NodeRunning}}<span class="badge badge-green">● running</span>{{else}}<span class="badge badge-red">stopped</span>{{end}}</span></div>
+    <div class="kv"><span class="kv-label">cpu</span><span class="kv-value">{{.NodeCPU}}</span></div>
+    <div class="kv"><span class="kv-label">ram</span><span class="kv-value">{{.NodeMemUsed}} / {{.NodeMemTotal}}</span></div>
+    <div class="kv"><span class="kv-label">restarts</span><span class="kv-value">{{.Restarts}}</span></div>
+    {{if .NodeUptime}}<div class="kv"><span class="kv-label">uptime</span><span class="kv-value">{{.NodeUptime}}</span></div>{{end}}
+  </div>
+</div>
+
+{{/* ── VALIDATORS ─────────────────────────────────────────────────────────── */}}
+<div class="section">Validators ({{len .Validators}})</div>
+<div class="val-wrap">
+<table class="val-table">
+<thead><tr>
+  <th>Moniker</th><th>VP%</th><th>Commission</th>
+  <th>Missed</th><th>Outstanding</th><th>Earned</th><th>Status</th>
+</tr></thead>
+<tbody>
+{{range .Validators}}
+<tr>
+  <td class="t-bright">{{.Moniker}}</td>
+  <td>{{.VP}}</td>
+  <td class="t-dim">{{.Commission}}</td>
+  <td>{{if .MissedHigh}}<span class="t-red">{{.Missed}}</span>{{else}}{{.Missed}}{{end}}</td>
+  <td>{{if .Outstanding}}{{.Outstanding}}{{else}}<span class="t-dim">–</span>{{end}}</td>
+  <td>{{if .Earned}}{{.Earned}}{{else}}<span class="t-dim">–</span>{{end}}</td>
+  <td>
+    {{if .Tombstoned}}<span class="badge badge-red">TOMBSTONED</span>
+    {{else if .Jailed}}<span class="badge badge-red">JAILED</span>
+    {{else if eq .Status "bonded"}}<span class="badge badge-green">bonded</span>
+    {{else}}<span class="badge badge-yellow">{{.Status}}</span>{{end}}
+  </td>
+</tr>
+{{end}}
+</tbody>
+</table>
+</div>
+
+{{/* ── ECONOMICS ──────────────────────────────────────────────────────────── */}}
+<div class="section">Economics</div>
+<div class="grid-3">
+
+  <div class="card">
+    <div class="card-title">x/staking</div>
+    <div class="kv"><span class="kv-label">total supply</span><span class="kv-value">{{.TotalSupply}}</span></div>
+    <div class="kv"><span class="kv-label">bonded</span>
+      <span class="kv-value">{{.BondedAmt}} <span class="t-dim">{{printf "%.1f%%" .BondedPct}} / goal {{printf "%.0f%%" .GoalBonded}}</span></span></div>
+    <div class="kv"><span class="kv-label">not bonded</span><span class="kv-value">{{.NotBonded}}</span></div>
+    <div class="kv"><span class="kv-label">inflation</span>
+      <span class="kv-value">{{printf "%.2f%%" .Inflation}}
+      {{if eq .Inflation 0.0}}<span class="t-dim"> inactive</span>{{end}}</span></div>
+    <div class="kv"><span class="kv-label">community pool</span><span class="kv-value">{{.CommunityPool}}</span></div>
+    {{if .BlocksPerYear}}<div class="kv"><span class="kv-label">blocks / year</span><span class="kv-value">{{.BlocksPerYear}}</span></div>{{end}}
+  </div>
+
+  <div class="card">
+    <div class="card-title">x/pmtrewards</div>
+    {{if not .PMTEnabled}}
+      <span class="badge badge-dim">disabled</span>
+    {{else if .PMTPoolEmpty}}
+      <span class="badge badge-red">POOL EMPTY</span>
+      <p style="color:var(--dim);font-size:11px;margin-top:8px">rewards enabled but pool is empty — validators receive no PMT rewards</p>
+    {{else}}
+      <span class="badge badge-green">● distributing</span>
+      <div style="margin-top:.5rem">
+        {{if .PMTRate}}<div class="kv"><span class="kv-label">rate</span><span class="kv-value">{{.PMTRate}}</span></div>{{end}}
+        {{if .PMTAnnual}}<div class="kv"><span class="kv-label">annual</span><span class="kv-value">{{.PMTAnnual}}</span></div>{{end}}
+        {{if .PMTBalance}}<div class="kv"><span class="kv-label">pool balance</span><span class="kv-value">{{.PMTBalance}}</span></div>{{end}}
+        {{if .PMTRunway}}<div class="kv"><span class="kv-label">runway</span><span class="kv-value t-yellow">{{.PMTRunway}}</span></div>{{end}}
+      </div>
+    {{end}}
+    {{if .TotalOutstanding}}
+    <div style="margin-top:.75rem;padding-top:.5rem;border-top:1px solid var(--border)">
+      <div class="kv"><span class="kv-label">unclaimed (all)</span><span class="kv-value">{{.TotalOutstanding}}</span></div>
+      <div class="kv"><span class="kv-label">commission rate</span><span class="kv-value">{{printf "%.0f%%" .CommissionRate}}</span></div>
+    </div>
+    {{end}}
+  </div>
+
+  <div class="card">
+    <div class="card-title">x/slashing</div>
+    <div class="kv"><span class="kv-label">window</span><span class="kv-value">{{.SlashWindow}} blocks</span></div>
+    <div class="kv"><span class="kv-label">min signed</span><span class="kv-value">{{printf "%.1f%%" .MinSigned}}</span></div>
+    {{if .SlashDowntime}}
+    <div class="kv"><span class="kv-label">slash / downtime</span>
+      <span class="kv-value">{{.SlashDowntime}}
+      {{if .SlashDTInactive}}<span class="t-yellow"> inactive</span>{{else}}<span class="t-green"> active</span>{{end}}
+      </span></div>
+    {{end}}
+    {{if .SlashDS}}
+    <div class="kv"><span class="kv-label">slash / double-sign</span>
+      <span class="kv-value">{{.SlashDS}}
+      {{if .SlashDSInactive}}<span class="t-yellow"> inactive</span>{{else}}<span class="t-green"> active</span>{{end}}
+      </span></div>
+    {{end}}
+  </div>
+
+</div>
+
+{{/* ── EVM ────────────────────────────────────────────────────────────────── */}}
+<div class="section">EVM</div>
+<div class="grid-3">
+
+  <div class="card">
+    <div class="card-title">Identity</div>
+    <div class="kv"><span class="kv-label">chain ID</span><span class="kv-value">{{.EVMChainID}}</span></div>
+    {{if .EVMClient}}<div class="kv"><span class="kv-label">client</span><span class="kv-value t-dim">{{.EVMClient}}</span></div>{{end}}
+    <div class="kv"><span class="kv-label">block</span><span class="kv-value">{{.EVMBlock}}</span></div>
+    <div class="kv"><span class="kv-label">ERC20</span>
+      <span class="kv-value">{{if .ERC20Enabled}}<span class="t-green">enabled</span>{{else}}<span class="t-dim">disabled</span>{{end}}</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Health</div>
+    <div class="kv"><span class="kv-label">rpc</span>
+      <span class="kv-value">{{if .EVMRPCOk}}<span class="badge badge-green">ok</span>{{else}}<span class="badge badge-red">error</span>{{end}}</span></div>
+    <div class="kv"><span class="kv-label">sync</span>
+      <span class="kv-value">{{if .EVMSynced}}<span class="badge badge-green">synced</span>{{else}}<span class="badge badge-yellow">syncing</span>{{end}}</span></div>
+    <div class="kv"><span class="kv-label">net listening</span>
+      <span class="kv-value">{{if .EVMListening}}<span class="t-green">yes</span>{{else}}<span class="t-yellow">no</span>{{end}}</span></div>
+    {{if .EVMBlockAge}}
+    <div class="kv"><span class="kv-label">last block age</span>
+      <span class="kv-value">
+        {{if .EVMBlockAgeErr}}<span class="t-red">{{.EVMBlockAge}} ⚠ stalled</span>
+        {{else if .EVMBlockAgeWarn}}<span class="t-yellow">{{.EVMBlockAge}} ⚠ slow</span>
+        {{else}}<span class="t-green">{{.EVMBlockAge}}</span>{{end}}
+      </span></div>
+    {{end}}
+    <div class="kv"><span class="kv-label">txpool</span>
+      <span class="kv-value">pending {{.PendingTx}} / queued {{.QueuedTx}}</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Gas / Fee Market</div>
+    {{if .BaseFee}}<div class="kv"><span class="kv-label">base fee</span><span class="kv-value">{{.BaseFee}} wei</span></div>{{end}}
+    {{if .GasPrice}}<div class="kv"><span class="kv-label">gas price</span><span class="kv-value">{{.GasPrice}}</span></div>{{end}}
+    {{if .AdjCap}}<div class="kv"><span class="kv-label">adjustment cap</span><span class="kv-value t-dim">{{.AdjCap}}</span></div>{{end}}
+    {{if .Elasticity}}<div class="kv"><span class="kv-label">target</span><span class="kv-value t-dim">max_gas ÷ {{.Elasticity}}</span></div>{{end}}
+    <div class="kv"><span class="kv-label">fee enforcement</span>
+      <span class="kv-value">{{if not .NoBaseFee}}<span class="t-green">active</span>{{else}}<span class="t-yellow">disabled</span>{{end}}</span></div>
+  </div>
+
+</div>
+
+{{/* ── CHAIN ───────────────────────────────────────────────────────────────── */}}
+<div class="section">Chain</div>
+<div class="grid-3">
+
+  <div class="card">
+    <div class="card-title">Governance</div>
+    <div class="kv"><span class="kv-label">voting period</span><span class="kv-value">{{.VotingPeriod}}</span></div>
+    <div class="kv"><span class="kv-label">quorum</span><span class="kv-value">{{printf "%.1f%%" .Quorum}}</span></div>
+    <div class="kv"><span class="kv-label">threshold</span><span class="kv-value">{{printf "%.1f%%" .Threshold}}</span></div>
+    {{if .VetoThreshold}}<div class="kv"><span class="kv-label">veto threshold</span><span class="kv-value">{{printf "%.1f%%" .VetoThreshold}}</span></div>{{end}}
+    {{if .Proposals}}
+    <div style="margin-top:.6rem;padding-top:.5rem;border-top:1px solid var(--border)">
+      <div class="t-yellow" style="font-size:11px;margin-bottom:.3rem">Active proposals</div>
+      {{range .Proposals}}
+      <div class="kv"><span class="kv-label">#{{.ID}}</span><span class="kv-value">{{.Title}} <span class="t-dim">ends {{.End}}</span></span></div>
+      {{end}}
+    </div>
+    {{else}}
+    <div class="kv" style="margin-top:.5rem"><span class="kv-label t-dim">no active proposals</span></div>
+    {{end}}
+  </div>
+
+  <div class="card">
+    <div class="card-title">Upgrade &amp; Slashing</div>
+    <div class="kv"><span class="kv-label">pending upgrade</span>
+      <span class="kv-value">{{if .UpgradeName}}{{.UpgradeName}} @ {{.UpgradeHeight}}{{if .BlocksLeft}} <span class="t-yellow">({{.BlocksLeft}} blocks)</span>{{end}}{{else}}<span class="t-dim">none</span>{{end}}</span></div>
+    {{if .ChainSlashDT}}<div class="kv"><span class="kv-label">slash / downtime</span><span class="kv-value">{{.ChainSlashDT}}</span></div>{{end}}
+    {{if .ChainSlashDS}}<div class="kv"><span class="kv-label">slash / double-sign</span><span class="kv-value">{{.ChainSlashDS}}</span></div>{{end}}
+  </div>
+
+  <div class="card">
+    <div class="card-title">IBC &amp; Token Pairs</div>
+    <div class="kv"><span class="kv-label">IBC clients</span><span class="kv-value">{{.IBCClients}}</span></div>
+    {{if .TokenPairs}}
+    <div style="margin-top:.5rem;padding-top:.4rem;border-top:1px solid var(--border)">
+      {{range .TokenPairs}}
+      <div class="kv">
+        <span class="kv-label">{{.Denom}}</span>
+        <span class="kv-value t-dim" style="font-size:11px">{{.ERC20}} {{if not .Enabled}}<span class="badge badge-dim">disabled</span>{{end}}</span>
+      </div>
+      {{end}}
+    </div>
+    {{else}}<div class="kv" style="margin-top:.3rem"><span class="t-dim">no token pairs</span></div>{{end}}
+  </div>
+
+</div>
+</div>{{/* end .page */}}
+{{end}}

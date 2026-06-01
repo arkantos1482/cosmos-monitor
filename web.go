@@ -1,70 +1,41 @@
 package main
 
 import (
-	"bytes"
 	_ "embed"
-	"fmt"
-	"html"
+	"html/template"
 	"log"
 	"net/http"
-	"regexp"
-	"strings"
 
 	"github.com/arkantos1482/cosmos-monitor/fetch"
 )
 
-//go:embed web.html
-var pageTemplate string
+//go:embed dashboard.html
+var dashboardHTML string
 
-var (
-	ansiRe      = regexp.MustCompile(`\x1b\[(\d+)m`)
-	ansiClasses = map[string]string{
-		"1": "b", "2": "dim",
-		"31": "r", "32": "g", "33": "y", "36": "c", "97": "w",
-	}
+var dashTmpl = template.Must(
+	template.New("dashboard").Funcs(template.FuncMap{
+		"mmColor": meterColor,
+		"not":     func(b bool) bool { return !b },
+	}).Parse(dashboardHTML),
 )
 
-func ansiToHTML(s string) string {
-	var b strings.Builder
-	open, last := 0, 0
-	for _, m := range ansiRe.FindAllStringSubmatchIndex(s, -1) {
-		b.WriteString(html.EscapeString(s[last:m[0]]))
-		last = m[1]
-		code := s[m[2]:m[3]]
-		if code == "0" {
-			for open > 0 {
-				b.WriteString("</span>")
-				open--
-			}
-		} else if cls, ok := ansiClasses[code]; ok {
-			b.WriteString(`<span class="` + cls + `">`)
-			open++
-		}
-	}
-	b.WriteString(html.EscapeString(s[last:]))
-	for open > 0 {
-		b.WriteString("</span>")
-		open--
-	}
-	return b.String()
-}
-
 func startWeb(addr string, doFetch func() (fetch.ChainSnapshot, fetch.EVMSnapshot, fetch.SystemSnapshot, fetch.DockerSnapshot)) {
-	panels := func() string {
-		chain, ev, sys, docker := doFetch()
-		var buf bytes.Buffer
-		printDashboard(&buf, chain, ev, sys, docker)
-		return `<pre>` + ansiToHTML(buf.String()) + `</pre>`
-	}
-
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		chain, ev, sys, docker := doFetch()
+		data := buildWebData(chain, ev, sys, docker)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprint(w, strings.ReplaceAll(pageTemplate, "{{CONTENT}}", panels()))
+		if err := dashTmpl.ExecuteTemplate(w, "page", data); err != nil {
+			log.Printf("template error: %v", err)
+		}
 	})
 
 	http.HandleFunc("/fragment", func(w http.ResponseWriter, r *http.Request) {
+		chain, ev, sys, docker := doFetch()
+		data := buildWebData(chain, ev, sys, docker)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprint(w, panels())
+		if err := dashTmpl.ExecuteTemplate(w, "fragment", data); err != nil {
+			log.Printf("template error: %v", err)
+		}
 	})
 
 	go func() {
