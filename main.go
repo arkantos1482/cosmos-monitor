@@ -84,7 +84,7 @@ func main() {
 		fmt.Fprintln(out, "fetching…")
 		chain, ev, sys, docker := doFetch()
 		fmt.Fprint(out, "\033[H\033[2J")
-		printEssentials(out, chain, ev, sys, docker)
+		printDashboard(out, chain, ev, sys, docker)
 	}
 
 	refresh()

@@ -528,6 +528,11 @@ func printEssentials(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapsho
 	fmt.Fprintln(w)
 }
 
+func printDashboard(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, docker fetch.DockerSnapshot) {
+	printEssentials(w, chain, ev, sys, docker)
+	printAll(w, chain, ev, sys, docker)
+}
+
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 func fmtInt(n int64) string {
