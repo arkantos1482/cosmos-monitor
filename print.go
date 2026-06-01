@@ -26,7 +26,7 @@ func clr(code, s string) string { return code + s + ansiReset }
 func printAll(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, docker fetch.DockerSnapshot) {
 	section    := func(name string)         { fmt.Fprintf(w, "\n%s\n", clr(ansiBold+ansiCyan, name)) }
 	subsection := func(name string)         { fmt.Fprintf(w, "  %s\n", clr(ansiYellow, name)) }
-	row        := func(label, value string) { fmt.Fprintf(w, "    %s%-20s%s  %s\n", ansiDim, label, ansiReset, value) }
+	row        := func(label, value string) { fmt.Fprintf(w, "    %s%-22s%s  %s\n", ansiDim, label, ansiReset, value) }
 
 	p := chain.Params
 
@@ -38,8 +38,8 @@ func printAll(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys 
 		clr(ansiBold+ansiWhite, "pmtop  "+chain.Moniker),
 		syncStr, fmtInt(chain.BlockHeight), time.Now().UTC().Format("15:04:05"))
 
-	// ── 1. HEALTH ────────────────────────────────────────────────────────────
-	section("1. HEALTH")
+	// ── 1. INFRASTRUCTURE ────────────────────────────────────────────────────
+	section("1. INFRASTRUCTURE")
 
 	subsection("OS")
 	memUsed := uint64(0)
@@ -63,7 +63,7 @@ func printAll(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys 
 		row("uptime", fmtUptime(docker.StartedAt))
 	}
 
-	// ── 2. NODE ───────────────────────────────────────────────────────────────
+	// ── 2. NODE ──────────────────────────────────────────────────────────────
 	section("2. NODE")
 
 	subsection("Identity")
@@ -88,161 +88,9 @@ func printAll(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys 
 	row("cosmos peers", fmt.Sprintf("%d", chain.PeerCount))
 	row("evm peers",    fmt.Sprintf("%d", ev.PeerCount))
 
-	// ── 3. TOKENOMICS ─────────────────────────────────────────────────────────
-	section("3. TOKENOMICS")
+	// ── 3. VALIDATORS ────────────────────────────────────────────────────────
+	section("3. VALIDATORS")
 
-	denom := p.BondDenom
-	if denom == "" {
-		denom = chain.TotalSupplyDenom
-	}
-	bondedF, _ := fetch.NormalizeCoin(chain.BondedTokens, denom)
-	totalF, _  := fetch.NormalizeCoin(chain.TotalSupply, chain.TotalSupplyDenom)
-	bondPct := 0.0
-	if totalF > 0 {
-		bondPct = bondedF / totalF * 100
-	}
-
-	subsection("Supply & Staking")
-	row("total supply",   fetch.FormatCoin(chain.TotalSupply, chain.TotalSupplyDenom))
-	row("bonded",         fmt.Sprintf("%s  (%.2f%%, goal %.0f%%)", fetch.FormatCoin(chain.BondedTokens, denom), bondPct, p.GoalBonded*100))
-	row("not bonded",     fetch.FormatCoin(chain.NotBondedTokens, denom))
-	row("unbonding time", fmtDurFull(p.UnbondingTime))
-	if p.MaxValidators > 0 {
-		row("max validators", fmt.Sprintf("%d", p.MaxValidators))
-	}
-	if p.BlocksPerYear > 0 {
-		row("blocks / year", fmtInt(p.BlocksPerYear))
-	}
-
-	subsection("Distribution Model")
-	communityTaxStr := fmt.Sprintf("%.2f%%", p.CommunityTax*100)
-	if p.CommunityTax == 0 {
-		communityTaxStr += "  → 100% of tx fees flow to validators"
-	}
-	row("community tax",  communityTaxStr)
-	row("community pool", chain.CommunityPool)
-	row("inflation",      fmt.Sprintf("%.2f%%  (mint rewards inactive)", chain.Inflation*100))
-
-	subsection("PMT Rewards")
-	row("status", pmtRewardsStatus(p, chain.BlockInterval))
-	if p.RewardPerBlockAmount != "" {
-		row("rate", fetch.FormatCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)+"/block")
-		if p.BlocksPerYear > 0 {
-			rewardF, _ := fetch.NormalizeCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)
-			_, displayDenom := fetch.NormalizeCoin("0", p.RewardPerBlockDenom)
-			annual := rewardF * float64(p.BlocksPerYear)
-			row("annual emissions", fmt.Sprintf("~%.0f %s/year  (%s blocks × %s)",
-				annual, displayDenom, fmtInt(p.BlocksPerYear),
-				fetch.FormatCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)))
-		}
-	}
-	if p.PMTRewardsPoolBalanceAmt != "" {
-		row("pool balance", fetch.FormatCoin(p.PMTRewardsPoolBalanceAmt, p.PMTRewardsPoolBalanceDenom)+poolRunway(p, chain.BlockInterval))
-	} else {
-		row("pool balance", clr(ansiRed, "0 PMT  — pool empty"))
-	}
-	if p.PMTRewardsPoolAddress != "" {
-		row("pool address", p.PMTRewardsPoolAddress)
-	}
-
-	subsection("Validator Earnings  (unclaimed)")
-	var totalOutF float64
-	var outDenom string
-	for _, v := range chain.Validators {
-		if v.OutstandingRewardsAmt != "" {
-			f, d := fetch.NormalizeCoin(v.OutstandingRewardsAmt, v.OutstandingRewardsDenom)
-			totalOutF += f
-			outDenom = d
-		}
-	}
-	if outDenom != "" {
-		row("total outstanding", fmt.Sprintf("%.6f %s  across %d validators", totalOutF, outDenom, len(chain.Validators)))
-	}
-	row("commission rate", fmt.Sprintf("%.0f%%  of staking rewards", func() float64 {
-		if len(chain.Validators) > 0 { return chain.Validators[0].Commission * 100 }
-		return 0
-	}()))
-
-	// ── 4. EVM ────────────────────────────────────────────────────────────────
-	section("4. EVM")
-
-	evSyncStr := clr(ansiGreen, "synced")
-	if ev.Syncing {
-		evSyncStr = clr(ansiYellow, "syncing")
-	}
-
-	subsection("Identity")
-	row("chain ID", fmt.Sprintf("%d", ev.ChainID))
-	if p.EVMDenom != "" {
-		row("denom", p.EVMDenom)
-	}
-
-	subsection("Block")
-	row("block", fmtInt(int64(ev.BlockNumber)))
-	row("sync",  evSyncStr)
-
-	subsection("Gas")
-	if chain.BaseFee != "" {
-		row("base fee", chain.BaseFee+" wei")
-	}
-	if ev.GasPrice != "" {
-		row("gas price", ev.GasPrice)
-	}
-	if p.MinGasPrice > 0 {
-		row("min gas price", fmt.Sprintf("%.9f %s", p.MinGasPrice, denom))
-	}
-
-	subsection("Fee Market")
-	if p.Elasticity > 0 {
-		row("elasticity", fmt.Sprintf("%d", p.Elasticity))
-	}
-	if p.BaseFeeChangeDenominator > 0 {
-		row("change denominator", fmt.Sprintf("%d", p.BaseFeeChangeDenominator))
-	}
-	row("no_base_fee", boolStr(p.NoBaseFee))
-
-	subsection("Txpool")
-	row("pending", fmt.Sprintf("%d", ev.PendingTx))
-	row("queued",  fmt.Sprintf("%d", ev.QueuedTx))
-
-	if len(p.ActiveStaticPrecompiles) > 0 {
-		subsection("Precompiles")
-		row("active", fmt.Sprintf("%d", len(p.ActiveStaticPrecompiles)))
-		for _, pc := range p.ActiveStaticPrecompiles {
-			fmt.Fprintf(w, "    %s\n", pc)
-		}
-	}
-
-	subsection("Config")
-	if p.HistoryServeWindow > 0 {
-		row("history serve window", fmtInt(p.HistoryServeWindow))
-	}
-	row("ERC20 enabled", boolStr(p.ERC20Enabled))
-	if p.HardforkLondon != "" {
-		row("London height", p.HardforkLondon)
-	}
-	if p.HardforkShanghai != "" {
-		row("Shanghai height", p.HardforkShanghai)
-	}
-	if p.HardforkCancun != "" {
-		row("Cancun height", p.HardforkCancun)
-	}
-
-	// ── 5. TOKEN PAIRS ────────────────────────────────────────────────────────
-	section(fmt.Sprintf("5. TOKEN PAIRS  (%d)", len(chain.TokenPairs)))
-	if len(chain.TokenPairs) == 0 {
-		fmt.Fprintln(w, "  none registered")
-	}
-	for _, tp := range chain.TokenPairs {
-		enabled := "yes"
-		if !tp.Enabled {
-			enabled = "no"
-		}
-		fmt.Fprintf(w, "  %-30s  %-42s  %s\n", tp.Denom, tp.ERC20Addr, enabled)
-	}
-
-	// ── 6. VALIDATORS ─────────────────────────────────────────────────────────
-	section("6. VALIDATORS")
 	vals := make([]fetch.ValidatorInfo, len(chain.Validators))
 	copy(vals, chain.Validators)
 	sort.Slice(vals, func(i, j int) bool {
@@ -281,23 +129,6 @@ func printAll(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys 
 		)
 	}
 
-	// ── 7. SECURITY ───────────────────────────────────────────────────────────
-	section("7. SECURITY")
-
-	subsection("Slashing Params")
-	if p.SignedBlocksWindow > 0 {
-		row("window", fmt.Sprintf("%s blocks", fmtInt(p.SignedBlocksWindow)))
-	}
-	if p.MinSignedPerWindow > 0 {
-		row("min signed", fmt.Sprintf("%.1f%%", p.MinSignedPerWindow*100))
-	}
-	if p.SlashFractionDowntime != "" {
-		row("slash / downtime", fmtFraction(p.SlashFractionDowntime))
-	}
-	if p.SlashFractionDoubleSign != "" {
-		row("slash / double sign", fmtFraction(p.SlashFractionDoubleSign))
-	}
-
 	subsection("Summary")
 	tombCount := 0
 	belowThreshold := 0
@@ -315,10 +146,248 @@ func printAll(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys 
 	row("tombstoned",      fmt.Sprintf("%d", tombCount))
 	row("below threshold", fmt.Sprintf("%d", belowThreshold))
 
-	// ── 8. GOVERNANCE ─────────────────────────────────────────────────────────
-	section("8. GOVERNANCE")
+	// ── 4. ECONOMICS ─────────────────────────────────────────────────────────
+	section("4. ECONOMICS")
 
-	subsection("Params")
+	denom := p.BondDenom
+	if denom == "" {
+		denom = chain.TotalSupplyDenom
+	}
+	bondedF, _ := fetch.NormalizeCoin(chain.BondedTokens, denom)
+	totalF, _  := fetch.NormalizeCoin(chain.TotalSupply, chain.TotalSupplyDenom)
+	bondPct := 0.0
+	if totalF > 0 {
+		bondPct = bondedF / totalF * 100
+	}
+
+	subsection("x/staking")
+	row("total supply",   fetch.FormatCoin(chain.TotalSupply, chain.TotalSupplyDenom))
+	row("bonded",         fmt.Sprintf("%s  (%.2f%%, goal %.0f%%)", fetch.FormatCoin(chain.BondedTokens, denom), bondPct, p.GoalBonded*100))
+	row("not bonded",     fetch.FormatCoin(chain.NotBondedTokens, denom))
+	row("unbonding time", fmtDurFull(p.UnbondingTime))
+	if p.MaxValidators > 0 {
+		row("max validators", fmt.Sprintf("%d", p.MaxValidators))
+	}
+	if p.BlocksPerYear > 0 {
+		row("blocks / year", fmtInt(p.BlocksPerYear))
+	}
+
+	subsection("x/mint")
+	inflationStr := fmt.Sprintf("%.2f%%", chain.Inflation*100)
+	if chain.Inflation == 0 {
+		inflationStr += "  " + clr(ansiYellow, "⚠ inactive") + "  (module present — can be activated via governance)"
+	}
+	row("inflation", inflationStr)
+	if p.BlocksPerYear > 0 {
+		row("blocks / year", fmtInt(p.BlocksPerYear))
+	}
+
+	subsection("x/distribution")
+	communityTaxStr := fmt.Sprintf("%.2f%%", p.CommunityTax*100)
+	if p.CommunityTax == 0 {
+		communityTaxStr += "  → 100% of tx fees flow to validators"
+	}
+	row("community tax",  communityTaxStr)
+	row("community pool", chain.CommunityPool)
+
+	subsection("x/pmtrewards  (custom)")
+	row("status", pmtRewardsStatus(p, chain.BlockInterval))
+	if p.RewardPerBlockAmount != "" {
+		row("rate", fetch.FormatCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)+"/block")
+		if p.BlocksPerYear > 0 {
+			rewardF, _ := fetch.NormalizeCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)
+			_, displayDenom := fetch.NormalizeCoin("0", p.RewardPerBlockDenom)
+			annual := rewardF * float64(p.BlocksPerYear)
+			row("annual emissions", fmt.Sprintf("~%.0f %s/year  (%s blocks × %s)",
+				annual, displayDenom, fmtInt(p.BlocksPerYear),
+				fetch.FormatCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)))
+		}
+	}
+	if p.PMTRewardsPoolBalanceAmt != "" {
+		row("pool balance", fetch.FormatCoin(p.PMTRewardsPoolBalanceAmt, p.PMTRewardsPoolBalanceDenom)+poolRunway(p, chain.BlockInterval))
+	} else {
+		row("pool balance", clr(ansiRed, "0 PMT  — pool empty"))
+	}
+	if p.PMTRewardsPoolAddress != "" {
+		row("pool address", p.PMTRewardsPoolAddress)
+	}
+
+	subsection("x/slashing  (economic impact)")
+	if p.SlashFractionDowntime != "" {
+		dtStr := fmtFraction(p.SlashFractionDowntime)
+		dtF := 0.0
+		fmt.Sscanf(p.SlashFractionDowntime, "%f", &dtF)
+		if dtF == 0 {
+			dtStr += "  " + clr(ansiYellow, "⚠ inactive") + "  (downtime slashing disabled — can be enabled via governance)"
+		} else {
+			dtStr += "  " + clr(ansiGreen, "active") + "  (validators lose this % of stake for downtime)"
+		}
+		row("slash / downtime", dtStr)
+	}
+	if p.SlashFractionDoubleSign != "" {
+		dsStr := fmtFraction(p.SlashFractionDoubleSign)
+		dsF := 0.0
+		fmt.Sscanf(p.SlashFractionDoubleSign, "%f", &dsF)
+		if dsF == 0 {
+			dsStr += "  " + clr(ansiYellow, "⚠ inactive") + "  (double-sign slashing disabled — can be enabled via governance)"
+		} else {
+			dsStr += "  " + clr(ansiGreen, "active") + "  (validators lose this % of stake for double-sign)"
+		}
+		row("slash / double-sign", dsStr)
+	}
+
+	// Insights — only when PMT rewards module is enabled
+	if p.PMTRewardsEnabled && p.RewardPerBlockAmount != "" && chain.BlockInterval > 0 {
+		subsection("Insights")
+		rewardF, _ := fetch.NormalizeCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)
+		_, displayDenom := fetch.NormalizeCoin("0", p.RewardPerBlockDenom)
+		blocksPerDay := 86400.0 / chain.BlockInterval.Seconds()
+		dailyPMT := rewardF * blocksPerDay
+
+		poolEmpty := p.PMTRewardsPoolBalanceAmt == "" || p.PMTRewardsPoolBalanceAmt == "0"
+		if poolEmpty {
+			row("pool runway",      clr(ansiRed, "EMPTY")+"  (no PMT rewards distributing)")
+			row("daily emissions",  fmt.Sprintf("0 %s/day  (pool empty)", displayDenom))
+		} else {
+			poolF, _ := fetch.NormalizeCoin(p.PMTRewardsPoolBalanceAmt, p.PMTRewardsPoolBalanceDenom)
+			runwayDays := 0.0
+			if dailyPMT > 0 {
+				runwayDays = poolF / dailyPMT
+			}
+			row("pool runway",     fmt.Sprintf("~%.0f days  (%.2f %s ÷ %.0f/day)", runwayDays, poolF, displayDenom, dailyPMT))
+			row("daily emissions", fmt.Sprintf("~%.0f %s/day  (%.4f/block × ~%.0f blocks/day)", dailyPMT, displayDenom, rewardF, blocksPerDay))
+			if len(chain.Validators) > 0 {
+				perVal := dailyPMT * (chain.Validators[0].VotingPowerPercent / 100)
+				row("per validator/day", fmt.Sprintf("~%.0f %s  (%.1f%% VP × %.0f/day)", perVal, displayDenom, chain.Validators[0].VotingPowerPercent, dailyPMT))
+			}
+		}
+
+		// Revenue flow
+		valCount := len(chain.Validators)
+		if valCount == 0 {
+			valCount = 1
+		}
+		commPct := 0.0
+		if len(chain.Validators) > 0 {
+			commPct = chain.Validators[0].Commission * 100
+		}
+		rateStr := fetch.FormatCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)
+		row("revenue flow", fmt.Sprintf("[tx fees] + [pool %s/block] → %d validators (%.0f%% VP each)",
+			rateStr, valCount, 100.0/float64(valCount)))
+		fmt.Fprintf(w, "    %-22s    ├─ %.0f%%  commission → validator\n", "", commPct)
+		fmt.Fprintf(w, "    %-22s    └─ %.0f%%  → delegators (pro-rata)\n", "", 100-commPct)
+	}
+
+	subsection("Validator Earnings  (unclaimed)")
+	var totalOutF float64
+	var outDenom string
+	for _, v := range chain.Validators {
+		if v.OutstandingRewardsAmt != "" {
+			f, d := fetch.NormalizeCoin(v.OutstandingRewardsAmt, v.OutstandingRewardsDenom)
+			totalOutF += f
+			outDenom = d
+		}
+	}
+	if outDenom != "" {
+		row("total outstanding", fmt.Sprintf("%.6f %s  across %d validators", totalOutF, outDenom, len(chain.Validators)))
+	}
+	row("commission rate", fmt.Sprintf("%.0f%%  of staking rewards", func() float64 {
+		if len(chain.Validators) > 0 {
+			return chain.Validators[0].Commission * 100
+		}
+		return 0
+	}()))
+
+	// ── 5. EVM ────────────────────────────────────────────────────────────────
+	section("5. EVM")
+
+	evSyncStr := clr(ansiGreen, "synced")
+	if ev.Syncing {
+		evSyncStr = clr(ansiYellow, "syncing")
+	}
+
+	subsection("Identity")
+	row("chain ID", fmt.Sprintf("%d", ev.ChainID))
+	if p.EVMDenom != "" {
+		row("denom", p.EVMDenom)
+	}
+
+	subsection("Block")
+	row("block", fmtInt(int64(ev.BlockNumber)))
+	row("sync",  evSyncStr)
+
+	subsection("Gas")
+	if chain.BaseFee != "" {
+		row("base fee", chain.BaseFee+" wei")
+	}
+	if ev.GasPrice != "" {
+		row("gas price", ev.GasPrice)
+	}
+	if p.MinGasPrice > 0 {
+		row("min gas price", fmt.Sprintf("%.9f %s", p.MinGasPrice, denom))
+	}
+
+	subsection("Fee Market Mechanics")
+	row("model", "EIP-1559  (dynamic base fee — adjusts to target block utilization)")
+	if chain.BaseFee != "" {
+		baseFeeF := 0.0
+		fmt.Sscanf(chain.BaseFee, "%f", &baseFeeF)
+		row("base fee", fmt.Sprintf("%s wei", chain.BaseFee))
+		if p.BaseFeeChangeDenominator > 0 && baseFeeF > 0 {
+			cap := baseFeeF / float64(p.BaseFeeChangeDenominator)
+			row("adjustment cap", fmt.Sprintf("±(base_fee ÷ %d) = ±%.4f wei/block  (max change per block)",
+				p.BaseFeeChangeDenominator, cap))
+		} else if p.BaseFeeChangeDenominator > 0 {
+			row("change denominator", fmt.Sprintf("%d", p.BaseFeeChangeDenominator))
+		}
+	}
+	if p.Elasticity > 0 {
+		row("block target", fmt.Sprintf("max_gas ÷ %d  (rises if > 1/%d full, falls if < 1/%d full)",
+			p.Elasticity, p.Elasticity, p.Elasticity))
+	}
+	row("no_base_fee", boolStr(p.NoBaseFee)+"  (fee enforcement "+(func() string {
+		if p.NoBaseFee {
+			return clr(ansiYellow, "disabled")
+		}
+		return clr(ansiGreen, "active")
+	})()+")")
+	feeDestStr := "validators"
+	if p.CommunityTax == 0 {
+		feeDestStr += "  (0% community tax — fees are not burned)"
+	}
+	row("fee destination", feeDestStr)
+
+	subsection("Txpool")
+	row("pending", fmt.Sprintf("%d", ev.PendingTx))
+	row("queued",  fmt.Sprintf("%d", ev.QueuedTx))
+
+	if len(p.ActiveStaticPrecompiles) > 0 {
+		subsection("Precompiles")
+		row("active", fmt.Sprintf("%d", len(p.ActiveStaticPrecompiles)))
+		for _, pc := range p.ActiveStaticPrecompiles {
+			fmt.Fprintf(w, "    %s\n", pc)
+		}
+	}
+
+	subsection("Config")
+	if p.HistoryServeWindow > 0 {
+		row("history serve window", fmtInt(p.HistoryServeWindow))
+	}
+	row("ERC20 enabled", boolStr(p.ERC20Enabled))
+	if p.HardforkLondon != "" {
+		row("London height", p.HardforkLondon)
+	}
+	if p.HardforkShanghai != "" {
+		row("Shanghai height", p.HardforkShanghai)
+	}
+	if p.HardforkCancun != "" {
+		row("Cancun height", p.HardforkCancun)
+	}
+
+	// ── 6. CHAIN ──────────────────────────────────────────────────────────────
+	section("6. CHAIN")
+
+	subsection("Governance")
 	row("voting period", fmtDurFull(p.VotingPeriod))
 	row("quorum",        fmt.Sprintf("%.1f%%", p.Quorum*100))
 	row("threshold",     fmt.Sprintf("%.1f%%", p.Threshold*100))
@@ -351,21 +420,45 @@ func printAll(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys 
 		fmt.Fprintln(w, "  none active")
 	}
 
-	// ── 9. UPGRADE ────────────────────────────────────────────────────────────
-	section("9. UPGRADE")
+	subsection("Slashing")
+	if p.SignedBlocksWindow > 0 {
+		row("window", fmt.Sprintf("%s blocks", fmtInt(p.SignedBlocksWindow)))
+	}
+	if p.MinSignedPerWindow > 0 {
+		row("min signed", fmt.Sprintf("%.1f%%", p.MinSignedPerWindow*100))
+	}
+	if p.SlashFractionDowntime != "" {
+		row("slash / downtime", fmtFraction(p.SlashFractionDowntime))
+	}
+	if p.SlashFractionDoubleSign != "" {
+		row("slash / double sign", fmtFraction(p.SlashFractionDoubleSign))
+	}
+
+	subsection("Upgrade")
 	if chain.UpgradeName == "" {
 		row("pending", "none")
 	} else {
-		row("name",   chain.UpgradeName)
+		row("name",          chain.UpgradeName)
 		row("target height", fmtInt(chain.UpgradeHeight))
 		if chain.BlockHeight > 0 && chain.UpgradeHeight > chain.BlockHeight {
 			row("blocks remaining", fmtInt(chain.UpgradeHeight-chain.BlockHeight))
 		}
 	}
 
-	// ── 10. IBC ───────────────────────────────────────────────────────────────
-	section("10. IBC")
+	subsection("IBC")
 	row("active clients", fmt.Sprintf("%d", chain.IBCClientCount))
+
+	subsection(fmt.Sprintf("Token Pairs  (%d)", len(chain.TokenPairs)))
+	if len(chain.TokenPairs) == 0 {
+		fmt.Fprintln(w, "    none registered")
+	}
+	for _, tp := range chain.TokenPairs {
+		enabled := "yes"
+		if !tp.Enabled {
+			enabled = "no"
+		}
+		fmt.Fprintf(w, "    %-30s  %-42s  %s\n", tp.Denom, tp.ERC20Addr, enabled)
+	}
 
 	fmt.Fprintln(w)
 }
@@ -509,8 +602,8 @@ func printEssentials(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapsho
 			missedStr, strings.ToLower(v.Status), earned, flags)
 	}
 
-	// ── TOKENOMICS
-	sec("TOKENOMICS", "")
+	// ── ECONOMICS
+	sec("ECONOMICS", "")
 	denom := p.BondDenom
 	if denom == "" {
 		denom = chain.TotalSupplyDenom
