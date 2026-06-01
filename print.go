@@ -34,9 +34,6 @@ func printAll(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys 
 	if chain.CatchingUp {
 		syncStr = clr(ansiRed, "CATCHING UP")
 	}
-	fmt.Fprintf(w, "%s  %s  height %s  %s UTC\n",
-		clr(ansiBold+ansiWhite, "pmtop  "+chain.Moniker),
-		syncStr, fmtInt(chain.BlockHeight), time.Now().UTC().Format("15:04:05"))
 
 	// ── 1. INFRASTRUCTURE ────────────────────────────────────────────────────
 	section("1. INFRASTRUCTURE")
@@ -311,6 +308,39 @@ func printAll(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys 
 	if p.EVMDenom != "" {
 		row("denom", p.EVMDenom)
 	}
+	if ev.ClientVersion != "" {
+		row("client", ev.ClientVersion)
+	}
+
+	subsection("Health")
+	// RPC reachability — if we got here, eth_blockNumber succeeded
+	row("rpc", clr(ansiGreen, "ok")+"  (eth_blockNumber responded)")
+	// net_listening
+	listeningStr := clr(ansiGreen, "yes")
+	if !ev.NetListening {
+		listeningStr = clr(ansiYellow, "no")
+	}
+	row("net listening", listeningStr)
+	// EVM block age from eth_getBlockByNumber("latest")
+	if ev.EVMBlockTimestamp > 0 {
+		blockAge := time.Since(time.Unix(int64(ev.EVMBlockTimestamp), 0))
+		ageStr := fmt.Sprintf("%.1fs", blockAge.Seconds())
+		switch {
+		case blockAge > 2*time.Minute:
+			ageStr = clr(ansiRed, ageStr) + "  ⚠ stalled"
+		case blockAge > 30*time.Second:
+			ageStr = clr(ansiYellow, ageStr) + "  ⚠ slow"
+		}
+		row("last block age", ageStr)
+	}
+	// eth_syncing
+	evSyncHealth := clr(ansiGreen, "synced")
+	if ev.Syncing {
+		evSyncHealth = clr(ansiYellow, "syncing")
+	}
+	row("sync", evSyncHealth)
+	// txpool via txpool_status (already fetched)
+	row("txpool", fmt.Sprintf("pending %d   queued %d", ev.PendingTx, ev.QueuedTx))
 
 	subsection("Block")
 	row("block", fmtInt(int64(ev.BlockNumber)))
@@ -335,7 +365,7 @@ func printAll(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys 
 		row("base fee", fmt.Sprintf("%s wei", chain.BaseFee))
 		if p.BaseFeeChangeDenominator > 0 && baseFeeF > 0 {
 			cap := baseFeeF / float64(p.BaseFeeChangeDenominator)
-			row("adjustment cap", fmt.Sprintf("±(base_fee ÷ %d) = ±%.4f wei/block  (max change per block)",
+			row("adjustment cap", fmt.Sprintf("±(base_fee ÷ %d) = ±%g wei/block  (max change per block)",
 				p.BaseFeeChangeDenominator, cap))
 		} else if p.BaseFeeChangeDenominator > 0 {
 			row("change denominator", fmt.Sprintf("%d", p.BaseFeeChangeDenominator))
@@ -356,10 +386,6 @@ func printAll(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys 
 		feeDestStr += "  (0% community tax — fees are not burned)"
 	}
 	row("fee destination", feeDestStr)
-
-	subsection("Txpool")
-	row("pending", fmt.Sprintf("%d", ev.PendingTx))
-	row("queued",  fmt.Sprintf("%d", ev.QueuedTx))
 
 	if len(p.ActiveStaticPrecompiles) > 0 {
 		subsection("Precompiles")

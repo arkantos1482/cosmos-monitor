@@ -10,14 +10,17 @@ import (
 
 // EVMSnapshot holds EVM JSON-RPC data.
 type EVMSnapshot struct {
-	BlockNumber uint64
-	ChainID     uint64
-	Syncing     bool
-	GasPrice    string
-	PendingTx   uint64
-	QueuedTx    uint64
-	PeerCount   uint64
-	Err         error
+	BlockNumber        uint64
+	ChainID            uint64
+	Syncing            bool
+	GasPrice           string
+	PendingTx          uint64
+	QueuedTx           uint64
+	PeerCount          uint64
+	ClientVersion      string
+	NetListening       bool
+	EVMBlockTimestamp  uint64 // unix seconds of latest EVM block
+	Err                error
 }
 
 type rpcRequest struct {
@@ -35,7 +38,11 @@ type rpcResponse struct {
 }
 
 func evmCall(endpoint, method string, target any) error {
-	body, _ := json.Marshal(rpcRequest{JSONRPC: "2.0", Method: method, Params: []any{}, ID: 1})
+	return evmCallP(endpoint, method, []any{}, target)
+}
+
+func evmCallP(endpoint, method string, params []any, target any) error {
+	body, _ := json.Marshal(rpcRequest{JSONRPC: "2.0", Method: method, Params: params, ID: 1})
 	resp, err := httpClient.Post(endpoint, "application/json", bytes.NewReader(body))
 	if err != nil {
 		return err
@@ -109,6 +116,23 @@ func FetchEVM(endpoint string) EVMSnapshot {
 			v, _ := strconv.ParseUint(s, 10, 64)
 			snap.PeerCount = v
 		}
+	}
+
+	var clientVer string
+	if err := evmCall(endpoint, "web3_clientVersion", &clientVer); err == nil {
+		snap.ClientVersion = clientVer
+	}
+
+	var listening bool
+	if err := evmCall(endpoint, "net_listening", &listening); err == nil {
+		snap.NetListening = listening
+	}
+
+	var latestBlock struct {
+		Timestamp string `json:"timestamp"`
+	}
+	if err := evmCallP(endpoint, "eth_getBlockByNumber", []any{"latest", false}, &latestBlock); err == nil {
+		snap.EVMBlockTimestamp = hexToUint64(latestBlock.Timestamp)
 	}
 
 	return snap
