@@ -73,11 +73,29 @@ status: ## print chain status (RPC + REST) from node4
 # Open a second terminal and run `make web-tunnel` to reach the browser dashboard.
 # Usage: make run-web
 .PHONY: run-web
-run-web: ## run pmtop + web UI on node4 (port 7777)
+run-web: ## run pmtop + web UI on node4 (port 7777), interactive
 	ssh -t -i $(KEY) ubuntu@$(NODE4_HOST) '~/pmtop --web :7777'
 
+# [ops] Start pmtop web UI in a detached tmux session on node4 (port 7777).
+# Use this when you want the web UI running in the background without occupying
+# a terminal. Then run `make web-tunnel` in a separate terminal to access it.
+# Use `make stop-web` to kill the background session.
+# Usage: make start-web
+.PHONY: start-web
+start-web: ## start pmtop web UI in background tmux session on node4
+	ssh -i $(KEY) ubuntu@$(NODE4_HOST) \
+		'tmux kill-session -t pmtop-web 2>/dev/null; \
+		 tmux new-session -d -s pmtop-web "~/pmtop --web :7777"; \
+		 sleep 1 && tmux capture-pane -t pmtop-web -p | head -3'
+
+# [ops] Stop the background pmtop-web tmux session on node4.
+# Usage: make stop-web
+.PHONY: stop-web
+stop-web: ## kill the background pmtop-web session on node4
+	ssh -i $(KEY) ubuntu@$(NODE4_HOST) 'tmux kill-session -t pmtop-web 2>/dev/null && echo stopped || echo not running'
+
 # [ops] SSH tunnel to the pmtop web UI running on node4 (port 7777).
-# Prerequisite: pmtop must be running on node4 with --web :7777 (see make run-web).
+# Prerequisite: pmtop must be running on node4 with --web :7777 (see start-web or run-web).
 # Opens http://localhost:7777 in your browser.
 # Usage: make web-tunnel
 .PHONY: web-tunnel
