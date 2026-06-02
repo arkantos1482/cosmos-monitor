@@ -64,7 +64,6 @@ type WebData struct {
 	// economics — PMT rewards
 	PMTEnabled     bool
 	PMTPoolEmpty   bool
-	PMTRunwayLow   bool
 	PMTRate        string
 	PMTBalance     string
 	PMTRunway      string
@@ -323,7 +322,6 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 				runwayDays := poolF / dailyPMT
 				d.PMTRunwayDays = fmt.Sprintf("~%.0f days  (%.2f %s ÷ %.0f/day)", runwayDays, poolF, dispDenom, dailyPMT)
 				d.PMTRunway = fmt.Sprintf("~%.0f days left", runwayDays)
-				d.PMTRunwayLow = runwayDays < 30
 			}
 			d.PMTDailyEmit = fmt.Sprintf("~%.0f %s/day  (%.4f/block × ~%.0f blocks/day)", dailyPMT, dispDenom, rewardF, blocksPerDay)
 		}
