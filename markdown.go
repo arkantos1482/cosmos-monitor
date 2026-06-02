@@ -43,10 +43,15 @@ func buildMarkdown(d WebData) string {
 	section("2. NODE")
 
 	subsection("Identity")
-	row("node ID", d.NodeID)
 	row("moniker", d.Moniker)
 	if d.AppVersion != "" {
 		row("version", d.AppVersion)
+	}
+	if d.ListenAddr != "" {
+		row("p2p", d.ListenAddr)
+	}
+	if d.Network != "" {
+		row("chain", d.Network)
 	}
 
 	subsection("Block")
@@ -55,18 +60,22 @@ func buildMarkdown(d WebData) string {
 		row("interval", d.BlockInterval)
 	}
 	if d.TimeSinceBlock != "" {
-		row("time since last", d.TimeSinceBlock)
+		row("last block", d.TimeSinceBlock+" ago")
 	}
-
-	subsection("Sync")
 	row("status", syncStr)
-	if d.LatestBlockTime != "" {
-		row("latest block time", d.LatestBlockTime)
-	}
 
-	subsection("Peers")
-	row("cosmos peers", fmt.Sprintf("%d", d.PeerCount))
-	row("evm peers",    fmt.Sprintf("%d", d.EVMPeerCount))
+	subsection("P2P")
+	if len(d.PeerMonikers) > 0 {
+		row("peers", strings.Join(d.PeerMonikers, "  "))
+	} else {
+		row("peers", fmt.Sprintf("%d", d.PeerCount))
+	}
+	row("mempool", fmt.Sprintf("%d pending", d.MempoolTxs))
+
+	if d.NextProposer != "" {
+		subsection("Consensus")
+		row("next proposer", d.NextProposer)
+	}
 
 	// ── 3. VALIDATORS ────────────────────────────────────────────────────────
 	section("3. VALIDATORS")
@@ -107,22 +116,45 @@ func buildMarkdown(d WebData) string {
 	row("tombstoned",      fmt.Sprintf("%d", d.TombstonedCount))
 	row("below threshold", fmt.Sprintf("%d", d.BelowThreshold))
 
-	// ── 4. ECONOMICS ─────────────────────────────────────────────────────────
-	section("4. ECONOMICS")
-
-	subsection("x/staking")
-	row("total supply",   d.TotalSupply)
-	row("bonded",         fmt.Sprintf("%s  (%.2f%%, goal %.0f%%)", d.BondedAmt, d.BondedPct, d.GoalBonded))
-	row("not bonded",     d.NotBonded)
+	subsection("Pool")
+	row("total supply", d.TotalSupply)
+	row("bonded",       fmt.Sprintf("%s  (%.2f%%, goal %.0f%%)", d.BondedAmt, d.BondedPct, d.GoalBonded))
+	row("not bonded",   d.NotBonded)
 	if d.UnbondingTime != "" {
 		row("unbonding time", d.UnbondingTime)
 	}
 	if d.MaxValidators > 0 {
 		row("max validators", fmt.Sprintf("%d", d.MaxValidators))
 	}
-	if d.BlocksPerYear != "" {
-		row("blocks / year", d.BlocksPerYear)
+
+	subsection("Slashing")
+	if d.SlashWindow != "" && d.SlashWindow != "0" {
+		row("window", d.SlashWindow+" blocks")
 	}
+	if d.MinSigned > 0 {
+		row("min signed", fmt.Sprintf("%.1f%%", d.MinSigned))
+	}
+	if d.SlashDowntime != "" {
+		dtStr := d.SlashDowntime
+		if d.SlashDTInactive {
+			dtStr += "  ⚠ inactive"
+		} else {
+			dtStr += "  active"
+		}
+		row("slash / downtime", dtStr)
+	}
+	if d.SlashDS != "" {
+		dsStr := d.SlashDS
+		if d.SlashDSInactive {
+			dsStr += "  ⚠ inactive"
+		} else {
+			dsStr += "  active"
+		}
+		row("slash / double-sign", dsStr)
+	}
+
+	// ── 4. ECONOMICS ─────────────────────────────────────────────────────────
+	section("4. ECONOMICS")
 
 	subsection("x/mint")
 	inflationStr := fmt.Sprintf("%.2f%%", d.Inflation)
@@ -159,26 +191,6 @@ func buildMarkdown(d WebData) string {
 		row("pool address", d.PMTPoolAddress)
 	}
 
-	subsection("x/slashing  (economic impact)")
-	if d.SlashDowntime != "" {
-		dtStr := d.SlashDowntime
-		if d.SlashDTInactive {
-			dtStr += "  ⚠ inactive  (downtime slashing disabled — can be enabled via governance)"
-		} else {
-			dtStr += "  active  (validators lose this % of stake for downtime)"
-		}
-		row("slash / downtime", dtStr)
-	}
-	if d.SlashDS != "" {
-		dsStr := d.SlashDS
-		if d.SlashDSInactive {
-			dsStr += "  ⚠ inactive  (double-sign slashing disabled — can be enabled via governance)"
-		} else {
-			dsStr += "  active  (validators lose this % of stake for double-sign)"
-		}
-		row("slash / double-sign", dsStr)
-	}
-
 	if d.PMTInsights {
 		subsection("Insights")
 		if d.PMTPoolEmpty {
@@ -206,8 +218,69 @@ func buildMarkdown(d WebData) string {
 	}
 	row("commission rate", fmt.Sprintf("%.0f%%  of staking rewards", d.CommissionRate))
 
-	// ── 5. EVM ────────────────────────────────────────────────────────────────
-	section("5. EVM")
+	// ── 5. GOVERNANCE ────────────────────────────────────────────────────────
+	section("5. GOVERNANCE")
+
+	subsection("Voting")
+	row("voting period", d.VotingPeriod)
+	row("quorum",        fmt.Sprintf("%.1f%%", d.Quorum))
+	row("threshold",     fmt.Sprintf("%.1f%%", d.Threshold))
+	if d.VetoThreshold > 0 {
+		row("veto threshold", fmt.Sprintf("%.1f%%", d.VetoThreshold))
+	}
+
+	if len(d.Proposals) > 0 {
+		subsection("Active Proposals (voting period)")
+		for _, pr := range d.Proposals {
+			fmt.Fprintf(w, "- **#%d** %s  _(ends %s)_\n", pr.ID, truncate(pr.Title, 40), pr.End)
+			if pr.HasTally {
+				fmt.Fprintf(w, "  - yes %s  no %s  abstain %s  veto %s\n",
+					pr.TallyYes, pr.TallyNo, pr.TallyAbstain, pr.TallyVeto)
+			}
+		}
+		fmt.Fprintln(w)
+	}
+
+	if len(d.DepositProposals) > 0 {
+		subsection("Deposit-Period Proposals")
+		for _, pr := range d.DepositProposals {
+			fmt.Fprintf(w, "- **#%d** %s  _(deposit ends %s)_\n", pr.ID, truncate(pr.Title, 40), pr.End)
+		}
+		fmt.Fprintln(w)
+	}
+
+	if len(d.Proposals)+len(d.DepositProposals) == 0 {
+		fmt.Fprintf(w, "none active\n\n")
+	}
+
+	subsection("Upgrade")
+	if d.UpgradeName == "" {
+		row("pending", "none")
+	} else {
+		row("name",          d.UpgradeName)
+		row("target height", d.UpgradeHeight)
+		if d.BlocksLeft != "" {
+			row("blocks remaining", d.BlocksLeft)
+		}
+	}
+
+	subsection("IBC")
+	row("active clients", fmt.Sprintf("%d", d.IBCClients))
+
+	subsection(fmt.Sprintf("Token Pairs  (%d)", len(d.TokenPairs)))
+	if len(d.TokenPairs) == 0 {
+		fmt.Fprintf(w, "none registered\n\n")
+	}
+	for _, tp := range d.TokenPairs {
+		enabled := "yes"
+		if !tp.Enabled {
+			enabled = "no"
+		}
+		fmt.Fprintf(w, "- `%s`  `%s`  enabled: %s\n", tp.Denom, tp.ERC20, enabled)
+	}
+
+	// ── 6. EVM ────────────────────────────────────────────────────────────────
+	section("6. EVM")
 
 	evSyncStr := "synced"
 	if !d.EVMSynced {
@@ -234,6 +307,7 @@ func buildMarkdown(d WebData) string {
 		listeningStr = "no"
 	}
 	row("net listening", listeningStr)
+	row("peers", fmt.Sprintf("%d", d.EVMPeerCount))
 	if d.EVMBlockAge != "" {
 		ageStr := d.EVMBlockAge
 		if d.EVMBlockAgeErr {
@@ -305,81 +379,6 @@ func buildMarkdown(d WebData) string {
 	}
 	if d.HardforkCancun != "" {
 		row("Cancun height", d.HardforkCancun)
-	}
-
-	// ── 6. CHAIN ──────────────────────────────────────────────────────────────
-	section("6. CHAIN")
-
-	subsection("Governance")
-	row("voting period", d.VotingPeriod)
-	row("quorum",        fmt.Sprintf("%.1f%%", d.Quorum))
-	row("threshold",     fmt.Sprintf("%.1f%%", d.Threshold))
-	if d.VetoThreshold > 0 {
-		row("veto threshold", fmt.Sprintf("%.1f%%", d.VetoThreshold))
-	}
-
-	if len(d.Proposals) > 0 {
-		subsection("Active Proposals (voting period)")
-		for _, pr := range d.Proposals {
-			fmt.Fprintf(w, "- **#%d** %s  _(ends %s)_\n", pr.ID, truncate(pr.Title, 40), pr.End)
-			if pr.HasTally {
-				fmt.Fprintf(w, "  - yes %s  no %s  abstain %s  veto %s\n",
-					pr.TallyYes, pr.TallyNo, pr.TallyAbstain, pr.TallyVeto)
-			}
-		}
-		fmt.Fprintln(w)
-	}
-
-	if len(d.DepositProposals) > 0 {
-		subsection("Deposit-Period Proposals")
-		for _, pr := range d.DepositProposals {
-			fmt.Fprintf(w, "- **#%d** %s  _(deposit ends %s)_\n", pr.ID, truncate(pr.Title, 40), pr.End)
-		}
-		fmt.Fprintln(w)
-	}
-
-	if len(d.Proposals)+len(d.DepositProposals) == 0 {
-		fmt.Fprintf(w, "none active\n\n")
-	}
-
-	subsection("Slashing")
-	if d.SlashWindow != "" && d.SlashWindow != "0" {
-		row("window", d.SlashWindow+" blocks")
-	}
-	if d.MinSigned > 0 {
-		row("min signed", fmt.Sprintf("%.1f%%", d.MinSigned))
-	}
-	if d.SlashDowntime != "" {
-		row("slash / downtime", d.SlashDowntime)
-	}
-	if d.SlashDS != "" {
-		row("slash / double sign", d.SlashDS)
-	}
-
-	subsection("Upgrade")
-	if d.UpgradeName == "" {
-		row("pending", "none")
-	} else {
-		row("name",          d.UpgradeName)
-		row("target height", d.UpgradeHeight)
-		if d.BlocksLeft != "" {
-			row("blocks remaining", d.BlocksLeft)
-		}
-	}
-
-	subsection("IBC")
-	row("active clients", fmt.Sprintf("%d", d.IBCClients))
-
-	subsection(fmt.Sprintf("Token Pairs  (%d)", len(d.TokenPairs)))
-	if len(d.TokenPairs) == 0 {
-		fmt.Fprintf(w, "none registered\n\n")
-	}
-	for _, tp := range d.TokenPairs {
-		enabled := "yes"
-		if !tp.Enabled {
-			enabled = "no"
-		}
-		fmt.Fprintf(w, "- `%s`  `%s`  enabled: %s\n", tp.Denom, tp.ERC20, enabled)
 	}
 
 	fmt.Fprintln(w)

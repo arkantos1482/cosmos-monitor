@@ -16,12 +16,17 @@ type ChainSnapshot struct {
 	NodeID     string
 	Moniker    string
 	AppVersion string
+	ListenAddr string
+	Network    string
 
 	BlockHeight     int64
 	LatestBlockTime time.Time
 	BlockInterval   time.Duration
 	CatchingUp      bool
 	PeerCount       int
+	PeerMonikers        []string
+	MempoolTxs          int
+	NextProposerMoniker string
 
 	Validators []ValidatorInfo
 
@@ -136,21 +141,38 @@ type ChainParams struct {
 type statusResp struct {
 	Result struct {
 		NodeInfo struct {
-			ID      string `json:"id"`
-			Moniker string `json:"moniker"`
-			Version string `json:"version"`
+			ID         string `json:"id"`
+			Moniker    string `json:"moniker"`
+			Version    string `json:"version"`
+			ListenAddr string `json:"listen_addr"`
+			Network    string `json:"network"`
 		} `json:"node_info"`
 		SyncInfo struct {
 			LatestBlockHeight string `json:"latest_block_height"`
 			LatestBlockTime   string `json:"latest_block_time"`
 			CatchingUp        bool   `json:"catching_up"`
 		} `json:"sync_info"`
+		ValidatorInfo struct {
+			Address     string `json:"address"`
+			VotingPower string `json:"voting_power"`
+		} `json:"validator_info"`
 	} `json:"result"`
 }
 
 type netInfoResp struct {
 	Result struct {
 		NPeers string `json:"n_peers"`
+		Peers  []struct {
+			NodeInfo struct {
+				Moniker string `json:"moniker"`
+			} `json:"node_info"`
+		} `json:"peers"`
+	} `json:"result"`
+}
+
+type numUnconfirmedTxsResp struct {
+	Result struct {
+		NTxs string `json:"n_txs"`
 	} `json:"result"`
 }
 
@@ -575,11 +597,13 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 		return snap
 	}
 
-	snap.NodeID = status.Result.NodeInfo.ID
-	snap.Moniker = status.Result.NodeInfo.Moniker
+	snap.NodeID     = status.Result.NodeInfo.ID
+	snap.Moniker    = status.Result.NodeInfo.Moniker
 	snap.AppVersion = status.Result.NodeInfo.Version
+	snap.ListenAddr = status.Result.NodeInfo.ListenAddr
+	snap.Network    = status.Result.NodeInfo.Network
 	snap.BlockHeight = parseInt64(status.Result.SyncInfo.LatestBlockHeight)
-	snap.CatchingUp = status.Result.SyncInfo.CatchingUp
+	snap.CatchingUp  = status.Result.SyncInfo.CatchingUp
 	if t, err := time.Parse(time.RFC3339Nano, status.Result.SyncInfo.LatestBlockTime); err == nil {
 		snap.LatestBlockTime = t
 	}
@@ -587,6 +611,16 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 	var netInfo netInfoResp
 	if err := doJSON(rpc+"/net_info", &netInfo); err == nil {
 		snap.PeerCount, _ = strconv.Atoi(netInfo.Result.NPeers)
+		for _, p := range netInfo.Result.Peers {
+			if p.NodeInfo.Moniker != "" {
+				snap.PeerMonikers = append(snap.PeerMonikers, p.NodeInfo.Moniker)
+			}
+		}
+	}
+
+	var unconfirmed numUnconfirmedTxsResp
+	if err := doJSON(rpc+"/num_unconfirmed_txs", &unconfirmed); err == nil {
+		snap.MempoolTxs, _ = strconv.Atoi(unconfirmed.Result.NTxs)
 	}
 
 	// block interval: latest - previous
@@ -843,6 +877,18 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 	}
 
 	snap.Validators = valList
+
+	// next proposer: validator with the highest proposer priority
+	first := true
+	var maxPriority int64
+	for _, v := range valList {
+		if first || v.ProposerPriority > maxPriority {
+			maxPriority = v.ProposerPriority
+			snap.NextProposerMoniker = v.Moniker
+			first = false
+		}
+	}
+
 	return snap
 }
 

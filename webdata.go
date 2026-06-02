@@ -24,6 +24,11 @@ type WebData struct {
 	BlockInterval   string
 	TimeSinceBlock  string
 	LatestBlockTime string
+	ListenAddr      string
+	Network         string
+	PeerMonikers    []string
+	MempoolTxs      int
+	NextProposer    string
 
 	// system — OS
 	Load1, Load5, Load15 float64
@@ -181,8 +186,13 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	d.EVMPeerCount = ev.PeerCount
 
 	// ── node ─────────────────────────────────────────────────────────────────
-	d.NodeID = chain.NodeID
-	d.AppVersion = chain.AppVersion
+	d.NodeID      = chain.NodeID
+	d.AppVersion  = chain.AppVersion
+	d.ListenAddr  = chain.ListenAddr
+	d.Network     = chain.Network
+	d.PeerMonikers = chain.PeerMonikers
+	d.MempoolTxs  = chain.MempoolTxs
+	d.NextProposer = chain.NextProposerMoniker
 	if chain.BlockInterval > 0 {
 		d.BlockInterval = fmtDur(chain.BlockInterval)
 	}
