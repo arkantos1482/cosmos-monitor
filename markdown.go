@@ -60,7 +60,7 @@ func buildMarkdown(d WebData) string {
 		row("interval", d.BlockInterval)
 	}
 	if d.TimeSinceBlock != "" {
-		row("last block", d.TimeSinceBlock+" ago")
+		row("age", d.TimeSinceBlock)
 	}
 	row("status", syncStr)
 
@@ -70,7 +70,9 @@ func buildMarkdown(d WebData) string {
 	} else {
 		row("peers", fmt.Sprintf("%d", d.PeerCount))
 	}
-	row("mempool", fmt.Sprintf("%d pending", d.MempoolTxs))
+
+	subsection("Mempool")
+	row("pending", fmt.Sprintf("%d", d.MempoolTxs))
 
 
 	// ── 3. VALIDATORS ────────────────────────────────────────────────────────
