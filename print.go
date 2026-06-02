@@ -193,13 +193,6 @@ func fmtBytes(b uint64) string {
 	}
 }
 
-func fmtPct(used, total uint64) string {
-	if total == 0 {
-		return "0"
-	}
-	return fmt.Sprintf("%.0f", float64(used)/float64(total)*100)
-}
-
 func fmtDur(d time.Duration) string {
 	if d < time.Second {
 		return fmt.Sprintf("%dms", d.Milliseconds())
@@ -221,10 +214,6 @@ func fmtDurFull(d time.Duration) string {
 		return fmt.Sprintf("%dh %dm", hours, mins)
 	}
 	return fmt.Sprintf("%dm", mins)
-}
-
-func fmtUptime(t time.Time) string {
-	return fmtDurFull(time.Since(t))
 }
 
 func boolStr(b bool) string {

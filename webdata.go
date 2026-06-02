@@ -127,10 +127,6 @@ type WebData struct {
 	Proposals       []WebProposal
 	DepositProposals []WebProposal
 
-	// chain — slashing (window/threshold — subset for CHAIN section)
-	ChainSlashDT string
-	ChainSlashDS string
-
 	// chain — upgrade
 	UpgradeName   string
 	UpgradeHeight string
@@ -204,10 +200,10 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	}
 	d.MemUsed = fmtBytes(memUsed)
 	d.MemTotal = fmtBytes(sys.MemTotal)
-	d.MemPct = int(float64(memUsed) / float64(max64(sys.MemTotal, 1)) * 100)
+	d.MemPct = int(float64(memUsed) / float64(max(sys.MemTotal, uint64(1))) * 100)
 	d.DiskUsed = fmtBytes(sys.DiskUsed)
 	d.DiskTotal = fmtBytes(sys.DiskTotal)
-	d.DiskPct = int(float64(sys.DiskUsed) / float64(max64(sys.DiskTotal, 1)) * 100)
+	d.DiskPct = int(float64(sys.DiskUsed) / float64(max(sys.DiskTotal, uint64(1))) * 100)
 
 	// ── system — container ────────────────────────────────────────────────────
 	d.NodeRunning = docker.Running
@@ -216,7 +212,7 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	d.NodeMemTotal = fmtBytes(docker.MemLimit)
 	d.Restarts = docker.RestartCount
 	if !docker.StartedAt.IsZero() {
-		d.NodeUptime = fmtUptime(docker.StartedAt)
+		d.NodeUptime = fmtDurFull(time.Since(docker.StartedAt))
 	}
 
 	// ── validators ────────────────────────────────────────────────────────────
@@ -308,23 +304,9 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	}
 	if !d.PMTPoolEmpty {
 		d.PMTBalance = fetch.FormatCoin(p.PMTRewardsPoolBalanceAmt, p.PMTRewardsPoolBalanceDenom)
-		// inline runway calculation (single source of truth)
-		if chain.BlockInterval > 0 && p.RewardPerBlockAmount != "" {
-			poolF, _ := fetch.NormalizeCoin(p.PMTRewardsPoolBalanceAmt, p.PMTRewardsPoolBalanceDenom)
-			rewardF, _ := fetch.NormalizeCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)
-			if rewardF > 0 && poolF > 0 {
-				blocksPerDay := 86400.0 / chain.BlockInterval.Seconds()
-				days := poolF / (rewardF * blocksPerDay)
-				d.PMTRunway = fmt.Sprintf("~%.0f days left", days)
-				d.PMTRunwayLow = days < 30
-			}
-		}
 	}
-	if p.PMTRewardsPoolAddress != "" {
-		d.PMTPoolAddress = p.PMTRewardsPoolAddress
-	}
+	d.PMTPoolAddress = p.PMTRewardsPoolAddress
 
-	// PMT insights — only when enabled and rate + block interval are known
 	if p.PMTRewardsEnabled && p.RewardPerBlockAmount != "" && chain.BlockInterval > 0 {
 		d.PMTInsights = true
 		rewardF, _ := fetch.NormalizeCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)
@@ -340,6 +322,8 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 			if dailyPMT > 0 {
 				runwayDays := poolF / dailyPMT
 				d.PMTRunwayDays = fmt.Sprintf("~%.0f days  (%.2f %s ÷ %.0f/day)", runwayDays, poolF, dispDenom, dailyPMT)
+				d.PMTRunway = fmt.Sprintf("~%.0f days left", runwayDays)
+				d.PMTRunwayLow = runwayDays < 30
 			}
 			d.PMTDailyEmit = fmt.Sprintf("~%.0f %s/day  (%.4f/block × ~%.0f blocks/day)", dailyPMT, dispDenom, rewardF, blocksPerDay)
 		}
@@ -349,11 +333,7 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 				perVal, dispDenom, chain.Validators[0].VotingPowerPercent, dailyPMT)
 		}
 		rateStr := fetch.FormatCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)
-		valCount := len(chain.Validators)
-		if valCount == 0 {
-			valCount = 1
-		}
-		d.PMTRevFlow = fmt.Sprintf("[tx fees] + [pool %s/block] → %d validators", rateStr, valCount)
+		d.PMTRevFlow = fmt.Sprintf("[tx fees] + [pool %s/block] → %d validators", rateStr, max(len(chain.Validators), 1))
 		if len(chain.Validators) > 0 {
 			d.PMTCommPct = chain.Validators[0].Commission * 100
 			d.PMTDelegPct = 100 - d.PMTCommPct
@@ -363,18 +343,8 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	// ── economics — slashing ──────────────────────────────────────────────────
 	d.SlashWindow = fmtInt(p.SignedBlocksWindow)
 	d.MinSigned = p.MinSignedPerWindow * 100
-	if p.SlashFractionDowntime != "" {
-		d.SlashDowntime = fmtFraction(p.SlashFractionDowntime)
-		dtF := 0.0
-		fmt.Sscanf(p.SlashFractionDowntime, "%f", &dtF)
-		d.SlashDTInactive = dtF == 0
-	}
-	if p.SlashFractionDoubleSign != "" {
-		d.SlashDS = fmtFraction(p.SlashFractionDoubleSign)
-		dsF := 0.0
-		fmt.Sscanf(p.SlashFractionDoubleSign, "%f", &dsF)
-		d.SlashDSInactive = dsF == 0
-	}
+	d.SlashDowntime, d.SlashDTInactive = slashFraction(p.SlashFractionDowntime)
+	d.SlashDS, d.SlashDSInactive = slashFraction(p.SlashFractionDoubleSign)
 
 	// ── economics — validator earnings ────────────────────────────────────────
 	var totalOutF float64
@@ -463,10 +433,6 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 		})
 	}
 
-	// ── chain — slashing (subset for CHAIN section) ───────────────────────────
-	d.ChainSlashDT = d.SlashDowntime
-	d.ChainSlashDS = d.SlashDS
-
 	// ── chain — upgrade ────────────────────────────────────────────────────────
 	d.UpgradeName = chain.UpgradeName
 	if chain.UpgradeHeight > 0 {
@@ -490,19 +456,11 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 }
 
 
-func meterColor(pct int) string {
-	if pct > 90 {
-		return "var(--red)"
+func slashFraction(raw string) (string, bool) {
+	if raw == "" {
+		return "", false
 	}
-	if pct > 75 {
-		return "var(--yellow)"
-	}
-	return "var(--green)"
-}
-
-func max64(a, b uint64) uint64 {
-	if a > b {
-		return a
-	}
-	return b
+	v := 0.0
+	fmt.Sscanf(raw, "%f", &v)
+	return fmtFraction(raw), v == 0
 }

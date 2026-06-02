@@ -67,18 +67,20 @@ em{font-style:normal;color:var(--dim)}
 `
 
 func startWeb(addr string, doFetch func() (fetch.ChainSnapshot, fetch.EVMSnapshot, fetch.SystemSnapshot, fetch.DockerSnapshot)) {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	render := func() (WebData, string) {
 		chain, ev, sys, docker := doFetch()
-		data := buildWebData(chain, ev, sys, docker)
-		fragment := renderFragment(data)
+		d := buildWebData(chain, ev, sys, docker)
+		return d, renderFragment(d)
+	}
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		d, fragment := render()
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprint(w, fullPage(data.Moniker, fragment))
+		fmt.Fprint(w, fullPage(d.Moniker, fragment))
 	})
 
 	http.HandleFunc("/fragment", func(w http.ResponseWriter, r *http.Request) {
-		chain, ev, sys, docker := doFetch()
-		data := buildWebData(chain, ev, sys, docker)
-		fragment := renderFragment(data)
+		_, fragment := render()
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		fmt.Fprint(w, fragment)
 	})

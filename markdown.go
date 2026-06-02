@@ -192,7 +192,6 @@ func buildMarkdown(d WebData) string {
 			}
 		}
 		if d.PMTRevFlow != "" {
-			row("revenue flow", d.PMTRevFlow)
 			fmt.Fprintf(w, "\n```\n")
 			fmt.Fprintf(w, "%s\n", d.PMTRevFlow)
 			fmt.Fprintf(w, "    ├─ %.0f%%  commission → validator\n", d.PMTCommPct)
@@ -249,7 +248,6 @@ func buildMarkdown(d WebData) string {
 
 	subsection("Block")
 	row("block", d.EVMBlock)
-	row("sync",  evSyncStr)
 
 	subsection("Gas")
 	if d.BaseFee != "" {
