@@ -72,10 +72,6 @@ func buildMarkdown(d WebData) string {
 	}
 	row("mempool", fmt.Sprintf("%d pending", d.MempoolTxs))
 
-	if d.NextProposer != "" {
-		subsection("Consensus")
-		row("next proposer", d.NextProposer)
-	}
 
 	// ── 3. VALIDATORS ────────────────────────────────────────────────────────
 	section("3. VALIDATORS")
