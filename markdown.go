@@ -60,7 +60,7 @@ func buildMarkdown(d WebData) string {
 		row("interval", d.BlockInterval)
 	}
 	if d.TimeSinceBlock != "" {
-		row("age", d.TimeSinceBlock)
+		row("last block", d.TimeSinceBlock)
 	}
 	row("status", syncStr)
 
