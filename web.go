@@ -1,41 +1,86 @@
 package main
 
 import (
-	_ "embed"
-	"html/template"
+	"bytes"
+	"fmt"
+	"html"
 	"log"
 	"net/http"
 
 	"github.com/arkantos1482/cosmos-monitor/fetch"
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
 )
 
-//go:embed dashboard.html
-var dashboardHTML string
-
-var dashTmpl = template.Must(
-	template.New("dashboard").Funcs(template.FuncMap{
-		"mmColor": meterColor,
-		"not":     func(b bool) bool { return !b },
-	}).Parse(dashboardHTML),
+var mdRenderer = goldmark.New(
+	goldmark.WithExtensions(extension.GFM),
 )
+
+func renderFragment(d WebData) string {
+	src := buildMarkdown(d)
+	var buf bytes.Buffer
+	if err := mdRenderer.Convert([]byte(src), &buf); err != nil {
+		return "<pre>" + html.EscapeString(src) + "</pre>"
+	}
+	return buf.String()
+}
+
+func fullPage(moniker, fragment string) string {
+	return fmt.Sprintf(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>pmtop — %s</title>
+<script src="https://unpkg.com/htmx.org@2.0.3/dist/htmx.min.js"></script>
+<style>%s</style>
+</head>
+<body>
+<div id="data" hx-get="/fragment" hx-trigger="every 5s" hx-swap="innerHTML">
+%s
+</div>
+</body>
+</html>`, html.EscapeString(moniker), pageCSS, fragment)
+}
+
+const pageCSS = `
+:root{--bg:#0d1117;--surface:#161b22;--border:#30363d;--fg:#c9d1d9;--dim:#6e7681;--bright:#f0f6fc;--red:#ff7b72;--green:#3fb950;--yellow:#e3b341;--cyan:#79c0ff}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--fg);font-family:'Cascadia Code','Fira Code','JetBrains Mono',ui-monospace,monospace;font-size:13px;line-height:1.6;padding:1.5rem 2rem;max-width:1400px;margin:0 auto}
+body::before{content:'';position:fixed;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cyan),var(--green));z-index:10}
+h1{color:var(--cyan);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:1.5rem 0 .4rem;padding-bottom:.3rem;border-bottom:1px solid var(--border)}
+h2{color:var(--yellow);font-size:11px;font-weight:600;margin:.8rem 0 .25rem 1rem}
+ul{list-style:none;padding:0 1.5rem;margin:0 0 .25rem}
+li{padding:1px 0}
+li>p{display:inline;margin:0}
+li strong{color:var(--dim);font-weight:400}
+table{border-collapse:collapse;width:100%;margin:.5rem 0 1rem;font-size:12px;overflow-x:auto;display:block}
+thead th{text-align:left;color:var(--dim);font-weight:500;padding:4px 10px;border-bottom:1px solid var(--border);font-size:11px;white-space:nowrap}
+tbody td{padding:4px 10px;border-bottom:1px solid #1c2128;white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#1c2128}
+pre{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:.6rem 1rem;margin:.4rem 0 .6rem;overflow-x:auto}
+code{font-family:inherit;font-size:12px;color:var(--cyan);background:transparent}
+pre code{color:var(--fg)}
+p{margin:.3rem 0;color:var(--dim);font-size:12px}
+em{font-style:normal;color:var(--dim)}
+`
 
 func startWeb(addr string, doFetch func() (fetch.ChainSnapshot, fetch.EVMSnapshot, fetch.SystemSnapshot, fetch.DockerSnapshot)) {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		chain, ev, sys, docker := doFetch()
 		data := buildWebData(chain, ev, sys, docker)
+		fragment := renderFragment(data)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if err := dashTmpl.ExecuteTemplate(w, "page", data); err != nil {
-			log.Printf("template error: %v", err)
-		}
+		fmt.Fprint(w, fullPage(data.Moniker, fragment))
 	})
 
 	http.HandleFunc("/fragment", func(w http.ResponseWriter, r *http.Request) {
 		chain, ev, sys, docker := doFetch()
 		data := buildWebData(chain, ev, sys, docker)
+		fragment := renderFragment(data)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if err := dashTmpl.ExecuteTemplate(w, "fragment", data); err != nil {
-			log.Printf("template error: %v", err)
-		}
+		fmt.Fprint(w, fragment)
 	})
 
 	go func() {
