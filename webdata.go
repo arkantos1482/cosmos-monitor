@@ -58,17 +58,20 @@ type WebData struct {
 	CommunityTax  string
 	BlocksPerYear string
 
+	// economics — distribution
+	CommunityTaxZero bool
+
 	// economics — PMT rewards
-	PMTEnabled    bool
-	PMTPoolEmpty  bool
-	PMTStatus     string
-	PMTRate       string
-	PMTBalance    string
-	PMTRunway     string
-	PMTAnnual     string
+	PMTEnabled     bool
+	PMTPoolEmpty   bool
+	PMTRunwayLow   bool
+	PMTRate        string
+	PMTBalance     string
+	PMTRunway      string
+	PMTAnnual      string
 	PMTPoolAddress string
 	// PMT insights
-	PMTInsights  bool
+	PMTInsights   bool
 	PMTRunwayDays string
 	PMTDailyEmit  string
 	PMTPerValDay  string
@@ -139,16 +142,18 @@ type WebData struct {
 }
 
 type WebValidator struct {
-	Moniker     string
-	VP          string
-	Commission  string
-	Missed      int64
-	Outstanding string
-	Earned      string
-	Status      string
-	Jailed      bool
-	Tombstoned  bool
-	MissedHigh  bool
+	Moniker         string
+	VP              string
+	VPFloat         float64
+	Commission      string
+	CommissionFloat float64
+	Missed          int64
+	Outstanding     string
+	Earned          string
+	Status          string
+	Jailed          bool
+	Tombstoned      bool
+	MissedHigh      bool
 }
 
 type WebProposal struct {
@@ -236,14 +241,16 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 
 	for _, v := range vals {
 		wv := WebValidator{
-			Moniker:    v.Moniker,
-			VP:         fmt.Sprintf("%.1f%%", v.VotingPowerPercent),
-			Commission: fmt.Sprintf("%.1f%%", v.Commission*100),
-			Missed:     v.MissedBlocks,
-			Status:     strings.ToLower(v.Status),
-			Jailed:     v.Jailed,
-			Tombstoned: v.Tombstoned,
-			MissedHigh: maxMissed > 0 && v.MissedBlocks > maxMissed,
+			Moniker:         v.Moniker,
+			VP:              fmt.Sprintf("%.1f%%", v.VotingPowerPercent),
+			VPFloat:         v.VotingPowerPercent,
+			Commission:      fmt.Sprintf("%.1f%%", v.Commission*100),
+			CommissionFloat: v.Commission * 100,
+			Missed:          v.MissedBlocks,
+			Status:          strings.ToLower(v.Status),
+			Jailed:          v.Jailed,
+			Tombstoned:      v.Tombstoned,
+			MissedHigh:      maxMissed > 0 && v.MissedBlocks > maxMissed,
 		}
 		if v.OutstandingRewards != "" {
 			wv.Outstanding = v.OutstandingRewards
@@ -279,6 +286,7 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	}
 
 	// ── economics — distribution ──────────────────────────────────────────────
+	d.CommunityTaxZero = p.CommunityTax == 0
 	if p.CommunityTax == 0 {
 		d.CommunityTax = "0%  → 100% of tx fees flow to validators"
 	} else {
@@ -288,18 +296,29 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	// ── economics — PMT rewards ────────────────────────────────────────────────
 	d.PMTEnabled = p.PMTRewardsEnabled
 	d.PMTPoolEmpty = p.PMTRewardsPoolBalanceAmt == "" || p.PMTRewardsPoolBalanceAmt == "0"
-	d.PMTStatus = pmtRewardsStatusPlain(p)
 	if p.RewardPerBlockAmount != "" {
 		d.PMTRate = fetch.FormatCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom) + "/block"
 		if p.BlocksPerYear > 0 {
 			rewardF, _ := fetch.NormalizeCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)
 			_, dispDenom := fetch.NormalizeCoin("0", p.RewardPerBlockDenom)
-			d.PMTAnnual = fmt.Sprintf("~%.0f %s/year", rewardF*float64(p.BlocksPerYear), dispDenom)
+			d.PMTAnnual = fmt.Sprintf("~%.0f %s/year  (%s blocks × %s)",
+				rewardF*float64(p.BlocksPerYear), dispDenom,
+				fmtInt(p.BlocksPerYear), fetch.FormatCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom))
 		}
 	}
 	if !d.PMTPoolEmpty {
 		d.PMTBalance = fetch.FormatCoin(p.PMTRewardsPoolBalanceAmt, p.PMTRewardsPoolBalanceDenom)
-		d.PMTRunway = poolRunwayPlain(p, chain.BlockInterval)
+		// inline runway calculation (single source of truth)
+		if chain.BlockInterval > 0 && p.RewardPerBlockAmount != "" {
+			poolF, _ := fetch.NormalizeCoin(p.PMTRewardsPoolBalanceAmt, p.PMTRewardsPoolBalanceDenom)
+			rewardF, _ := fetch.NormalizeCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)
+			if rewardF > 0 && poolF > 0 {
+				blocksPerDay := 86400.0 / chain.BlockInterval.Seconds()
+				days := poolF / (rewardF * blocksPerDay)
+				d.PMTRunway = fmt.Sprintf("~%.0f days left", days)
+				d.PMTRunwayLow = days < 30
+			}
+		}
 	}
 	if p.PMTRewardsPoolAddress != "" {
 		d.PMTPoolAddress = p.PMTRewardsPoolAddress
@@ -405,7 +424,7 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 		fmt.Sscanf(chain.BaseFee, "%f", &baseFeeF)
 		if baseFeeF > 0 {
 			cap := baseFeeF / float64(p.BaseFeeChangeDenominator)
-			d.AdjCap = fmt.Sprintf("±%g wei/block  (base_fee ÷ %d)", cap, p.BaseFeeChangeDenominator)
+			d.AdjCap = fmt.Sprintf("±(base_fee ÷ %d) = ±%g wei/block  (max change per block)", p.BaseFeeChangeDenominator, cap)
 		}
 	}
 	d.Precompiles = p.ActiveStaticPrecompiles
@@ -470,29 +489,6 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	return d
 }
 
-func pmtRewardsStatusPlain(p fetch.ChainParams) string {
-	if !p.PMTRewardsEnabled {
-		return "disabled"
-	}
-	if p.PMTRewardsPoolBalanceAmt == "" || p.PMTRewardsPoolBalanceAmt == "0" {
-		return "ENABLED — pool EMPTY"
-	}
-	return "distributing"
-}
-
-func poolRunwayPlain(p fetch.ChainParams, blockInterval time.Duration) string {
-	if blockInterval <= 0 || p.RewardPerBlockAmount == "" || p.PMTRewardsPoolBalanceAmt == "" {
-		return ""
-	}
-	poolF, _ := fetch.NormalizeCoin(p.PMTRewardsPoolBalanceAmt, p.PMTRewardsPoolBalanceDenom)
-	rewardF, _ := fetch.NormalizeCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)
-	if rewardF <= 0 || poolF <= 0 {
-		return ""
-	}
-	blocksPerDay := 86400.0 / blockInterval.Seconds()
-	days := poolF / (rewardF * blocksPerDay)
-	return fmt.Sprintf("~%.0f days left", days)
-}
 
 func meterColor(pct int) string {
 	if pct > 90 {
