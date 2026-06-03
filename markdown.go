@@ -42,7 +42,9 @@ func buildMarkdown(d WebData) string {
 	// ── 2. NODE ──────────────────────────────────────────────────────────────
 	section("2. NODE")
 
-	subsection("Identity")
+	fmt.Fprintf(w, "_This machine's CometBFT process — identity, listen addresses, and consensus view._\n\n")
+
+	subsection("Node")
 	row("moniker", d.Moniker)
 	if d.NodeID != "" {
 		row("node ID", d.NodeID+"  _(CometBFT P2P peer ID)_")
@@ -50,14 +52,18 @@ func buildMarkdown(d WebData) string {
 	if d.AppVersion != "" {
 		row("version", d.AppVersion)
 	}
-	if d.ListenAddr != "" {
-		row("p2p listen", d.ListenAddr)
-	}
 	if d.Network != "" {
 		row("chain ID", d.Network)
 	}
+	if d.ListenAddr != "" {
+		row("p2p listen", d.ListenAddr+"  _(advertised dial address from `/status`)_")
+	}
+	if d.RpcListenAddr != "" {
+		row("rpc listen", d.RpcListenAddr)
+	}
 
-	subsection("Block")
+	subsection("Consensus")
+	row("sync", syncStr)
 	row("height", d.BlockHeight)
 	if d.BlockInterval != "" {
 		row("interval", d.BlockInterval)
@@ -65,25 +71,22 @@ func buildMarkdown(d WebData) string {
 	if d.TimeSinceBlock != "" {
 		row("last block", d.TimeSinceBlock)
 	}
-	row("status", syncStr)
-
-	subsection("P2P")
-	if len(d.PeerMonikers) > 0 {
-		row("peers", strings.Join(d.PeerMonikers, "  "))
-	} else {
-		row("peers", fmt.Sprintf("%d connected", d.PeerCount))
+	if d.LocalConsensusAddr != "" {
+		row("consensus address", strings.ToUpper(d.LocalConsensusAddr)+"  _(hex; signs blocks — `/status` validator_info)_")
 	}
-
-	subsection("Mempool")
-	row("pending", fmt.Sprintf("%d", d.MempoolTxs))
+	if d.LocalVotingPower != "" {
+		row("voting power", d.LocalVotingPower+"  _(consensus units — `/status` validator_info)_")
+	}
+	row("mempool", fmt.Sprintf("%d pending", d.MempoolTxs))
 
 	// ── 3. VALIDATOR SET ─────────────────────────────────────────────────────
 	section("3. VALIDATOR SET")
 
-	fmt.Fprintf(w, "_All validators on the chain — staking power, signing health, and network params._\n\n")
+	fmt.Fprintf(w, "_All validators on the chain — P2P dial from `/status` + `/net_info`, stake, signing health, and params._\n\n")
+	fmt.Fprintf(w, "_P2P dial is `node_id@listen_addr` when this node sees the peer in `/net_info`, or from `/status` for this node. Other validators show — until peered._\n\n")
 
-	fmt.Fprintf(w, "| moniker | operator | vp%% | commission | missed | status | jailed | local |\n")
-	fmt.Fprintf(w, "|---------|----------|------|------------|--------|--------|--------|-------|\n")
+	fmt.Fprintf(w, "| moniker | operator | p2p dial | node ID | consensus | vp%% | commission | missed | status | jailed | local |\n")
+	fmt.Fprintf(w, "|---------|----------|----------|---------|-----------|-----|------------|--------|--------|--------|-------|\n")
 	for _, v := range d.Validators {
 		missed := fmt.Sprintf("%d", v.Missed)
 		if v.MissedHigh {
@@ -101,9 +104,16 @@ func buildMarkdown(d WebData) string {
 		if v.Tombstoned {
 			tomb = "  tombstoned"
 		}
-		fmt.Fprintf(w, "| %s | %s | %.1f%% | %.1f%% | %s | %s%s | %s | %s |\n",
-			truncate(v.Moniker, 16),
+		p2p := v.P2PDial
+		if p2p == "" || p2p == "—" {
+			p2p = "—"
+		}
+		fmt.Fprintf(w, "| %s | %s | %s | %s | %s | %.1f%% | %.1f%% | %s | %s%s | %s | %s |\n",
+			truncate(v.Moniker, 12),
 			v.Operator,
+			p2p,
+			v.NodeID,
+			v.ConsensusAddr,
 			v.VPFloat,
 			v.CommissionFloat,
 			missed,
@@ -112,6 +122,13 @@ func buildMarkdown(d WebData) string {
 			jailed,
 			local,
 		)
+	}
+
+	subsection("P2P on this node")
+	if len(d.PeerMonikers) > 0 {
+		row("connected", fmt.Sprintf("%d — %s", d.PeerCount, strings.Join(d.PeerMonikers, ", "))+"  _(from `/net_info`)_")
+	} else {
+		row("connected", fmt.Sprintf("%d peers  _(from `/net_info`)_", d.PeerCount))
 	}
 
 	subsection("Summary")
@@ -162,23 +179,18 @@ func buildMarkdown(d WebData) string {
 	// ── 4. THIS VALIDATOR ──────────────────────────────────────────────────────
 	section("4. THIS VALIDATOR")
 
-	fmt.Fprintf(w, "_Status of **this machine's** validator identity — matched via CometBFT `/status` consensus address._\n\n")
+	fmt.Fprintf(w, "_Staking and rewards for this machine's validator — matched via `/status` consensus address. Node identity is in §2._\n\n")
 
 	lv := d.Local
 	if !lv.IsValidator {
 		row("role", lv.SigningStatus)
-		row("node ID", d.NodeID)
 		row("moniker", d.Moniker)
 	} else {
-		subsection("Identity")
-		row("moniker", lv.Moniker)
-		row("node ID", lv.NodeID+"  _(P2P peer ID — how other nodes reach you)_")
-		if lv.ConsensusAddr != "" {
-			row("consensus address", lv.ConsensusAddr+"  _(signs blocks)_")
-		}
+		subsection("Operator")
 		if lv.OperatorAddr != "" {
-			row("operator address", lv.OperatorAddr+"  _(staking / rewards account)_")
+			row("operator address", lv.OperatorAddr+"  _(staking / rewards — `evmd query/distribution` use this)_")
 		}
+		row("moniker", lv.Moniker)
 
 		subsection("Staking")
 		row("status", lv.Status)

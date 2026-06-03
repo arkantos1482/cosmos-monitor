@@ -24,9 +24,12 @@ type WebData struct {
 	BlockInterval   string
 	TimeSinceBlock  string
 	LatestBlockTime string
-	ListenAddr      string
-	Network         string
-	PeerMonikers    []string
+	ListenAddr           string
+	RpcListenAddr        string
+	Network              string
+	LocalConsensusAddr   string
+	LocalVotingPower     string
+	PeerMonikers         []string
 	MempoolTxs      int
 	NextProposer    string
 
@@ -142,6 +145,10 @@ type WebData struct {
 type WebValidator struct {
 	Moniker         string
 	Operator        string
+	NodeID          string
+	ConsensusAddr   string
+	P2PDial         string
+	P2PConnected    bool
 	VPFloat         float64
 	CommissionFloat float64
 	Missed          int64
@@ -214,7 +221,12 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	d.NodeID = chain.NodeID
 	d.AppVersion = chain.AppVersion
 	d.ListenAddr = chain.ListenAddr
+	d.RpcListenAddr = chain.RpcListenAddr
 	d.Network = chain.Network
+	d.LocalConsensusAddr = chain.LocalConsensusAddr
+	if chain.LocalVotingPower > 0 {
+		d.LocalVotingPower = fmtInt(chain.LocalVotingPower)
+	}
 	d.PeerMonikers = chain.PeerMonikers
 	d.MempoolTxs = chain.MempoolTxs
 	d.NextProposer = chain.NextProposerMoniker
@@ -294,9 +306,17 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 
 	for _, v := range vals {
 		isLocal := localVal != nil && v.OperatorAddr == localVal.OperatorAddr
+		p2p := v.P2PDial
+		if p2p == "" {
+			p2p = "—"
+		}
 		d.Validators = append(d.Validators, WebValidator{
 			Moniker:         v.Moniker,
 			Operator:        truncate(v.OperatorAddr, 18),
+			NodeID:          truncate(v.NodeID, 12),
+			ConsensusAddr:   truncate(strings.ToUpper(v.ConsensusAddr), 12),
+			P2PDial:         truncate(p2p, 36),
+			P2PConnected:    v.P2PConnected,
 			VPFloat:         v.VotingPowerPercent,
 			CommissionFloat: v.Commission * 100,
 			Missed:          v.MissedBlocks,

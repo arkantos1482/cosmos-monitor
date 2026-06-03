@@ -16,8 +16,9 @@ type ChainSnapshot struct {
 	NodeID     string
 	Moniker    string
 	AppVersion string
-	ListenAddr string
-	Network    string
+	ListenAddr    string
+	RpcListenAddr string
+	Network       string
 
 	BlockHeight     int64
 	LatestBlockTime time.Time
@@ -73,6 +74,9 @@ type ValidatorInfo struct {
 	Moniker            string
 	OperatorAddr       string
 	ConsensusAddr      string
+	NodeID             string // CometBFT peer ID (from /net_info or /status for this node)
+	P2PDial            string // node_id@listen_addr when known from chain RPC
+	P2PConnected       bool   // peer visible in this node's /net_info (or is this node)
 	Status             string
 	Jailed             bool
 	Tombstoned         bool
@@ -150,6 +154,9 @@ type statusResp struct {
 			Version    string `json:"version"`
 			ListenAddr string `json:"listen_addr"`
 			Network    string `json:"network"`
+			Other      struct {
+				RPCAddress string `json:"rpc_address"`
+			} `json:"other"`
 		} `json:"node_info"`
 		SyncInfo struct {
 			LatestBlockHeight string `json:"latest_block_height"`
@@ -168,7 +175,9 @@ type netInfoResp struct {
 		NPeers string `json:"n_peers"`
 		Peers  []struct {
 			NodeInfo struct {
-				Moniker string `json:"moniker"`
+				ID         string `json:"id"`
+				Moniker    string `json:"moniker"`
+				ListenAddr string `json:"listen_addr"`
 			} `json:"node_info"`
 		} `json:"peers"`
 	} `json:"result"`
@@ -590,6 +599,30 @@ func parseProposal(p struct {
 	return info
 }
 
+func formatP2PDial(nodeID, listen string) string {
+	if nodeID == "" || listen == "" {
+		return ""
+	}
+	return nodeID + "@" + strings.TrimPrefix(listen, "tcp://")
+}
+
+func applyValidatorP2P(v *ValidatorInfo, localMoniker, localNodeID, localListen string, peers map[string]struct {
+	nodeID string
+	listen string
+}) {
+	if v.Moniker == localMoniker {
+		v.NodeID = localNodeID
+		v.P2PDial = formatP2PDial(localNodeID, localListen)
+		v.P2PConnected = localNodeID != ""
+		return
+	}
+	if p, ok := peers[v.Moniker]; ok {
+		v.NodeID = p.nodeID
+		v.P2PDial = formatP2PDial(p.nodeID, p.listen)
+		v.P2PConnected = true
+	}
+}
+
 // FetchChain fetches all chain data from CometBFT RPC and Cosmos REST.
 func FetchChain(rpc, rest string) ChainSnapshot {
 	snap := ChainSnapshot{}
@@ -605,7 +638,8 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 	snap.Moniker    = status.Result.NodeInfo.Moniker
 	snap.AppVersion = status.Result.NodeInfo.Version
 	snap.ListenAddr = status.Result.NodeInfo.ListenAddr
-	snap.Network    = status.Result.NodeInfo.Network
+	snap.RpcListenAddr = status.Result.NodeInfo.Other.RPCAddress
+	snap.Network = status.Result.NodeInfo.Network
 	snap.BlockHeight = parseInt64(status.Result.SyncInfo.LatestBlockHeight)
 	snap.CatchingUp  = status.Result.SyncInfo.CatchingUp
 	if t, err := time.Parse(time.RFC3339Nano, status.Result.SyncInfo.LatestBlockTime); err == nil {
@@ -614,12 +648,20 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 	snap.LocalConsensusAddr = strings.ToLower(status.Result.ValidatorInfo.Address)
 	snap.LocalVotingPower = parseInt64(status.Result.ValidatorInfo.VotingPower)
 
+	peerByMoniker := map[string]struct {
+		nodeID string
+		listen string
+	}{}
 	var netInfo netInfoResp
 	if err := doJSON(rpc+"/net_info", &netInfo); err == nil {
 		snap.PeerCount, _ = strconv.Atoi(netInfo.Result.NPeers)
 		for _, p := range netInfo.Result.Peers {
 			if p.NodeInfo.Moniker != "" {
 				snap.PeerMonikers = append(snap.PeerMonikers, p.NodeInfo.Moniker)
+				peerByMoniker[p.NodeInfo.Moniker] = struct {
+					nodeID string
+					listen string
+				}{nodeID: p.NodeInfo.ID, listen: p.NodeInfo.ListenAddr}
 			}
 		}
 	}
@@ -885,6 +927,7 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 		if pp, ok := rpcVals[strings.ToLower(v.ConsensusAddr)]; ok {
 			valList[i].ProposerPriority = pp
 		}
+		applyValidatorP2P(&valList[i], snap.Moniker, snap.NodeID, snap.ListenAddr, peerByMoniker)
 	}
 
 	snap.Validators = valList
