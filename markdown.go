@@ -239,11 +239,14 @@ func buildMarkdown(d WebData) string {
 	// ── 5. ECONOMICS ─────────────────────────────────────────────────────────
 	section("5. ECONOMICS")
 
-	fmt.Fprintf(w, "_How money moves on this chain — staking, inflation, fees, and rewards._\n\n")
+	fmt.Fprintf(w, "_How money moves on this chain — tx fees, PMT pool rewards, and (if active) inflation accumulate in `fee_collector`, then `x/distribution` pays validators each block._\n\n")
 
 	subsection("Overview")
-	hint("Mermaid → ASCII via mermaid-ascii. Labels use live snapshot; rows below: `bond denom` → `x/staking` params; `total supply` → `x/bank`; `bonded` / `not bonded` → `x/staking` pool.")
+	hint("Mermaid → ASCII via mermaid-ascii. Sources → `fee_collector` (ante fees; PMT via `x/mint` BeginBlock hook) → `x/distribution` BeginBlock. Rows below: `bond denom` → `x/staking`; `total supply` → `x/bank`.")
 	writeDiagram(w, economicsOverviewMermaid(d))
+	if d.PMTEnabled {
+		fmt.Fprintf(w, "_PMT pool funds per-block rewards via mint hook → `fee_collector` (see PMT Rewards table below)._\n\n")
+	}
 
 	row("bond denom", d.BondDenom)
 	row("total supply", d.TotalSupply)
@@ -314,10 +317,10 @@ func buildMarkdown(d WebData) string {
 		row("unclaimed staking rewards", d.TotalOutstanding+"  _(validators haven't withdrawn yet)_")
 	}
 
-	subsection("Fee Structure & Flow")
-	hint("Mermaid → ASCII. Fee fields: `base fee`, `block gas` → REST `/cosmos/evm/feemarket/v1/...`; `gas price` → `eth_gasPrice`; split % → `x/distribution` community tax.")
-	fmt.Fprintf(w, "_Every EVM transaction pays gas. Fees are collected on-chain and routed to validators (and optionally the community pool)._\n\n")
-	writeDiagram(w, feeFlowMermaid(d))
+	subsection("Fee market (x/feemarket)")
+	hint("Mermaid → ASCII. `base fee`, `block gas` → REST `/cosmos/evm/feemarket/v1/...`; `gas price` → `eth_gasPrice`; params → `/cosmos/evm/feemarket/v1/params`. Payout path is in Overview above.")
+	fmt.Fprintf(w, "_EIP-1559 adjusts base fee from last block gas vs target; ante enforces it on each EVM tx._\n\n")
+	writeDiagram(w, feemarketMechanicsMermaid(d))
 
 	row("model", "EIP-1559  _(base fee rises when blocks are full, falls when empty)_")
 	if d.BaseFee != "" {
@@ -351,9 +354,6 @@ func buildMarkdown(d WebData) string {
 
 	subsection("PMT Rewards  (x/pmtrewards — custom)")
 	hint("`status`, `reward rate`, pool address → `GET /cosmos/evm/pmtrewards/v1/params`; `pool balance` → `x/bank` balances for pool address; runway/emissions derived in pmtop.")
-	if src := pmtRewardsMermaid(d); src != "" {
-		writeDiagram(w, src)
-	}
 	row("status", mdPMTStatus(d))
 	if d.PMTRate != "" {
 		row("reward rate", d.PMTRate+"  _(extra tokens per block from PMT pool)_")
