@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -415,7 +416,13 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	d.SlashDowntime, d.SlashDTInactive = slashFraction(p.SlashFractionDowntime)
 	d.SlashDS, d.SlashDSInactive = slashFraction(p.SlashFractionDoubleSign)
 
-	d.BaseFee = chain.BaseFee
+	feeDenom := p.EVMDenom
+	if feeDenom == "" {
+		feeDenom = denom
+	}
+	if chain.BaseFee != "" {
+		d.BaseFee = fetch.FormatFeeAmount(chain.BaseFee, feeDenom)
+	}
 	if chain.BlockGas > 0 {
 		d.BlockGas = fmtInt(int64(chain.BlockGas))
 	}
@@ -427,11 +434,12 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	d.NoBaseFee = p.NoBaseFee
 	d.Elasticity = p.Elasticity
 	if chain.BaseFee != "" && p.BaseFeeChangeDenominator > 0 {
-		baseFeeF := 0.0
-		fmt.Sscanf(chain.BaseFee, "%f", &baseFeeF)
+		baseFeeF, _ := strconv.ParseFloat(chain.BaseFee, 64)
 		if baseFeeF > 0 {
 			cap := baseFeeF / float64(p.BaseFeeChangeDenominator)
-			d.AdjCap = fmt.Sprintf("±%g wei/block  (base_fee ÷ %d)", cap, p.BaseFeeChangeDenominator)
+			_, capDenom := fetch.NormalizeCoin("0", feeDenom)
+			d.AdjCap = "±" + fetch.FormatAmountUnit(cap, capDenom) + "/block" +
+				fmt.Sprintf("  (base_fee ÷ %d)", p.BaseFeeChangeDenominator)
 		}
 	}
 

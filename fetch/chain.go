@@ -487,6 +487,9 @@ func FormatFeeAmount(raw, denom string) string {
 	if v >= 1 {
 		return FormatCoin(fmt.Sprintf("%.0f", v), denom)
 	}
+	if denom != "" {
+		return FormatAmountUnit(v, displayDenom(denom))
+	}
 	return FormatAmount(v)
 }
 

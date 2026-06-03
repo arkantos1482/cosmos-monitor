@@ -321,7 +321,7 @@ func buildMarkdown(d WebData) string {
 
 	row("model", "EIP-1559  _(base fee rises when blocks are full, falls when empty)_")
 	if d.BaseFee != "" {
-		row("current base fee", d.BaseFee+" wei")
+		row("current base fee", d.BaseFee)
 	}
 	if d.GasPrice != "" {
 		row("current gas price", d.GasPrice+"  _(from JSON-RPC eth_gasPrice)_")

@@ -40,6 +40,7 @@ func TestFormatFeeAmount(t *testing.T) {
 		{"0", "apmt", "0"},
 		{"0.000000000000000000", "apmt", "0"},
 		{"1000000000", "apmt", "1.00e-09 PMT"},
+		{"0.000000000000000007", "apmt", "7.00e-18 PMT"},
 		{"0.5 PMT", "apmt", "0.5 PMT"},
 	}
 	for _, tc := range tests {
