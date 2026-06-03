@@ -9,7 +9,7 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/fetch"
 )
 
-// WebData holds all pre-formatted data for dashboard.html rendering.
+// WebData holds all pre-formatted data for dashboard rendering.
 type WebData struct {
 	Moniker      string
 	Synced       bool
@@ -45,28 +45,35 @@ type WebData struct {
 	NodeUptime   string
 	Restarts     int
 
-	// validators
+	// validator set (network)
 	Validators      []WebValidator
+	BondedCount     int
+	JailedCount     int
 	TombstonedCount int
 	BelowThreshold  int
 
-	// economics — staking
-	TotalSupply   string
-	BondedAmt     string
-	BondedPct     float64
-	GoalBonded    float64
-	NotBonded     string
-	UnbondingTime string
-	MaxValidators int64
-	Inflation     float64
-	CommunityPool string
-	CommunityTax  string
-	BlocksPerYear string
+	// local validator (this node)
+	Local WebLocalValidator
 
-	// economics — distribution
-	CommunityTaxZero bool
+	// economics
+	BondDenom         string
+	TotalSupply       string
+	BondedAmt         string
+	BondedPct         float64
+	GoalBonded        float64
+	NotBonded         string
+	UnbondingTime     string
+	MaxValidators     int64
+	Inflation         float64
+	AnnualProvisions  string
+	CommunityPool     string
+	CommunityTax      string
+	CommunityTaxZero  bool
+	CommunityTaxPct   float64
+	BlocksPerYear     string
+	TotalOutstanding  string
 
-	// economics — PMT rewards
+	// PMT rewards
 	PMTEnabled     bool
 	PMTPoolEmpty   bool
 	PMTRate        string
@@ -74,16 +81,19 @@ type WebData struct {
 	PMTRunway      string
 	PMTAnnual      string
 	PMTPoolAddress string
-	// PMT insights
-	PMTInsights   bool
-	PMTRunwayDays string
-	PMTDailyEmit  string
-	PMTPerValDay  string
-	PMTRevFlow    string
-	PMTCommPct    float64
-	PMTDelegPct   float64
+	PMTDailyEmit   string
 
-	// economics — slashing
+	// fee market (shown in economics)
+	BaseFee         string
+	BlockGas        string
+	GasPrice        string
+	MinGasPrice     string
+	AdjCap          string
+	NoBaseFee       bool
+	Elasticity      int64
+	BaseFeeChangeDenominator int64
+
+	// slashing (validator set section)
 	SlashWindow     string
 	MinSigned       float64
 	SlashDowntime   string
@@ -91,11 +101,8 @@ type WebData struct {
 	SlashDS         string
 	SlashDSInactive bool
 
-	// economics — validator earnings
-	TotalOutstanding string
-	CommissionRate   float64
-
-	// EVM
+	// EVM JSON-RPC
+	EVMEndpoint     string
 	EVMChainID      uint64
 	EVMDenom        string
 	EVMClient       string
@@ -106,54 +113,74 @@ type WebData struct {
 	EVMBlockAgeErr  bool
 	EVMSynced       bool
 	EVMBlock        string
-	BaseFee         string
-	GasPrice        string
-	MinGasPrice     string
-	AdjCap          string
-	NoBaseFee       bool
-	Elasticity      int64
-	ERC20Enabled    bool
 	PendingTx       uint64
 	QueuedTx        uint64
+	RPCProbes       []WebRPCProbe
+	RPCProbeOK      int
+	RPCProbeTotal   int
 	Precompiles     []string
-
-	// EVM config
 	HistoryWindow   string
 	HardforkLondon  string
 	HardforkShanghai string
 	HardforkCancun  string
+	ERC20Enabled    bool
 
-	// chain — governance
-	VotingPeriod    string
-	Quorum          float64
-	Threshold       float64
-	VetoThreshold   float64
-	Proposals       []WebProposal
+	// governance
+	VotingPeriod     string
+	Quorum           float64
+	Threshold        float64
+	VetoThreshold    float64
+	Proposals        []WebProposal
 	DepositProposals []WebProposal
-
-	// chain — upgrade
-	UpgradeName   string
-	UpgradeHeight string
-	BlocksLeft    string
-
-	// chain — IBC + token pairs
-	IBCClients int
-	TokenPairs []WebTokenPair
+	UpgradeName      string
+	UpgradeHeight    string
+	BlocksLeft       string
+	IBCClients       int
+	TokenPairs       []WebTokenPair
 }
 
 type WebValidator struct {
 	Moniker         string
-	VP              string
+	Operator        string
 	VPFloat         float64
-	Commission      string
 	CommissionFloat float64
 	Missed          int64
-	Outstanding     string
-	Earned          string
+	MissedHigh      bool
 	Status          string
 	Jailed          bool
 	Tombstoned      bool
-	MissedHigh      bool
+	IsLocal         bool
+}
+
+type WebLocalValidator struct {
+	IsValidator      bool
+	Moniker          string
+	NodeID           string
+	ConsensusAddr    string
+	OperatorAddr     string
+	VotingPower      string
+	VPPercent        float64
+	Commission       float64
+	Status           string
+	Jailed           bool
+	Tombstoned       bool
+	Missed           int64
+	MaxMissed        int64
+	MissedHigh       bool
+	SigningStatus    string
+	IsNextProposer   bool
+	ProposerPriority int64
+	Outstanding      string
+	CommissionEarned string
+}
+
+type WebRPCProbe struct {
+	Method   string
+	OK       bool
+	Latency  string
+	Error    string
+	Request  string
+	Response string
 }
 
 type WebProposal struct {
@@ -177,7 +204,6 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	p := chain.Params
 	d := WebData{}
 
-	// ── header ──────────────────────────────────────────────────────────────
 	d.Moniker = chain.Moniker
 	d.Synced = !chain.CatchingUp
 	d.BlockHeight = fmtInt(chain.BlockHeight)
@@ -185,13 +211,12 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	d.PeerCount = chain.PeerCount
 	d.EVMPeerCount = ev.PeerCount
 
-	// ── node ─────────────────────────────────────────────────────────────────
-	d.NodeID      = chain.NodeID
-	d.AppVersion  = chain.AppVersion
-	d.ListenAddr  = chain.ListenAddr
-	d.Network     = chain.Network
+	d.NodeID = chain.NodeID
+	d.AppVersion = chain.AppVersion
+	d.ListenAddr = chain.ListenAddr
+	d.Network = chain.Network
 	d.PeerMonikers = chain.PeerMonikers
-	d.MempoolTxs  = chain.MempoolTxs
+	d.MempoolTxs = chain.MempoolTxs
 	d.NextProposer = chain.NextProposerMoniker
 	if chain.BlockInterval > 0 {
 		d.BlockInterval = fmtDur(chain.BlockInterval)
@@ -201,7 +226,6 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 		d.LatestBlockTime = chain.LatestBlockTime.UTC().Format("2006-01-02 15:04:05 UTC")
 	}
 
-	// ── system — OS ──────────────────────────────────────────────────────────
 	d.Load1, d.Load5, d.Load15 = sys.LoadAvg1, sys.LoadAvg5, sys.LoadAvg15
 	memUsed := uint64(0)
 	if sys.MemTotal > sys.MemAvail {
@@ -214,7 +238,6 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	d.DiskTotal = fmtBytes(sys.DiskTotal)
 	d.DiskPct = int(float64(sys.DiskUsed) / float64(max(sys.DiskTotal, uint64(1))) * 100)
 
-	// ── system — container ────────────────────────────────────────────────────
 	d.NodeRunning = docker.Running
 	d.NodeCPU = fmt.Sprintf("%.1f%%", docker.CPUPercent)
 	d.NodeMemUsed = fmtBytes(docker.MemUsage)
@@ -224,53 +247,74 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 		d.NodeUptime = fmtDurFull(time.Since(docker.StartedAt))
 	}
 
-	// ── validators ────────────────────────────────────────────────────────────
 	maxMissed := int64(0)
 	if p.SignedBlocksWindow > 0 {
 		maxMissed = int64(float64(p.SignedBlocksWindow) * (1 - p.MinSignedPerWindow))
 	}
+
 	vals := make([]fetch.ValidatorInfo, len(chain.Validators))
 	copy(vals, chain.Validators)
 	sort.Slice(vals, func(i, j int) bool { return vals[i].VotingPowerPercent > vals[j].VotingPowerPercent })
-	tombCount, belowThresh := 0, 0
-	for _, v := range chain.Validators {
+
+	localAddr := strings.ToLower(chain.LocalConsensusAddr)
+	var localVal *fetch.ValidatorInfo
+	tombCount, belowThresh, jailedCount, bondedCount := 0, 0, 0, 0
+
+	for i := range chain.Validators {
+		v := &chain.Validators[i]
 		if v.Tombstoned {
 			tombCount++
+		}
+		if v.Jailed {
+			jailedCount++
+		}
+		if v.Status == "BONDED" {
+			bondedCount++
 		}
 		if v.Status == "BONDED" && !v.Tombstoned && maxMissed > 0 && v.MissedBlocks > maxMissed {
 			belowThresh++
 		}
+		if localAddr != "" && strings.EqualFold(v.ConsensusAddr, localAddr) {
+			localVal = v
+		}
 	}
+	if localVal == nil && chain.Moniker != "" {
+		for i := range chain.Validators {
+			if chain.Validators[i].Moniker == chain.Moniker {
+				localVal = &chain.Validators[i]
+				break
+			}
+		}
+	}
+
 	d.TombstonedCount = tombCount
 	d.BelowThreshold = belowThresh
+	d.JailedCount = jailedCount
+	d.BondedCount = bondedCount
 
 	for _, v := range vals {
-		wv := WebValidator{
+		isLocal := localVal != nil && v.OperatorAddr == localVal.OperatorAddr
+		d.Validators = append(d.Validators, WebValidator{
 			Moniker:         v.Moniker,
-			VP:              fmt.Sprintf("%.1f%%", v.VotingPowerPercent),
+			Operator:        truncate(v.OperatorAddr, 18),
 			VPFloat:         v.VotingPowerPercent,
-			Commission:      fmt.Sprintf("%.1f%%", v.Commission*100),
 			CommissionFloat: v.Commission * 100,
 			Missed:          v.MissedBlocks,
+			MissedHigh:      maxMissed > 0 && v.MissedBlocks > maxMissed,
 			Status:          strings.ToLower(v.Status),
 			Jailed:          v.Jailed,
 			Tombstoned:      v.Tombstoned,
-			MissedHigh:      maxMissed > 0 && v.MissedBlocks > maxMissed,
-		}
-		if v.OutstandingRewards != "" {
-			wv.Outstanding = v.OutstandingRewards
-		}
-		if v.CommissionEarned != "" {
-			wv.Earned = v.CommissionEarned
-		}
-		d.Validators = append(d.Validators, wv)
+			IsLocal:         isLocal,
+		})
 	}
 
-	// ── economics — staking ───────────────────────────────────────────────────
+	d.Local = buildLocalValidator(chain, localVal, maxMissed)
+
 	denom := p.BondDenom
 	if denom == "" {
 		denom = chain.TotalSupplyDenom
 	}
+	d.BondDenom = denom
 	bondedF, _ := fetch.NormalizeCoin(chain.BondedTokens, denom)
 	totalF, _ := fetch.NormalizeCoin(chain.TotalSupply, chain.TotalSupplyDenom)
 	if totalF > 0 {
@@ -285,20 +329,22 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 		d.MaxValidators = int64(p.MaxValidators)
 	}
 	d.Inflation = chain.Inflation * 100
+	if chain.AnnualProvisions != "" {
+		d.AnnualProvisions = fetch.FormatCoin(chain.AnnualProvisions, denom)
+	}
 	d.CommunityPool = chain.CommunityPool
 	if p.BlocksPerYear > 0 {
 		d.BlocksPerYear = fmtInt(p.BlocksPerYear)
 	}
 
-	// ── economics — distribution ──────────────────────────────────────────────
+	d.CommunityTaxPct = p.CommunityTax * 100
 	d.CommunityTaxZero = p.CommunityTax == 0
 	if p.CommunityTax == 0 {
-		d.CommunityTax = "0%  → 100% of tx fees flow to validators"
+		d.CommunityTax = "0%"
 	} else {
-		d.CommunityTax = fmt.Sprintf("%.2f%%", p.CommunityTax*100)
+		d.CommunityTax = fmt.Sprintf("%.2f%%", d.CommunityTaxPct)
 	}
 
-	// ── economics — PMT rewards ────────────────────────────────────────────────
 	d.PMTEnabled = p.PMTRewardsEnabled
 	d.PMTPoolEmpty = p.PMTRewardsPoolBalanceAmt == "" || p.PMTRewardsPoolBalanceAmt == "0"
 	if p.RewardPerBlockAmount != "" {
@@ -306,55 +352,28 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 		if p.BlocksPerYear > 0 {
 			rewardF, _ := fetch.NormalizeCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)
 			_, dispDenom := fetch.NormalizeCoin("0", p.RewardPerBlockDenom)
-			d.PMTAnnual = fmt.Sprintf("~%.0f %s/year  (%s blocks × %s)",
-				rewardF*float64(p.BlocksPerYear), dispDenom,
-				fmtInt(p.BlocksPerYear), fetch.FormatCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom))
+			d.PMTAnnual = fmt.Sprintf("~%.0f %s/year", rewardF*float64(p.BlocksPerYear), dispDenom)
+		}
+		if chain.BlockInterval > 0 {
+			rewardF, _ := fetch.NormalizeCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)
+			_, dispDenom := fetch.NormalizeCoin("0", p.RewardPerBlockDenom)
+			blocksPerDay := 86400.0 / chain.BlockInterval.Seconds()
+			d.PMTDailyEmit = fmt.Sprintf("~%.0f %s/day", rewardF*blocksPerDay, dispDenom)
 		}
 	}
 	if !d.PMTPoolEmpty {
 		d.PMTBalance = fetch.FormatCoin(p.PMTRewardsPoolBalanceAmt, p.PMTRewardsPoolBalanceDenom)
+		poolF, _ := fetch.NormalizeCoin(p.PMTRewardsPoolBalanceAmt, p.PMTRewardsPoolBalanceDenom)
+		if chain.BlockInterval > 0 && p.RewardPerBlockAmount != "" {
+			rewardF, _ := fetch.NormalizeCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)
+			blocksPerDay := 86400.0 / chain.BlockInterval.Seconds()
+			if daily := rewardF * blocksPerDay; daily > 0 {
+				d.PMTRunway = fmt.Sprintf("~%.0f days left", poolF/daily)
+			}
+		}
 	}
 	d.PMTPoolAddress = p.PMTRewardsPoolAddress
 
-	if p.PMTRewardsEnabled && p.RewardPerBlockAmount != "" && chain.BlockInterval > 0 {
-		d.PMTInsights = true
-		rewardF, _ := fetch.NormalizeCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)
-		_, dispDenom := fetch.NormalizeCoin("0", p.RewardPerBlockDenom)
-		blocksPerDay := 86400.0 / chain.BlockInterval.Seconds()
-		dailyPMT := rewardF * blocksPerDay
-
-		if d.PMTPoolEmpty {
-			d.PMTRunwayDays = "EMPTY"
-			d.PMTDailyEmit = fmt.Sprintf("0 %s/day  (pool empty)", dispDenom)
-		} else {
-			poolF, _ := fetch.NormalizeCoin(p.PMTRewardsPoolBalanceAmt, p.PMTRewardsPoolBalanceDenom)
-			if dailyPMT > 0 {
-				runwayDays := poolF / dailyPMT
-				d.PMTRunwayDays = fmt.Sprintf("~%.0f days  (%.2f %s ÷ %.0f/day)", runwayDays, poolF, dispDenom, dailyPMT)
-				d.PMTRunway = fmt.Sprintf("~%.0f days left", runwayDays)
-			}
-			d.PMTDailyEmit = fmt.Sprintf("~%.0f %s/day  (%.4f/block × ~%.0f blocks/day)", dailyPMT, dispDenom, rewardF, blocksPerDay)
-		}
-		if len(chain.Validators) > 0 {
-			perVal := dailyPMT * (chain.Validators[0].VotingPowerPercent / 100)
-			d.PMTPerValDay = fmt.Sprintf("~%.0f %s  (%.1f%% VP × %.0f/day)",
-				perVal, dispDenom, chain.Validators[0].VotingPowerPercent, dailyPMT)
-		}
-		rateStr := fetch.FormatCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)
-		d.PMTRevFlow = fmt.Sprintf("[tx fees] + [pool %s/block] → %d validators", rateStr, max(len(chain.Validators), 1))
-		if len(chain.Validators) > 0 {
-			d.PMTCommPct = chain.Validators[0].Commission * 100
-			d.PMTDelegPct = 100 - d.PMTCommPct
-		}
-	}
-
-	// ── economics — slashing ──────────────────────────────────────────────────
-	d.SlashWindow = fmtInt(p.SignedBlocksWindow)
-	d.MinSigned = p.MinSignedPerWindow * 100
-	d.SlashDowntime, d.SlashDTInactive = slashFraction(p.SlashFractionDowntime)
-	d.SlashDS, d.SlashDSInactive = slashFraction(p.SlashFractionDoubleSign)
-
-	// ── economics — validator earnings ────────────────────────────────────────
 	var totalOutF float64
 	var outDenom string
 	for _, v := range chain.Validators {
@@ -367,11 +386,32 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	if outDenom != "" {
 		d.TotalOutstanding = fmt.Sprintf("%.6f %s  across %d validators", totalOutF, outDenom, len(chain.Validators))
 	}
-	if len(chain.Validators) > 0 {
-		d.CommissionRate = chain.Validators[0].Commission * 100
+
+	d.SlashWindow = fmtInt(p.SignedBlocksWindow)
+	d.MinSigned = p.MinSignedPerWindow * 100
+	d.SlashDowntime, d.SlashDTInactive = slashFraction(p.SlashFractionDowntime)
+	d.SlashDS, d.SlashDSInactive = slashFraction(p.SlashFractionDoubleSign)
+
+	d.BaseFee = chain.BaseFee
+	if chain.BlockGas > 0 {
+		d.BlockGas = fmtInt(int64(chain.BlockGas))
+	}
+	d.GasPrice = ev.GasPrice
+	d.BaseFeeChangeDenominator = p.BaseFeeChangeDenominator
+	if p.MinGasPrice > 0 {
+		d.MinGasPrice = fmt.Sprintf("%.9f %s", p.MinGasPrice, denom)
+	}
+	d.NoBaseFee = p.NoBaseFee
+	d.Elasticity = p.Elasticity
+	if chain.BaseFee != "" && p.BaseFeeChangeDenominator > 0 {
+		baseFeeF := 0.0
+		fmt.Sscanf(chain.BaseFee, "%f", &baseFeeF)
+		if baseFeeF > 0 {
+			cap := baseFeeF / float64(p.BaseFeeChangeDenominator)
+			d.AdjCap = fmt.Sprintf("±%g wei/block  (base_fee ÷ %d)", cap, p.BaseFeeChangeDenominator)
+		}
 	}
 
-	// ── EVM ───────────────────────────────────────────────────────────────────
 	d.EVMChainID = ev.ChainID
 	if p.EVMDenom != "" {
 		d.EVMDenom = p.EVMDenom
@@ -389,39 +429,36 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 		d.EVMBlockAgeWarn = age > 30*time.Second && age <= 2*time.Minute
 		d.EVMBlockAgeErr = age > 2*time.Minute
 	}
-	d.BaseFee = chain.BaseFee
-	d.GasPrice = ev.GasPrice
-	if p.MinGasPrice > 0 {
-		d.MinGasPrice = fmt.Sprintf("%.9f %s", p.MinGasPrice, denom)
-	}
-	d.NoBaseFee = p.NoBaseFee
-	d.Elasticity = p.Elasticity
-	d.ERC20Enabled = p.ERC20Enabled
-	if chain.BaseFee != "" && p.BaseFeeChangeDenominator > 0 {
-		baseFeeF := 0.0
-		fmt.Sscanf(chain.BaseFee, "%f", &baseFeeF)
-		if baseFeeF > 0 {
-			cap := baseFeeF / float64(p.BaseFeeChangeDenominator)
-			d.AdjCap = fmt.Sprintf("±(base_fee ÷ %d) = ±%g wei/block  (max change per block)", p.BaseFeeChangeDenominator, cap)
-		}
-	}
 	d.Precompiles = p.ActiveStaticPrecompiles
-
-	// EVM config
 	if p.HistoryServeWindow > 0 {
 		d.HistoryWindow = fmtInt(p.HistoryServeWindow)
 	}
 	d.HardforkLondon = p.HardforkLondon
 	d.HardforkShanghai = p.HardforkShanghai
 	d.HardforkCancun = p.HardforkCancun
+	d.ERC20Enabled = p.ERC20Enabled
 
-	// ── chain — governance ────────────────────────────────────────────────────
+	d.RPCProbeTotal = len(ev.Probes)
+	for _, probe := range ev.Probes {
+		if probe.OK {
+			d.RPCProbeOK++
+		}
+		d.RPCProbes = append(d.RPCProbes, WebRPCProbe{
+			Method:   probe.Method,
+			OK:       probe.OK,
+			Latency:  fmt.Sprintf("%.0fms", float64(probe.Latency)/float64(time.Millisecond)),
+			Error:    probe.Error,
+			Request:  fetch.TruncateJSON(probe.Request, 120),
+			Response: fetch.TruncateJSON(probe.Response, 180),
+		})
+	}
+
 	d.VotingPeriod = fmtDurFull(p.VotingPeriod)
 	d.Quorum = p.Quorum * 100
 	d.Threshold = p.Threshold * 100
 	d.VetoThreshold = p.VetoThreshold * 100
 	for _, pr := range chain.VotingProposals {
-		wp := WebProposal{
+		d.Proposals = append(d.Proposals, WebProposal{
 			ID:           uint64(pr.ID),
 			Title:        pr.Title,
 			End:          pr.VotingEnd.Format("2006-01-02"),
@@ -430,8 +467,7 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 			TallyAbstain: pr.Tally.Abstain,
 			TallyVeto:    pr.Tally.NoWithVeto,
 			HasTally:     pr.Tally.Yes != "" || pr.Tally.No != "" || pr.Tally.Abstain != "" || pr.Tally.NoWithVeto != "",
-		}
-		d.Proposals = append(d.Proposals, wp)
+		})
 	}
 	for _, pr := range chain.DepositProposals {
 		d.DepositProposals = append(d.DepositProposals, WebProposal{
@@ -441,7 +477,6 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 		})
 	}
 
-	// ── chain — upgrade ────────────────────────────────────────────────────────
 	d.UpgradeName = chain.UpgradeName
 	if chain.UpgradeHeight > 0 {
 		d.UpgradeHeight = fmtInt(chain.UpgradeHeight)
@@ -450,7 +485,6 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 		}
 	}
 
-	// ── chain — IBC + token pairs ─────────────────────────────────────────────
 	d.IBCClients = chain.IBCClientCount
 	for _, tp := range chain.TokenPairs {
 		d.TokenPairs = append(d.TokenPairs, WebTokenPair{
@@ -463,6 +497,56 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	return d
 }
 
+func buildLocalValidator(chain fetch.ChainSnapshot, v *fetch.ValidatorInfo, maxMissed int64) WebLocalValidator {
+	lv := WebLocalValidator{
+		Moniker:       chain.Moniker,
+		NodeID:        chain.NodeID,
+		ConsensusAddr: chain.LocalConsensusAddr,
+	}
+	if v == nil {
+		if chain.LocalVotingPower > 0 || chain.LocalConsensusAddr != "" {
+			lv.IsValidator = true
+			lv.VotingPower = fmtInt(chain.LocalVotingPower)
+			lv.SigningStatus = "validator key present — not matched to staking API"
+		} else {
+			lv.SigningStatus = "this node is not a validator (full node / observer)"
+		}
+		return lv
+	}
+
+	lv.IsValidator = true
+	lv.OperatorAddr = v.OperatorAddr
+	if lv.ConsensusAddr == "" {
+		lv.ConsensusAddr = v.ConsensusAddr
+	}
+	lv.VotingPower = fetch.FormatCoin(v.VotingPowerTokens, chain.Params.BondDenom)
+	lv.VPPercent = v.VotingPowerPercent
+	lv.Commission = v.Commission * 100
+	lv.Status = strings.ToLower(v.Status)
+	lv.Jailed = v.Jailed
+	lv.Tombstoned = v.Tombstoned
+	lv.Missed = v.MissedBlocks
+	lv.MaxMissed = maxMissed
+	lv.MissedHigh = maxMissed > 0 && v.MissedBlocks > maxMissed
+	lv.ProposerPriority = v.ProposerPriority
+	lv.IsNextProposer = v.Moniker == chain.NextProposerMoniker
+	lv.Outstanding = v.OutstandingRewards
+	lv.CommissionEarned = v.CommissionEarned
+
+	switch {
+	case lv.Tombstoned:
+		lv.SigningStatus = "TOMBSTONED — permanently removed from validator set"
+	case lv.Jailed:
+		lv.SigningStatus = "JAILED — not signing blocks"
+	case lv.MissedHigh:
+		lv.SigningStatus = fmt.Sprintf("⚠ below min signed  (%d missed, max allowed %d in window)", lv.Missed, maxMissed)
+	case lv.Missed > 0:
+		lv.SigningStatus = fmt.Sprintf("ok  (%d missed in current window)", lv.Missed)
+	default:
+		lv.SigningStatus = "ok  (no missed blocks in current window)"
+	}
+	return lv
+}
 
 func slashFraction(raw string) (string, bool) {
 	if raw == "" {

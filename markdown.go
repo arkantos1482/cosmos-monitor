@@ -23,7 +23,7 @@ func buildMarkdown(d WebData) string {
 
 	subsection("OS")
 	row("load", fmt.Sprintf("%.2f / %.2f / %.2f  (1m 5m 15m)", d.Load1, d.Load5, d.Load15))
-	row("ram",  fmt.Sprintf("%s / %s  (%d%%)", d.MemUsed, d.MemTotal, d.MemPct))
+	row("ram", fmt.Sprintf("%s / %s  (%d%%)", d.MemUsed, d.MemTotal, d.MemPct))
 	row("disk", fmt.Sprintf("%s / %s  (%d%%)", d.DiskUsed, d.DiskTotal, d.DiskPct))
 
 	subsection("Container")
@@ -31,9 +31,9 @@ func buildMarkdown(d WebData) string {
 	if d.NodeRunning {
 		nodeStatus = "running"
 	}
-	row("status",   nodeStatus)
-	row("cpu",      d.NodeCPU)
-	row("ram",      fmt.Sprintf("%s / %s", d.NodeMemUsed, d.NodeMemTotal))
+	row("status", nodeStatus)
+	row("cpu", d.NodeCPU)
+	row("ram", fmt.Sprintf("%s / %s", d.NodeMemUsed, d.NodeMemTotal))
 	row("restarts", fmt.Sprintf("%d", d.Restarts))
 	if d.NodeUptime != "" {
 		row("uptime", d.NodeUptime)
@@ -44,14 +44,17 @@ func buildMarkdown(d WebData) string {
 
 	subsection("Identity")
 	row("moniker", d.Moniker)
+	if d.NodeID != "" {
+		row("node ID", d.NodeID+"  _(CometBFT P2P peer ID)_")
+	}
 	if d.AppVersion != "" {
 		row("version", d.AppVersion)
 	}
 	if d.ListenAddr != "" {
-		row("p2p", d.ListenAddr)
+		row("p2p listen", d.ListenAddr)
 	}
 	if d.Network != "" {
-		row("chain", d.Network)
+		row("chain ID", d.Network)
 	}
 
 	subsection("Block")
@@ -68,76 +71,83 @@ func buildMarkdown(d WebData) string {
 	if len(d.PeerMonikers) > 0 {
 		row("peers", strings.Join(d.PeerMonikers, "  "))
 	} else {
-		row("peers", fmt.Sprintf("%d", d.PeerCount))
+		row("peers", fmt.Sprintf("%d connected", d.PeerCount))
 	}
 
 	subsection("Mempool")
 	row("pending", fmt.Sprintf("%d", d.MempoolTxs))
 
+	// ── 3. VALIDATOR SET ─────────────────────────────────────────────────────
+	section("3. VALIDATOR SET")
 
-	// ── 3. VALIDATORS ────────────────────────────────────────────────────────
-	section("3. VALIDATORS")
+	fmt.Fprintf(w, "_All validators on the chain — staking power, signing health, and network params._\n\n")
 
-	fmt.Fprintf(w, "| moniker | vp%% | commission | missed | outstanding | earned | tombstoned | status | jailed |\n")
-	fmt.Fprintf(w, "|---------|------|------------|--------|-------------|--------|------------|--------|--------|\n")
+	fmt.Fprintf(w, "| moniker | operator | vp%% | commission | missed | status | jailed | local |\n")
+	fmt.Fprintf(w, "|---------|----------|------|------------|--------|--------|--------|-------|\n")
 	for _, v := range d.Validators {
-		tombStr := "no"
-		if v.Tombstoned {
-			tombStr = "YES"
+		missed := fmt.Sprintf("%d", v.Missed)
+		if v.MissedHigh {
+			missed += " ⚠"
 		}
 		jailed := ""
 		if v.Jailed {
-			jailed = "JAILED"
+			jailed = "yes"
 		}
-		outstanding := v.Outstanding
-		if outstanding == "" {
-			outstanding = "–"
+		local := ""
+		if v.IsLocal {
+			local = "**this node**"
 		}
-		earned := v.Earned
-		if earned == "" {
-			earned = "–"
+		tomb := ""
+		if v.Tombstoned {
+			tomb = "  tombstoned"
 		}
-		fmt.Fprintf(w, "| %s | %.1f%% | %.1f%% | %d | %s | %s | %s | %s | %s |\n",
-			truncate(v.Moniker, 20),
+		fmt.Fprintf(w, "| %s | %s | %.1f%% | %.1f%% | %s | %s%s | %s | %s |\n",
+			truncate(v.Moniker, 16),
+			v.Operator,
 			v.VPFloat,
 			v.CommissionFloat,
-			v.Missed,
-			outstanding,
-			earned,
-			tombStr,
+			missed,
 			v.Status,
+			tomb,
 			jailed,
+			local,
 		)
 	}
 
 	subsection("Summary")
-	row("tombstoned",      fmt.Sprintf("%d", d.TombstonedCount))
-	row("below threshold", fmt.Sprintf("%d", d.BelowThreshold))
+	row("bonded", fmt.Sprintf("%d", d.BondedCount))
+	row("jailed", fmt.Sprintf("%d", d.JailedCount))
+	row("tombstoned", fmt.Sprintf("%d", d.TombstonedCount))
+	row("below min signed", fmt.Sprintf("%d", d.BelowThreshold))
+	if d.NextProposer != "" {
+		row("next proposer", d.NextProposer)
+	}
 
-	subsection("Pool")
+	subsection("Staking Pool")
+	if d.BondDenom != "" {
+		row("bond denom", d.BondDenom)
+	}
 	row("total supply", d.TotalSupply)
-	row("bonded",       fmt.Sprintf("%s  (%.2f%%, goal %.0f%%)", d.BondedAmt, d.BondedPct, d.GoalBonded))
-	row("not bonded",   d.NotBonded)
+	row("bonded", fmt.Sprintf("%s  (%.2f%%, goal %.0f%%)", d.BondedAmt, d.BondedPct, d.GoalBonded))
+	row("not bonded", d.NotBonded)
 	if d.UnbondingTime != "" {
-		row("unbonding time", d.UnbondingTime)
+		row("unbonding time", d.UnbondingTime+"  _(time locked after unstaking)_")
 	}
 	if d.MaxValidators > 0 {
 		row("max validators", fmt.Sprintf("%d", d.MaxValidators))
 	}
 
-	subsection("Slashing")
+	subsection("Slashing Params")
 	if d.SlashWindow != "" && d.SlashWindow != "0" {
-		row("window", d.SlashWindow+" blocks")
+		row("signed blocks window", d.SlashWindow+" blocks")
 	}
 	if d.MinSigned > 0 {
-		row("min signed", fmt.Sprintf("%.1f%%", d.MinSigned))
+		row("min signed per window", fmt.Sprintf("%.1f%%  _(miss more → downtime slash risk)_", d.MinSigned))
 	}
 	if d.SlashDowntime != "" {
 		dtStr := d.SlashDowntime
 		if d.SlashDTInactive {
 			dtStr += "  ⚠ inactive"
-		} else {
-			dtStr += "  active"
 		}
 		row("slash / downtime", dtStr)
 	}
@@ -145,92 +155,214 @@ func buildMarkdown(d WebData) string {
 		dsStr := d.SlashDS
 		if d.SlashDSInactive {
 			dsStr += "  ⚠ inactive"
-		} else {
-			dsStr += "  active"
 		}
 		row("slash / double-sign", dsStr)
 	}
 
-	// ── 4. ECONOMICS ─────────────────────────────────────────────────────────
-	section("4. ECONOMICS")
+	// ── 4. THIS VALIDATOR ──────────────────────────────────────────────────────
+	section("4. THIS VALIDATOR")
 
-	subsection("x/mint")
+	fmt.Fprintf(w, "_Status of **this machine's** validator identity — matched via CometBFT `/status` consensus address._\n\n")
+
+	lv := d.Local
+	if !lv.IsValidator {
+		row("role", lv.SigningStatus)
+		row("node ID", d.NodeID)
+		row("moniker", d.Moniker)
+	} else {
+		subsection("Identity")
+		row("moniker", lv.Moniker)
+		row("node ID", lv.NodeID+"  _(P2P peer ID — how other nodes reach you)_")
+		if lv.ConsensusAddr != "" {
+			row("consensus address", lv.ConsensusAddr+"  _(signs blocks)_")
+		}
+		if lv.OperatorAddr != "" {
+			row("operator address", lv.OperatorAddr+"  _(staking / rewards account)_")
+		}
+
+		subsection("Staking")
+		row("status", lv.Status)
+		if lv.Jailed {
+			row("jailed", "yes")
+		}
+		if lv.Tombstoned {
+			row("tombstoned", "YES")
+		}
+		row("voting power", fmt.Sprintf("%s  (%.1f%% of bonded stake)", lv.VotingPower, lv.VPPercent))
+		row("commission", fmt.Sprintf("%.1f%%  _(your cut of delegator rewards)_", lv.Commission))
+
+		subsection("Block Signing")
+		row("signing health", lv.SigningStatus)
+		if d.SlashWindow != "" && d.SlashWindow != "0" {
+			row("missed / window", fmt.Sprintf("%d / %s blocks  (max allowed: %d)", lv.Missed, d.SlashWindow, lv.MaxMissed))
+		}
+		if lv.IsNextProposer {
+			row("proposer", "**next block proposer**")
+		} else if d.NextProposer != "" {
+			row("proposer", "not next  _(next: "+d.NextProposer+")_")
+		}
+		if lv.ProposerPriority != 0 {
+			row("proposer priority", fmtInt(lv.ProposerPriority))
+		}
+
+		subsection("Unclaimed Rewards")
+		if lv.Outstanding != "" {
+			row("outstanding rewards", lv.Outstanding+"  _(total rewards not yet withdrawn)_")
+		} else {
+			row("outstanding rewards", "–")
+		}
+		if lv.CommissionEarned != "" {
+			row("commission earned", lv.CommissionEarned+"  _(your validator commission, unclaimed)_")
+		} else {
+			row("commission earned", "–")
+		}
+	}
+
+	// ── 5. ECONOMICS ─────────────────────────────────────────────────────────
+	section("5. ECONOMICS")
+
+	fmt.Fprintf(w, "_How money moves on this chain — staking, inflation, fees, and rewards._\n\n")
+
+	subsection("Overview")
+	fmt.Fprintf(w, "```\n")
+	fmt.Fprintf(w, "                         WHERE VALUE COMES FROM\n")
+	fmt.Fprintf(w, "  ┌─────────────────────┐              ┌──────────────────────┐\n")
+	fmt.Fprintf(w, "  │  Tx fees (EVM/Cosmos)│              │  Inflation (x/mint)   │\n")
+	fmt.Fprintf(w, "  │  paid by users       │              │  new tokens / block   │\n")
+	fmt.Fprintf(w, "  └──────────┬──────────┘              └──────────┬───────────┘\n")
+	fmt.Fprintf(w, "             │                                    │\n")
+	fmt.Fprintf(w, "             └────────────────┬───────────────────┘\n")
+	fmt.Fprintf(w, "                              ▼\n")
+	fmt.Fprintf(w, "                    ┌─────────────────────┐\n")
+	fmt.Fprintf(w, "                    │  Block reward pool   │\n")
+	fmt.Fprintf(w, "                    │  (x/distribution)    │\n")
+	fmt.Fprintf(w, "                    └──────────┬──────────┘\n")
+	fmt.Fprintf(w, "           ┌───────────────────┼────────────────────┐\n")
+	fmt.Fprintf(w, "           ▼                   ▼                    ▼\n")
+	fmt.Fprintf(w, "   ┌───────────────┐   ┌──────────────┐   ┌─────────────────┐\n")
+	fmt.Fprintf(w, "   │  Validators    │   │ Community    │   │ PMT pool        │\n")
+	fmt.Fprintf(w, "   │  (by stake %)  │   │ pool (tax)   │   │ (x/pmtrewards)  │\n")
+	fmt.Fprintf(w, "   └───────┬───────┘   └──────────────┘   └─────────────────┘\n")
+	fmt.Fprintf(w, "           │\n")
+	fmt.Fprintf(w, "     commission %% → operator\n")
+	fmt.Fprintf(w, "     remainder    → delegators\n")
+	fmt.Fprintf(w, "```\n\n")
+
+	row("bond denom", d.BondDenom)
+	row("total supply", d.TotalSupply)
+	row("bonded stake", fmt.Sprintf("%s  (%.1f%% of supply)", d.BondedAmt, d.BondedPct))
+	row("not bonded", d.NotBonded)
+
+	subsection("Staking & Inflation  (x/mint + x/staking)")
 	inflationStr := fmt.Sprintf("%.2f%%", d.Inflation)
 	if d.Inflation == 0 {
-		inflationStr += "  ⚠ inactive  (module present — can be activated via governance)"
+		inflationStr += "  ⚠ inactive"
 	}
-	row("inflation", inflationStr)
+	row("inflation rate", inflationStr+"  _(extra tokens minted when active — rewards stakers)_")
+	if d.AnnualProvisions != "" {
+		row("annual provisions", d.AnnualProvisions+"  _(absolute new tokens/year if inflation active)_")
+	}
+	row("goal bonded", fmt.Sprintf("%.0f%%  _(target stake ratio — inflation adjusts toward this)_", d.GoalBonded))
 	if d.BlocksPerYear != "" {
 		row("blocks / year", d.BlocksPerYear)
 	}
+	if d.UnbondingTime != "" {
+		row("unbonding time", d.UnbondingTime+"  _(tokens locked after you unstake)_")
+	}
 
-	subsection("x/distribution")
-	row("community tax",  d.CommunityTax)
-	row("community pool", d.CommunityPool)
+	subsection("Distribution  (x/distribution)")
+	row("community tax", d.CommunityTax+"  _(%% of block rewards → community pool, not validators)_")
+	row("community pool", d.CommunityPool+"  _(governance-controlled treasury)_")
+	if d.TotalOutstanding != "" {
+		row("unclaimed staking rewards", d.TotalOutstanding+"  _(validators haven't withdrawn yet)_")
+	}
 
-	subsection("x/pmtrewards  (custom)")
+	subsection("Fee Structure & Flow")
+	fmt.Fprintf(w, "_Every EVM transaction pays gas. Fees are collected on-chain and routed to validators (and optionally the community pool)._\n\n")
+	fmt.Fprintf(w, "```\n")
+	fmt.Fprintf(w, "  User submits EVM tx\n")
+	fmt.Fprintf(w, "       │\n")
+	fmt.Fprintf(w, "       ▼ pays gas = gas_used × effective_gas_price\n")
+	fmt.Fprintf(w, "  ┌─────────────────────────────────────────┐\n")
+	fmt.Fprintf(w, "  │  EIP-1559 fee market (x/feemarket)       │\n")
+	fmt.Fprintf(w, "  │  base_fee (burned/adjusted) + priority   │\n")
+	fmt.Fprintf(w, "  └──────────────────┬──────────────────────┘\n")
+	fmt.Fprintf(w, "                     ▼\n")
+	if d.CommunityTaxZero {
+		fmt.Fprintf(w, "  100%% of collected fees → validators (pro-rata by stake)\n")
+	} else {
+		fmt.Fprintf(w, "  ┌─────────────────────────────────────────┐\n")
+		fmt.Fprintf(w, "  │  x/distribution splits block income:     │\n")
+		fmt.Fprintf(w, "  │  • %.1f%% → community pool               │\n", d.CommunityTaxPct)
+		fmt.Fprintf(w, "  │  • %.1f%% → validators + delegators        │\n", 100-d.CommunityTaxPct)
+		fmt.Fprintf(w, "  └─────────────────────────────────────────┘\n")
+	}
+	if d.PMTEnabled && d.PMTRate != "" {
+		fmt.Fprintf(w, "  + PMT pool adds %s from x/pmtrewards\n", d.PMTRate)
+	}
+	fmt.Fprintf(w, "```\n\n")
+
+	row("model", "EIP-1559  _(base fee rises when blocks are full, falls when empty)_")
+	if d.BaseFee != "" {
+		row("current base fee", d.BaseFee+" wei")
+	}
+	if d.GasPrice != "" {
+		row("current gas price", d.GasPrice+"  _(from JSON-RPC eth_gasPrice)_")
+	}
+	if d.MinGasPrice != "" {
+		row("min gas price", d.MinGasPrice+"  _(chain-enforced floor)_")
+	}
+	if d.BlockGas != "" {
+		row("gas used (last block)", d.BlockGas)
+	}
+	if d.Elasticity > 0 {
+		row("block gas target", fmt.Sprintf("max_block_gas ÷ %d", d.Elasticity))
+	}
+	if d.AdjCap != "" {
+		row("base fee max change", d.AdjCap)
+	}
+	if d.BaseFeeChangeDenominator > 0 {
+		row("change denominator", fmt.Sprintf("%d", d.BaseFeeChangeDenominator))
+	}
+	noBaseFeeStr := boolStr(d.NoBaseFee)
+	if d.NoBaseFee {
+		noBaseFeeStr += "  _(EIP-1559 enforcement disabled)_"
+	} else {
+		noBaseFeeStr += "  _(EIP-1559 active)_"
+	}
+	row("no_base_fee flag", noBaseFeeStr)
+
+	subsection("PMT Rewards  (x/pmtrewards — custom)")
 	row("status", mdPMTStatus(d))
 	if d.PMTRate != "" {
-		row("rate", d.PMTRate)
-		if d.PMTAnnual != "" {
-			row("annual emissions", d.PMTAnnual)
-		}
+		row("reward rate", d.PMTRate+"  _(extra tokens per block from PMT pool)_")
+	}
+	if d.PMTAnnual != "" {
+		row("annual emissions", d.PMTAnnual)
+	}
+	if d.PMTDailyEmit != "" {
+		row("daily emissions", d.PMTDailyEmit)
 	}
 	if d.PMTPoolEmpty {
-		row("pool balance", "0 PMT  — pool empty")
+		row("pool balance", "0  — pool empty, no PMT rewards distributing")
 	} else if d.PMTBalance != "" {
-		mdRunway := ""
+		bal := d.PMTBalance
 		if d.PMTRunway != "" {
-			mdRunway = "  (" + d.PMTRunway + ")"
+			bal += "  (" + d.PMTRunway + ")"
 		}
-		row("pool balance", d.PMTBalance+mdRunway)
+		row("pool balance", bal)
 	}
 	if d.PMTPoolAddress != "" {
 		row("pool address", d.PMTPoolAddress)
 	}
 
-	if d.PMTInsights {
-		subsection("Insights")
-		if d.PMTPoolEmpty {
-			row("pool runway",     "EMPTY  (no PMT rewards distributing)")
-			row("daily emissions", d.PMTDailyEmit)
-		} else {
-			row("pool runway",     d.PMTRunwayDays)
-			row("daily emissions", d.PMTDailyEmit)
-			if d.PMTPerValDay != "" {
-				row("per validator/day", d.PMTPerValDay)
-			}
-		}
-		if d.PMTRevFlow != "" {
-			fmt.Fprintf(w, "\n```\n")
-			fmt.Fprintf(w, "%s\n", d.PMTRevFlow)
-			fmt.Fprintf(w, "    ├─ %.0f%%  commission → validator\n", d.PMTCommPct)
-			fmt.Fprintf(w, "    └─ %.0f%%  → delegators (pro-rata)\n", d.PMTDelegPct)
-			fmt.Fprintf(w, "```\n\n")
-		}
-	}
-
-	subsection("Validator Earnings  (unclaimed)")
-	if d.TotalOutstanding != "" {
-		row("total outstanding", d.TotalOutstanding)
-	}
-	row("commission rate", fmt.Sprintf("%.0f%%  of staking rewards", d.CommissionRate))
-
-	// ── 5. GOVERNANCE ────────────────────────────────────────────────────────
-	section("5. GOVERNANCE")
-
-	subsection("Voting")
-	row("voting period", d.VotingPeriod)
-	row("quorum",        fmt.Sprintf("%.1f%%", d.Quorum))
-	row("threshold",     fmt.Sprintf("%.1f%%", d.Threshold))
-	if d.VetoThreshold > 0 {
-		row("veto threshold", fmt.Sprintf("%.1f%%", d.VetoThreshold))
-	}
+	// ── 6. GOVERNANCE ────────────────────────────────────────────────────────
+	section("6. GOVERNANCE")
 
 	if len(d.Proposals) > 0 {
-		subsection("Active Proposals (voting period)")
+		subsection(fmt.Sprintf("Active Proposals  (%d)", len(d.Proposals)))
 		for _, pr := range d.Proposals {
-			fmt.Fprintf(w, "- **#%d** %s  _(ends %s)_\n", pr.ID, truncate(pr.Title, 40), pr.End)
+			fmt.Fprintf(w, "- **#%d** %s  _(voting ends %s)_\n", pr.ID, truncate(pr.Title, 40), pr.End)
 			if pr.HasTally {
 				fmt.Fprintf(w, "  - yes %s  no %s  abstain %s  veto %s\n",
 					pr.TallyYes, pr.TallyNo, pr.TallyAbstain, pr.TallyVeto)
@@ -240,7 +372,7 @@ func buildMarkdown(d WebData) string {
 	}
 
 	if len(d.DepositProposals) > 0 {
-		subsection("Deposit-Period Proposals")
+		subsection(fmt.Sprintf("Deposit-Period Proposals  (%d)", len(d.DepositProposals)))
 		for _, pr := range d.DepositProposals {
 			fmt.Fprintf(w, "- **#%d** %s  _(deposit ends %s)_\n", pr.ID, truncate(pr.Title, 40), pr.End)
 		}
@@ -248,14 +380,22 @@ func buildMarkdown(d WebData) string {
 	}
 
 	if len(d.Proposals)+len(d.DepositProposals) == 0 {
-		fmt.Fprintf(w, "none active\n\n")
+		fmt.Fprintf(w, "_No active proposals._\n\n")
+	}
+
+	subsection("Voting Params")
+	row("voting period", d.VotingPeriod)
+	row("quorum", fmt.Sprintf("%.1f%%", d.Quorum))
+	row("threshold", fmt.Sprintf("%.1f%%", d.Threshold))
+	if d.VetoThreshold > 0 {
+		row("veto threshold", fmt.Sprintf("%.1f%%", d.VetoThreshold))
 	}
 
 	subsection("Upgrade")
 	if d.UpgradeName == "" {
 		row("pending", "none")
 	} else {
-		row("name",          d.UpgradeName)
+		row("name", d.UpgradeName)
 		row("target height", d.UpgradeHeight)
 		if d.BlocksLeft != "" {
 			row("blocks remaining", d.BlocksLeft)
@@ -277,35 +417,39 @@ func buildMarkdown(d WebData) string {
 		fmt.Fprintf(w, "- `%s`  `%s`  enabled: %s\n", tp.Denom, tp.ERC20, enabled)
 	}
 
-	// ── 6. EVM ────────────────────────────────────────────────────────────────
-	section("6. EVM")
+	// ── 7. EVM JSON-RPC ────────────────────────────────────────────────────────
+	section("7. EVM JSON-RPC")
+
+	fmt.Fprintf(w, "_Health and metrics from the EVM JSON-RPC endpoint (`eth_*`, `net_*`, `txpool_*`)._\n\n")
 
 	evSyncStr := "synced"
 	if !d.EVMSynced {
 		evSyncStr = "syncing"
 	}
 
-	subsection("Identity")
-	row("chain ID", fmt.Sprintf("%d", d.EVMChainID))
+	subsection("Endpoint Health")
+	okStr := "error"
+	if d.EVMRPCOk {
+		okStr = fmt.Sprintf("ok  (%d/%d methods responded)", d.RPCProbeOK, d.RPCProbeTotal)
+	}
+	row("overall", okStr)
+	listeningStr := "no"
+	if d.EVMListening {
+		listeningStr = "yes"
+	}
+	row("net_listening", listeningStr)
+	row("peers", fmt.Sprintf("%d  _(net_peerCount)_", d.EVMPeerCount))
+	row("sync", evSyncStr+"  _(eth_syncing)_")
+	if d.EVMClient != "" {
+		row("client", d.EVMClient+"  _(web3_clientVersion)_")
+	}
+
+	subsection("Live Metrics")
+	row("chain ID", fmt.Sprintf("%d  _(eth_chainId)_", d.EVMChainID))
 	if d.EVMDenom != "" {
 		row("denom", d.EVMDenom)
 	}
-	if d.EVMClient != "" {
-		row("client", d.EVMClient)
-	}
-
-	subsection("Health")
-	if d.EVMRPCOk {
-		row("rpc", "ok  (eth_blockNumber responded)")
-	} else {
-		row("rpc", "error")
-	}
-	listeningStr := "yes"
-	if !d.EVMListening {
-		listeningStr = "no"
-	}
-	row("net listening", listeningStr)
-	row("peers", fmt.Sprintf("%d", d.EVMPeerCount))
+	row("block height", d.EVMBlock+"  _(eth_blockNumber)_")
 	if d.EVMBlockAge != "" {
 		ageStr := d.EVMBlockAge
 		if d.EVMBlockAgeErr {
@@ -313,83 +457,65 @@ func buildMarkdown(d WebData) string {
 		} else if d.EVMBlockAgeWarn {
 			ageStr += "  ⚠ slow"
 		}
-		row("last block age", ageStr)
+		row("last block age", ageStr+"  _(eth_getBlockByNumber)_")
 	}
-	row("sync",   evSyncStr)
-	row("txpool", fmt.Sprintf("pending %d   queued %d", d.PendingTx, d.QueuedTx))
+	row("txpool", fmt.Sprintf("pending %d   queued %d  _(txpool_status)_", d.PendingTx, d.QueuedTx))
 
-	subsection("Block")
-	row("block", d.EVMBlock)
-
-	subsection("Gas")
-	if d.BaseFee != "" {
-		row("base fee", d.BaseFee+" wei")
-	}
-	if d.GasPrice != "" {
-		row("gas price", d.GasPrice)
-	}
-	if d.MinGasPrice != "" {
-		row("min gas price", d.MinGasPrice)
-	}
-
-	subsection("Fee Market Mechanics")
-	row("model", "EIP-1559  (dynamic base fee — adjusts to target block utilization)")
-	if d.BaseFee != "" {
-		row("base fee", d.BaseFee+" wei")
-		if d.AdjCap != "" {
-			row("adjustment cap", d.AdjCap)
+	subsection("Method Probes")
+	fmt.Fprintf(w, "| method | status | latency | error |\n")
+	fmt.Fprintf(w, "|--------|--------|---------|-------|\n")
+	for _, p := range d.RPCProbes {
+		status := "ok"
+		errStr := ""
+		if !p.OK {
+			status = "FAIL"
+			errStr = truncate(p.Error, 30)
 		}
+		fmt.Fprintf(w, "| `%s` | %s | %s | %s |\n", p.Method, status, p.Latency, errStr)
 	}
-	if d.Elasticity > 0 {
-		row("block target", fmt.Sprintf("max_gas ÷ %d  (rises if > 1/%d full, falls if < 1/%d full)", d.Elasticity, d.Elasticity, d.Elasticity))
-	}
-	noBaseFeeStr := boolStr(d.NoBaseFee) + "  (fee enforcement "
-	if d.NoBaseFee {
-		noBaseFeeStr += "disabled)"
-	} else {
-		noBaseFeeStr += "active)"
-	}
-	row("no_base_fee", noBaseFeeStr)
-	feeDestStr := "validators"
-	if d.CommunityTaxZero {
-		feeDestStr += "  (0% community tax — fees are not burned)"
-	}
-	row("fee destination", feeDestStr)
+	fmt.Fprintln(w)
 
+	subsection("Raw JSON-RPC Samples")
+	for _, p := range d.RPCProbes {
+		status := "ok"
+		if !p.OK {
+			status = "FAIL"
+		}
+		fmt.Fprintf(w, "**%s** (%s, %s)\n\n", p.Method, status, p.Latency)
+		fmt.Fprintf(w, "```json\n%s\n→\n%s\n```\n\n", p.Request, p.Response)
+	}
+
+	subsection("EVM Config")
 	if len(d.Precompiles) > 0 {
-		subsection("Precompiles")
-		row("active", fmt.Sprintf("%d", len(d.Precompiles)))
+		row("precompiles", fmt.Sprintf("%d active", len(d.Precompiles)))
 		for _, pc := range d.Precompiles {
-			fmt.Fprintf(w, "- %s\n", pc)
+			fmt.Fprintf(w, "  - `%s`\n", pc)
 		}
 	}
-
-	subsection("Config")
 	if d.HistoryWindow != "" {
-		row("history serve window", d.HistoryWindow)
+		row("history serve window", d.HistoryWindow+" blocks")
 	}
-	row("ERC20 enabled", boolStr(d.ERC20Enabled))
+	row("ERC20 module", boolStr(d.ERC20Enabled))
 	if d.HardforkLondon != "" {
-		row("London height", d.HardforkLondon)
+		row("London", "height "+d.HardforkLondon)
 	}
 	if d.HardforkShanghai != "" {
-		row("Shanghai height", d.HardforkShanghai)
+		row("Shanghai", "time "+d.HardforkShanghai)
 	}
 	if d.HardforkCancun != "" {
-		row("Cancun height", d.HardforkCancun)
+		row("Cancun", "time "+d.HardforkCancun)
 	}
 
 	fmt.Fprintln(w)
 	return b.String()
 }
 
-// mdPMTStatus returns a plain-text PMT status string for Markdown output.
 func mdPMTStatus(d WebData) string {
 	if !d.PMTEnabled {
 		return "disabled"
 	}
 	if d.PMTPoolEmpty {
-		return "ENABLED — pool EMPTY  (validators receive no PMT rewards)"
+		return "enabled — pool empty  (no PMT rewards distributing)"
 	}
 	suffix := ""
 	if d.PMTRunway != "" {

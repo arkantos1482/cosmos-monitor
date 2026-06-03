@@ -4,23 +4,36 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
+	"time"
 )
+
+// RPCProbe holds one JSON-RPC health check with raw request/response.
+type RPCProbe struct {
+	Method   string
+	Request  string
+	Response string
+	OK       bool
+	Error    string
+	Latency  time.Duration
+}
 
 // EVMSnapshot holds EVM JSON-RPC data.
 type EVMSnapshot struct {
-	BlockNumber        uint64
-	ChainID            uint64
-	Syncing            bool
-	GasPrice           string
-	PendingTx          uint64
-	QueuedTx           uint64
-	PeerCount          uint64
-	ClientVersion      string
-	NetListening       bool
-	EVMBlockTimestamp  uint64 // unix seconds of latest EVM block
-	Err                error
+	BlockNumber       uint64
+	ChainID           uint64
+	Syncing           bool
+	GasPrice          string
+	PendingTx         uint64
+	QueuedTx          uint64
+	PeerCount         uint64
+	ClientVersion     string
+	NetListening      bool
+	EVMBlockTimestamp uint64 // unix seconds of latest EVM block
+	Probes            []RPCProbe
+	Err               error
 }
 
 type rpcRequest struct {
@@ -59,36 +72,133 @@ func evmCallP(endpoint, method string, params []any, target any) error {
 	return json.Unmarshal(rpc.Result, target)
 }
 
+func evmProbe(endpoint, method string, params []any) RPCProbe {
+	req := rpcRequest{JSONRPC: "2.0", Method: method, Params: params, ID: 1}
+	reqBody, _ := json.Marshal(req)
+	p := RPCProbe{
+		Method:  method,
+		Request: compactJSONFull(reqBody),
+	}
+
+	start := time.Now()
+	resp, err := httpClient.Post(endpoint, "application/json", bytes.NewReader(reqBody))
+	p.Latency = time.Since(start)
+	if err != nil {
+		p.Error = err.Error()
+		return p
+	}
+	defer resp.Body.Close()
+
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		p.Error = err.Error()
+		return p
+	}
+	p.Response = compactJSONFull(raw)
+	if resp.StatusCode != 200 {
+		p.Error = fmt.Sprintf("HTTP %d", resp.StatusCode)
+		return p
+	}
+
+	var rpc rpcResponse
+	if err := json.Unmarshal(raw, &rpc); err != nil {
+		p.Error = err.Error()
+		return p
+	}
+	if rpc.Error != nil {
+		p.Error = rpc.Error.Message
+		return p
+	}
+	p.OK = true
+	return p
+}
+
+func compactJSONFull(b []byte) string {
+	var buf bytes.Buffer
+	if err := json.Compact(&buf, b); err != nil {
+		return string(b)
+	}
+	return buf.String()
+}
+
+func TruncateJSON(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "…"
+}
+
 func hexToUint64(h string) uint64 {
 	h = strings.TrimPrefix(h, "0x")
 	v, _ := strconv.ParseUint(h, 16, 64)
 	return v
 }
 
-// FetchEVM fetches all EVM JSON-RPC metrics.
+func probeResult[T any](p RPCProbe, target *T) bool {
+	if !p.OK {
+		return false
+	}
+	var rpc rpcResponse
+	if err := json.Unmarshal([]byte(p.Response), &rpc); err != nil {
+		return false
+	}
+	return json.Unmarshal(rpc.Result, target) == nil
+}
+
+// FetchEVM fetches all EVM JSON-RPC metrics and probe traces.
 func FetchEVM(endpoint string) EVMSnapshot {
 	snap := EVMSnapshot{}
 
-	var blockHex string
-	if err := evmCall(endpoint, "eth_blockNumber", &blockHex); err != nil {
-		snap.Err = fmt.Errorf("eth_blockNumber: %w", err)
+	methods := []struct {
+		method string
+		params []any
+	}{
+		{"eth_blockNumber", nil},
+		{"eth_chainId", nil},
+		{"eth_syncing", nil},
+		{"eth_gasPrice", nil},
+		{"txpool_status", nil},
+		{"net_peerCount", nil},
+		{"net_listening", nil},
+		{"web3_clientVersion", nil},
+		{"eth_getBlockByNumber", []any{"latest", false}},
+	}
+
+	for _, m := range methods {
+		params := m.params
+		if params == nil {
+			params = []any{}
+		}
+		snap.Probes = append(snap.Probes, evmProbe(endpoint, m.method, params))
+	}
+
+	byMethod := map[string]RPCProbe{}
+	for _, p := range snap.Probes {
+		byMethod[p.Method] = p
+	}
+
+	blockProbe := byMethod["eth_blockNumber"]
+	if !blockProbe.OK {
+		snap.Err = fmt.Errorf("eth_blockNumber: %s", firstNonEmpty(blockProbe.Error, "failed"))
 		return snap
 	}
-	snap.BlockNumber = hexToUint64(blockHex)
+	var blockHex string
+	if probeResult(blockProbe, &blockHex) {
+		snap.BlockNumber = hexToUint64(blockHex)
+	}
 
 	var chainIDHex string
-	if err := evmCall(endpoint, "eth_chainId", &chainIDHex); err == nil {
+	if probeResult(byMethod["eth_chainId"], &chainIDHex) {
 		snap.ChainID = hexToUint64(chainIDHex)
 	}
 
-	// eth_syncing returns false (bool) or an object — handle both
 	var syncRaw json.RawMessage
-	if err := evmCall(endpoint, "eth_syncing", &syncRaw); err == nil {
+	if probeResult(byMethod["eth_syncing"], &syncRaw) {
 		snap.Syncing = string(syncRaw) != "false"
 	}
 
 	var gasPriceHex string
-	if err := evmCall(endpoint, "eth_gasPrice", &gasPriceHex); err == nil {
+	if probeResult(byMethod["eth_gasPrice"], &gasPriceHex) {
 		gp := hexToUint64(gasPriceHex)
 		if gp == 0 {
 			snap.GasPrice = "0"
@@ -101,14 +211,13 @@ func FetchEVM(endpoint string) EVMSnapshot {
 		Pending string `json:"pending"`
 		Queued  string `json:"queued"`
 	}
-	if err := evmCall(endpoint, "txpool_status", &txpool); err == nil {
+	if probeResult(byMethod["txpool_status"], &txpool) {
 		snap.PendingTx = hexToUint64(txpool.Pending)
 		snap.QueuedTx = hexToUint64(txpool.Queued)
 	}
 
-	// net_peerCount returns a plain integer on this chain, not a hex string.
 	var peerRaw json.RawMessage
-	if err := evmCall(endpoint, "net_peerCount", &peerRaw); err == nil {
+	if probeResult(byMethod["net_peerCount"], &peerRaw) {
 		s := strings.Trim(string(peerRaw), `"`)
 		if strings.HasPrefix(s, "0x") || strings.HasPrefix(s, "0X") {
 			snap.PeerCount = hexToUint64(s)
@@ -119,8 +228,7 @@ func FetchEVM(endpoint string) EVMSnapshot {
 	}
 
 	var clientVer string
-	if err := evmCall(endpoint, "web3_clientVersion", &clientVer); err == nil {
-		// response may be multi-line; keep only the first line
+	if probeResult(byMethod["web3_clientVersion"], &clientVer) {
 		if i := strings.IndexByte(clientVer, '\n'); i >= 0 {
 			clientVer = clientVer[:i]
 		}
@@ -128,16 +236,25 @@ func FetchEVM(endpoint string) EVMSnapshot {
 	}
 
 	var listening bool
-	if err := evmCall(endpoint, "net_listening", &listening); err == nil {
+	if probeResult(byMethod["net_listening"], &listening) {
 		snap.NetListening = listening
 	}
 
 	var latestBlock struct {
 		Timestamp string `json:"timestamp"`
 	}
-	if err := evmCallP(endpoint, "eth_getBlockByNumber", []any{"latest", false}, &latestBlock); err == nil {
+	if probeResult(byMethod["eth_getBlockByNumber"], &latestBlock) {
 		snap.EVMBlockTimestamp = hexToUint64(latestBlock.Timestamp)
 	}
 
 	return snap
+}
+
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if v != "" {
+			return v
+		}
+	}
+	return "unknown"
 }

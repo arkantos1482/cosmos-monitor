@@ -28,6 +28,10 @@ type ChainSnapshot struct {
 	MempoolTxs          int
 	NextProposerMoniker string
 
+	// This node's validator identity from /status (empty if full node).
+	LocalConsensusAddr string
+	LocalVotingPower   int64
+
 	Validators []ValidatorInfo
 
 	BondedTokens     string
@@ -607,6 +611,8 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 	if t, err := time.Parse(time.RFC3339Nano, status.Result.SyncInfo.LatestBlockTime); err == nil {
 		snap.LatestBlockTime = t
 	}
+	snap.LocalConsensusAddr = strings.ToLower(status.Result.ValidatorInfo.Address)
+	snap.LocalVotingPower = parseInt64(status.Result.ValidatorInfo.VotingPower)
 
 	var netInfo netInfoResp
 	if err := doJSON(rpc+"/net_info", &netInfo); err == nil {
@@ -760,7 +766,12 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 			go func(idx int, id uint64) {
 				defer twg.Done()
 				var tr proposalTallyResp
-				if err := doJSON(fmt.Sprintf("%s/cosmos/gov/v1beta1/proposals/%d/tally", rest, id), &tr); err == nil {
+				tallyURL := fmt.Sprintf("%s/cosmos/gov/v1beta1/proposals/%d/tally", rest, id)
+				if err := doJSON(tallyURL, &tr); err != nil {
+					tallyURL = fmt.Sprintf("%s/cosmos/gov/v1/proposals/%d/tally", rest, id)
+					_ = doJSON(tallyURL, &tr)
+				}
+				if tr.Tally.Yes != "" || tr.Tally.No != "" || tr.Tally.Abstain != "" || tr.Tally.NoWithVeto != "" {
 					tallies[idx] = ProposalTally{
 						Yes:        tr.Tally.Yes,
 						No:         tr.Tally.No,
