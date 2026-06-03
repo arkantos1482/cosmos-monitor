@@ -9,9 +9,36 @@ import (
 	"github.com/AlexanderGrooff/mermaid-ascii/pkg/diagram"
 )
 
+// Diagram padding (mermaid-ascii): border = space inside each box; padX/padY = gap between nodes.
+// Defaults are compact for TUI scrolling; override with -diagram-border / -diagram-padx / -diagram-pady.
+var (
+	diagramBorderPad = 0
+	diagramPadX      = 2
+	diagramPadY      = 2
+)
+
+func SetDiagramPadding(border, padX, padY int) {
+	if border < 0 {
+		border = 0
+	}
+	if padX < 0 {
+		padX = 0
+	}
+	if padY < 0 {
+		padY = 0
+	}
+	diagramBorderPad = border
+	diagramPadX = padX
+	diagramPadY = padY
+}
+
+func mermaidConfig(useAscii bool) (*diagram.Config, error) {
+	return diagram.NewCLIConfig(useAscii, false, false, diagramBorderPad, diagramPadX, diagramPadY, "TD")
+}
+
 // renderMermaid converts Mermaid source to Unicode box-drawing text (terminal + web).
 func renderMermaid(src string) (string, error) {
-	cfg, err := diagram.NewCLIConfig(false, false, false, 1, 4, 4, "TD")
+	cfg, err := mermaidConfig(false)
 	if err != nil {
 		return "", err
 	}
@@ -19,7 +46,7 @@ func renderMermaid(src string) (string, error) {
 	if err == nil {
 		return strings.TrimRight(out, "\n"), nil
 	}
-	cfg2, err2 := diagram.NewCLIConfig(true, false, false, 1, 4, 4, "TD")
+	cfg2, err2 := mermaidConfig(true)
 	if err2 != nil {
 		return "", err
 	}
@@ -42,6 +69,15 @@ func mermaidLabel(s string) string {
 	return `"` + s + `"`
 }
 
+// shortenLabel keeps diagram nodes narrow (long REST amounts blow up box width).
+func shortenLabel(s string, max int) string {
+	s = strings.TrimSpace(s)
+	if max <= 0 || len(s) <= max {
+		return s
+	}
+	return s[:max-1] + "…"
+}
+
 func economicsOverviewMermaid(d WebData) string {
 	infl := fmt.Sprintf("Inflation %.2f%%", d.Inflation)
 	if d.Inflation == 0 {
@@ -51,12 +87,12 @@ func economicsOverviewMermaid(d WebData) string {
 	if d.CommunityTaxZero {
 		comm = "Community tax 0%"
 	}
-	distLabel := "Block rewards (x/distribution)"
+	distLabel := "x/distribution"
 	if d.BondedPct > 0 {
 		if d.GoalBonded > 0 {
-			distLabel = fmt.Sprintf("x/distribution · bonded %.1f%% (goal %.0f%%)", d.BondedPct, d.GoalBonded)
+			distLabel = fmt.Sprintf("dist · %.1f%% bonded (goal %.0f%%)", d.BondedPct, d.GoalBonded)
 		} else {
-			distLabel = fmt.Sprintf("x/distribution · bonded %.1f%%", d.BondedPct)
+			distLabel = fmt.Sprintf("dist · %.1f%% bonded", d.BondedPct)
 		}
 	}
 
@@ -108,11 +144,11 @@ func feeFlowMermaid(d WebData) string {
 	fmLabel := fm
 	if d.BaseFee != "" || d.GasPrice != "" {
 		if d.BaseFee != "" && d.GasPrice != "" {
-			fmLabel = fm + " · base " + d.BaseFee + " · gas " + d.GasPrice
+			fmLabel = fm + " · " + shortenLabel("base "+d.BaseFee, 22) + " · " + shortenLabel("gas "+d.GasPrice, 18)
 		} else if d.BaseFee != "" {
-			fmLabel = fm + " · base " + d.BaseFee
+			fmLabel = fm + " · " + shortenLabel("base "+d.BaseFee, 28)
 		} else {
-			fmLabel = fm + " · gas " + d.GasPrice
+			fmLabel = fm + " · " + shortenLabel("gas "+d.GasPrice, 28)
 		}
 	}
 
