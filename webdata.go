@@ -266,7 +266,9 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 
 	vals := make([]fetch.ValidatorInfo, len(chain.Validators))
 	copy(vals, chain.Validators)
-	sort.Slice(vals, func(i, j int) bool { return vals[i].VotingPowerPercent > vals[j].VotingPowerPercent })
+	sort.Slice(vals, func(i, j int) bool {
+		return strings.ToLower(vals[i].Moniker) < strings.ToLower(vals[j].Moniker)
+	})
 
 	localAddr := strings.ToLower(chain.LocalConsensusAddr)
 	var localVal *fetch.ValidatorInfo

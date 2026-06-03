@@ -71,18 +71,25 @@ _(Removed from §2: connected peer monikers — moved to §3 as network-wide con
 
 _All validators on **pmt** — how to dial them on P2P, stake, signing health, and chain-wide staking/slashing params._
 
-## Validators
+## Network (P2P)
 
-| moniker | operator | p2p dial | node ID | consensus | vp% | commission | missed | status | jailed | local |
-|---------|----------|----------|---------|-----------|-----|------------|--------|--------|--------|-------|
-| node1 | cosmosvaloper1akk…zp4 | `7c90c689…@ec2-18-206-235-38…:26656` | 7c90c689… | 31AEC3D5… | 25.0% | 10.0% | 0 | BONDED | | |
-| node2 | cosmosvaloper1r2d…jk0a | `d8e831a5…@ec2-3-88-102-95…:26656` | d8e831a5… | B022E73E… | 25.0% | 10.0% | 0 | BONDED | | |
-| node3 | cosmosvaloper15hr…ej3e | `b00a33cb…@ec2-98-88-84-176…:26656` | b00a33cb… | 74F9309C… | 25.0% | 10.0% | 0 | BONDED | | |
-| node4 | cosmosvaloper1vmr…pdxh | `3381ddd6…@ec2-34-203-36-91…:26656` | 3381ddd6… | 870DA298… | 25.0% | 10.0% | 0 | BONDED | | **this node** |
+Per-validator blocks: **operator** (`x/staking`), **p2p dial** / **node ID** (`/status` or `/net_info`), **consensus** (`x/staking`).
 
-**p2p dial** = `node_id@external_host:26656` from deploy inventory (`tools/ops/deploy/inventory.ini` `external_address`), keyed by moniker ↔ manifest `node_id`.
+## Stake
 
-**connected** _(optional badge on row)_: whether this validator's node ID appears in **this** node's `/net_info` peers (node4 example: 3 peers — node1, node2, node3).
+| moniker | vp% | commission | status | local |
+|---------|-----|------------|--------|-------|
+| node1 | 25.0% | 10.0% | bonded | |
+| … | | | | **this node** on node4 row |
+
+## Security
+
+| moniker | missed | jailed | tombstoned | health | local |
+|---------|--------|--------|------------|--------|-------|
+| node1 | 0 | | | ok | |
+| … | | | | | |
+
+Sources noted above each table in the rendered output.
 
 ## Connected peers (this node)
 
@@ -122,17 +129,14 @@ _Staking & rewards for **this machine's** operator — matched via consensus add
 - **status**: BONDED
 - **voting power**: 100,000,000,000,000,000,000,000,000 apmt  (25.0% of bonded stake)
 - **commission**: 10.0%
+- **outstanding rewards**: …  _(x/distribution, unclaimed)_
+- **commission earned**: …  _(x/distribution, unclaimed)_
 
 ## Block signing
 
 - **signing health**: OK
 - **missed / window**: 0 / 10,000 blocks  (max allowed: 500)
 - **proposer**: not next  _(next: node2)_
-
-## Unclaimed rewards
-
-- **outstanding rewards**: …
-- **commission earned**: …
 
 _(Removed from §4: node ID, consensus address — already under §2 Node / Consensus.)_
 

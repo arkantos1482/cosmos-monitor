@@ -82,15 +82,21 @@ func buildMarkdown(d WebData) string {
 	// ── 3. VALIDATOR SET ─────────────────────────────────────────────────────
 	section("3. VALIDATOR SET")
 
-	fmt.Fprintf(w, "_All validators on the chain — split for readability. P2P dial is `node_id@listen_addr` from `/status` (this node) or `/net_info` (peered validators); otherwise —._\n\n")
+	fmt.Fprintf(w, "_All validators on the chain — identity and P2P per validator, then stake and security tables._\n\n")
 
 	subsection("Network (P2P)")
+	fmt.Fprintf(w, "_Per validator: `p2p dial` / `node ID` from CometBFT `/status` (this node) or `/net_info` (peers); `operator` / `consensus` from Cosmos REST `x/staking`._\n\n")
 	for _, v := range d.Validators {
 		hdr := "**" + v.Moniker + "**"
 		if v.IsLocal {
 			hdr += "  _(this node)_"
 		}
 		fmt.Fprintf(w, "\n%s\n\n", hdr)
+		if v.Operator != "" {
+			row("operator", "`"+v.Operator+"`")
+		} else {
+			row("operator", "—")
+		}
 		p2p := v.P2PDial
 		if p2p == "" {
 			p2p = "—  _(not in this node's `/net_info` peers)_"
@@ -110,28 +116,24 @@ func buildMarkdown(d WebData) string {
 	fmt.Fprintln(w)
 
 	subsection("Stake")
-	fmt.Fprintf(w, "| moniker | operator | vp%% | commission | status | jailed | local |\n")
-	fmt.Fprintf(w, "|---------|----------|-----|------------|--------|--------|-------|\n")
+	fmt.Fprintf(w, "_`vp%%`, `commission`, `status` → REST `GET /cosmos/staking/v1beta1/validators` (all bond statuses)._\n\n")
+	fmt.Fprintf(w, "| moniker | vp%% | commission | status | local |\n")
+	fmt.Fprintf(w, "|---------|-----|------------|--------|-------|\n")
 	for _, v := range d.Validators {
-		jailed := ""
-		if v.Jailed {
-			jailed = "yes"
-		}
-		fmt.Fprintf(w, "| %s | %s | %.1f%% | %.1f%% | %s | %s | %s |\n",
+		fmt.Fprintf(w, "| %s | %.1f%% | %.1f%% | %s | %s |\n",
 			truncate(v.Moniker, 14),
-			truncate(v.Operator, 22),
 			v.VPFloat,
 			v.CommissionFloat,
 			v.Status,
-			jailed,
 			valLocalMark(v),
 		)
 	}
 	fmt.Fprintln(w)
 
-	subsection("Signing")
-	fmt.Fprintf(w, "| moniker | missed | health | tombstoned | local |\n")
-	fmt.Fprintf(w, "|---------|--------|--------|------------|-------|\n")
+	subsection("Security")
+	fmt.Fprintf(w, "_`missed`, `tombstoned` → REST `GET /cosmos/slashing/v1beta1/signing_infos`; `jailed` → `x/staking` validators; `health` → derived (missed vs `min_signed_per_window` from slashing params)._\n\n")
+	fmt.Fprintf(w, "| moniker | missed | jailed | tombstoned | health | local |\n")
+	fmt.Fprintf(w, "|---------|--------|--------|------------|--------|-------|\n")
 	for _, v := range d.Validators {
 		missed := fmt.Sprintf("%d", v.Missed)
 		health := "ok"
@@ -145,15 +147,20 @@ func buildMarkdown(d WebData) string {
 		} else if v.Missed > 0 {
 			health = "ok (some misses)"
 		}
+		jailed := ""
+		if v.Jailed {
+			jailed = "yes"
+		}
 		tomb := ""
 		if v.Tombstoned {
 			tomb = "yes"
 		}
-		fmt.Fprintf(w, "| %s | %s | %s | %s | %s |\n",
+		fmt.Fprintf(w, "| %s | %s | %s | %s | %s | %s |\n",
 			truncate(v.Moniker, 14),
 			missed,
-			health,
+			jailed,
 			tomb,
+			health,
 			valLocalMark(v),
 		)
 	}
@@ -194,6 +201,16 @@ func buildMarkdown(d WebData) string {
 		}
 		row("voting power", fmt.Sprintf("%s  (%.1f%% of bonded stake)", lv.VotingPower, lv.VPPercent))
 		row("commission", fmt.Sprintf("%.1f%%  _(your cut of delegator rewards)_", lv.Commission))
+		if lv.Outstanding != "" {
+			row("outstanding rewards", lv.Outstanding+"  _(total rewards not yet withdrawn — x/distribution)_")
+		} else {
+			row("outstanding rewards", "–")
+		}
+		if lv.CommissionEarned != "" {
+			row("commission earned", lv.CommissionEarned+"  _(validator commission, unclaimed — x/distribution)_")
+		} else {
+			row("commission earned", "–")
+		}
 
 		subsection("Block Signing")
 		row("signing health", lv.SigningStatus)
@@ -207,18 +224,6 @@ func buildMarkdown(d WebData) string {
 		}
 		if lv.ProposerPriority != 0 {
 			row("proposer priority", fmtInt(lv.ProposerPriority))
-		}
-
-		subsection("Unclaimed Rewards")
-		if lv.Outstanding != "" {
-			row("outstanding rewards", lv.Outstanding+"  _(total rewards not yet withdrawn)_")
-		} else {
-			row("outstanding rewards", "–")
-		}
-		if lv.CommissionEarned != "" {
-			row("commission earned", lv.CommissionEarned+"  _(your validator commission, unclaimed)_")
-		} else {
-			row("commission earned", "–")
 		}
 	}
 
