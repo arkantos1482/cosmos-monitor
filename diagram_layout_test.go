@@ -12,7 +12,7 @@ func TestEconomicsOverviewLiveLabels(t *testing.T) {
 		BondedAmt:        "400M PMT",
 		CommunityPool:    "0 PMT",
 		CommunityTaxZero: true,
-		TotalOutstanding: "1.2 PMT",
+		TotalOutstanding: "1.2 PMT  across 4 validators",
 		PMTEnabled:       true,
 		PMTRate:          "0.1 PMT/block",
 		PMTBalance:       "500K PMT",
@@ -22,11 +22,72 @@ func TestEconomicsOverviewLiveLabels(t *testing.T) {
 		},
 	}
 	src := economicsOverviewMermaid(d)
-	for _, want := range []string{"mempool 2", "400M PMT", "4 validators", "0 PMT", "500K PMT", "0.1 PMT/block"} {
+	for _, want := range []string{"mempool 2", "400M PMT", "4 validators", "0 PMT", "500K PMT", "0.1 PMT/block", "across 4 validators"} {
 		if !strings.Contains(src, want) {
 			t.Fatalf("expected live label fragment %q in:\n%s", want, src)
 		}
 	}
+	if !strings.Contains(src, "fees --> fc") || strings.Contains(src, "dist --> pmt") {
+		t.Fatalf("unexpected topology in:\n%s", src)
+	}
+}
+
+func TestEconomicsOverviewStackedLabelsRender(t *testing.T) {
+	d := WebData{
+		BondedCount:      4,
+		BondedAmt:        "400.00M PMT",
+		TotalOutstanding: "0.006854 PMT  across 4 validators",
+		PMTEnabled:       true,
+		PMTRate:          "0.1 PMT/block",
+		PMTPoolEmpty:     true,
+	}
+	out, err := renderMermaid(economicsOverviewMermaid(d))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"fee_collector", "outstanding 0.006854 PMT", "across 4 validators", "400.00M PMT bonded"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("expected %q in render output", want)
+		}
+	}
+	if diagramMaxWidth(out) >= diagramMaxWidth(strings.ReplaceAll(out, "\n\n", "\n")) {
+		// Multiline boxes should be taller; main column width should stay moderate.
+		t.Logf("rendered width=%d", diagramMaxWidth(out))
+	}
+}
+
+func TestMultilineLabelNarrowsBox(t *testing.T) {
+	flat := mermaidLabel("fee_collector · outstanding 0.006854 PMT  across 4 validators")
+	stacked := stackMermaidQuoted(stackLabelText(
+		"fee_collector",
+		"outstanding 0.006854 PMT",
+		"across 4 validators",
+	))
+	srcFlat := "graph TD\n  fc[" + flat + "]\n"
+	srcStack := "graph TD\n  fc[" + stacked + "]\n"
+	outFlat, err := renderMermaid(srcFlat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	outStack, err := renderMermaid(srcStack)
+	if err != nil {
+		t.Fatal(err)
+	}
+	maxFlat, maxStack := diagramMaxWidth(outFlat), diagramMaxWidth(outStack)
+	if maxStack >= maxFlat {
+		t.Fatalf("expected stacked label to narrow box: flat=%d stack=%d\nflat:\n%s\nstack:\n%s",
+			maxFlat, maxStack, outFlat, outStack)
+	}
+}
+
+func diagramMaxWidth(s string) int {
+	m := 0
+	for _, l := range strings.Split(s, "\n") {
+		if len(l) > m {
+			m = len(l)
+		}
+	}
+	return m
 }
 
 func TestFeemarketMechanicsVerticalSpine(t *testing.T) {

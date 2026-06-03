@@ -70,6 +70,20 @@ func mermaidLabel(s string) string {
 	return `"` + s + `"`
 }
 
+// stackLabelText joins parts with newlines for taller, narrower mermaid-ascii boxes.
+func stackLabelText(parts ...string) string {
+	var lines []string
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			lines = append(lines, p)
+		}
+	}
+	s := strings.Join(lines, "\n")
+	s = strings.ReplaceAll(s, `"`, `'`)
+	return s
+}
+
 func diagramDenom(d WebData) string {
 	if d.EVMDenom != "" {
 		return d.EVMDenom
@@ -80,46 +94,51 @@ func diagramDenom(d WebData) string {
 	return "apmt"
 }
 
-func joinLabel(parts ...string) string {
-	var out []string
-	for _, p := range parts {
-		if p != "" {
-			out = append(out, p)
-		}
+func splitOutstandingSuffix(s string) (amount, suffix string) {
+	if i := strings.Index(s, "  across "); i >= 0 {
+		return strings.TrimSpace(s[:i]), strings.TrimSpace(s[i+2:])
 	}
-	return strings.Join(out, " · ")
+	return strings.TrimSpace(s), ""
 }
 
 func economicsFeesLabel(d WebData) string {
-	label := "Tx fees (ante / EVM)"
+	lines := []string{"Tx fees (ante / EVM)"}
 	if d.MempoolTxs > 0 {
-		label = joinLabel(label, fmt.Sprintf("mempool %d", d.MempoolTxs))
+		lines = append(lines, fmt.Sprintf("mempool %d", d.MempoolTxs))
 	}
 	if d.PendingTx > 0 {
-		label = joinLabel(label, fmt.Sprintf("evm pending %d", d.PendingTx))
+		lines = append(lines, fmt.Sprintf("evm pending %d", d.PendingTx))
 	}
-	return label
+	return stackLabelText(lines...)
 }
 
 func economicsFCLabel(d WebData) string {
-	label := "fee_collector"
+	lines := []string{"fee_collector"}
 	if d.TotalOutstanding != "" {
-		return joinLabel(label, "outstanding "+d.TotalOutstanding)
+		amt, suffix := splitOutstandingSuffix(d.TotalOutstanding)
+		lines = append(lines, "outstanding "+amt)
+		if suffix != "" {
+			lines = append(lines, suffix)
+		}
+	} else {
+		lines = append(lines, "cleared each BeginBlock")
 	}
-	return joinLabel(label, "cleared each BeginBlock")
+	return stackLabelText(lines...)
 }
 
 func economicsValLabel(d WebData) string {
-	label := "Validators"
+	var lines []string
 	if d.BondedCount > 0 {
-		label = fmt.Sprintf("%d validators", d.BondedCount)
+		lines = append(lines, fmt.Sprintf("%d validators", d.BondedCount))
+	} else {
+		lines = append(lines, "Validators")
 	}
 	if d.BondedAmt != "" {
-		label = joinLabel(label, d.BondedAmt+" bonded")
+		lines = append(lines, d.BondedAmt+" bonded")
 	} else if d.BondedPct > 0 {
-		label = joinLabel(label, fmt.Sprintf("%.1f%% stake", d.BondedPct))
+		lines = append(lines, fmt.Sprintf("%.1f%% stake", d.BondedPct))
 	}
-	return label
+	return stackLabelText(lines...)
 }
 
 func economicsCommLabel(d WebData) string {
@@ -128,83 +147,113 @@ func economicsCommLabel(d WebData) string {
 		comm = "community tax 0%"
 	}
 	if d.CommunityPool != "" {
-		return joinLabel(comm, "pool "+d.CommunityPool)
+		return stackLabelText(comm, "pool "+d.CommunityPool)
 	}
-	return comm
+	return stackLabelText(comm)
 }
 
 func economicsOpLabel(d WebData) string {
 	if d.Local.IsValidator && d.Local.Commission > 0 {
-		return fmt.Sprintf("commission %.1f%% → operator", d.Local.Commission)
+		return stackLabelText(fmt.Sprintf("commission %.1f%%", d.Local.Commission), "→ operator")
 	}
 	if n := len(d.Validators); n > 0 {
 		sum := 0.0
 		for _, v := range d.Validators {
 			sum += v.CommissionFloat
 		}
-		return fmt.Sprintf("commission ~%.1f%% → operator", sum/float64(n))
+		return stackLabelText(fmt.Sprintf("commission ~%.1f%%", sum/float64(n)), "→ operator")
 	}
-	return "commission → operator"
+	return stackLabelText("commission", "→ operator")
 }
 
 func economicsDelLabel(d WebData) string {
 	if d.TotalOutstanding != "" {
-		return joinLabel("delegators", "outstanding "+d.TotalOutstanding)
+		amt, suffix := splitOutstandingSuffix(d.TotalOutstanding)
+		lines := []string{"delegators", "outstanding " + amt}
+		if suffix != "" {
+			lines = append(lines, suffix)
+		}
+		return stackLabelText(lines...)
 	}
-	return "remainder → delegators"
+	return stackLabelText("remainder", "→ delegators")
 }
 
 func economicsPMTPoolLabel(d WebData) string {
-	pmt := "PMT pool (x/pmtrewards)"
+	lines := []string{"PMT pool (x/pmtrewards)"}
 	if d.PMTRate != "" {
-		pmt = joinLabel(pmt, d.PMTRate)
+		lines = append(lines, d.PMTRate)
 	}
 	if d.PMTBalance != "" {
-		pmt = joinLabel(pmt, d.PMTBalance)
+		lines = append(lines, d.PMTBalance)
 		if d.PMTRunway != "" {
-			pmt = joinLabel(pmt, d.PMTRunway)
+			lines = append(lines, d.PMTRunway)
 		}
 	} else if d.PMTPoolEmpty {
-		pmt += " — empty"
+		lines = append(lines, "— empty")
 	}
-	return pmt
+	return stackLabelText(lines...)
+}
+
+func economicsDistLabel(d WebData) string {
+	var lines []string
+	if d.BondedPct > 0 && d.GoalBonded > 0 {
+		lines = append(lines, fmt.Sprintf("x/distribution · %.1f%% bonded", d.BondedPct))
+		lines = append(lines, fmt.Sprintf("(goal %.0f%%)", d.GoalBonded))
+	} else if d.BondedPct > 0 {
+		lines = append(lines, fmt.Sprintf("x/distribution · %.1f%% bonded", d.BondedPct))
+	} else {
+		lines = append(lines, "x/distribution BeginBlock")
+	}
+	if d.TotalOutstanding != "" {
+		amt, suffix := splitOutstandingSuffix(d.TotalOutstanding)
+		lines = append(lines, "outstanding "+amt)
+		if suffix != "" {
+			lines = append(lines, suffix)
+		}
+	}
+	return stackLabelText(lines...)
+}
+
+func economicsInflLabel(d WebData) string {
+	if d.Inflation <= 0 {
+		return ""
+	}
+	if d.AnnualProvisions != "" {
+		return stackLabelText(
+			fmt.Sprintf("Inflation %.2f%%", d.Inflation),
+			d.AnnualProvisions+"/yr",
+			"(x/mint)",
+		)
+	}
+	return stackLabelText(fmt.Sprintf("Inflation %.2f%%", d.Inflation), "(x/mint)")
+}
+
+func stackMermaidQuoted(label string) string {
+	label = strings.ReplaceAll(label, `"`, `'`)
+	return `"` + label + `"`
+}
+
+func writeStackNode(b *strings.Builder, id, label string) {
+	fmt.Fprintf(b, "  %s[%s]\n", id, stackMermaidQuoted(label))
 }
 
 func economicsOverviewMermaid(d WebData) string {
-	distLabel := "x/distribution BeginBlock"
-	if d.BondedPct > 0 {
-		if d.GoalBonded > 0 {
-			distLabel = fmt.Sprintf("x/distribution · %.1f%% bonded (goal %.0f%%)", d.BondedPct, d.GoalBonded)
-		} else {
-			distLabel = fmt.Sprintf("x/distribution · %.1f%% bonded", d.BondedPct)
-		}
-	}
-	if d.TotalOutstanding != "" {
-		distLabel = joinLabel(distLabel, "outstanding "+d.TotalOutstanding)
-	}
-
 	var b strings.Builder
 	fmt.Fprintf(&b, "graph TD\n")
-	fmt.Fprintf(&b, "  fees[%s]\n", mermaidLabel(economicsFeesLabel(d)))
-	fmt.Fprintf(&b, "  fc[%s]\n", mermaidLabel(economicsFCLabel(d)))
-	fmt.Fprintf(&b, "  dist[%s]\n", mermaidLabel(distLabel))
-	fmt.Fprintf(&b, "  val[%s]\n", mermaidLabel(economicsValLabel(d)))
-	fmt.Fprintf(&b, "  comm[%s]\n", mermaidLabel(economicsCommLabel(d)))
-	fmt.Fprintf(&b, "  op[%s]\n", mermaidLabel(economicsOpLabel(d)))
-	fmt.Fprintf(&b, "  del[%s]\n", mermaidLabel(economicsDelLabel(d)))
+
+	writeStackNode(&b, "fees", economicsFeesLabel(d))
+	writeStackNode(&b, "fc", economicsFCLabel(d))
+	writeStackNode(&b, "dist", economicsDistLabel(d))
+	writeStackNode(&b, "val", economicsValLabel(d))
+	writeStackNode(&b, "comm", economicsCommLabel(d))
+	writeStackNode(&b, "op", economicsOpLabel(d))
+	writeStackNode(&b, "del", economicsDelLabel(d))
 
 	if d.Inflation > 0 {
-		infl := fmt.Sprintf("Inflation %.2f%% (x/mint)", d.Inflation)
-		fmt.Fprintf(&b, "  infl[%s]\n", mermaidLabel(infl))
+		writeStackNode(&b, "infl", economicsInflLabel(d))
 	}
 	if d.PMTEnabled {
-		fmt.Fprintf(&b, "  pmtPool[%s]\n", mermaidLabel(economicsPMTPoolLabel(d)))
-	}
-	if d.Inflation > 0 && d.AnnualProvisions != "" {
-		infl := fmt.Sprintf("Inflation %.2f%%", d.Inflation)
-		fmt.Fprintf(&b, "  infl[%s]\n", mermaidLabel(joinLabel(infl, d.AnnualProvisions+"/yr")))
-	} else if d.Inflation > 0 {
-		fmt.Fprintf(&b, "  infl[%s]\n", mermaidLabel(fmt.Sprintf("Inflation %.2f%% (x/mint)", d.Inflation)))
+		writeStackNode(&b, "pmtPool", economicsPMTPoolLabel(d))
 	}
 
 	fmt.Fprintf(&b, "  fees --> fc\n")
