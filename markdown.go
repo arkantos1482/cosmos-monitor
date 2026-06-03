@@ -12,6 +12,7 @@ func buildMarkdown(d WebData) string {
 	section    := func(name string)         { fmt.Fprintf(w, "\n# %s\n\n", name) }
 	subsection := func(name string)         { fmt.Fprintf(w, "\n## %s\n\n", name) }
 	row        := func(label, value string) { fmt.Fprintf(w, "- **%s**: %s\n", label, value) }
+	hint       := func(text string)         { fmt.Fprintf(w, "_%s_\n\n", text) }
 
 	syncStr := "synced"
 	if !d.Synced {
@@ -22,11 +23,13 @@ func buildMarkdown(d WebData) string {
 	section("1. INFRASTRUCTURE")
 
 	subsection("OS")
+	hint("`load` → `/proc/loadavg`; `ram` → `/proc/meminfo` (MemTotal, MemAvailable); `disk` → `statfs` on `/`.")
 	row("load", fmt.Sprintf("%.2f / %.2f / %.2f  (1m 5m 15m)", d.Load1, d.Load5, d.Load15))
 	row("ram", fmt.Sprintf("%s / %s  (%d%%)", d.MemUsed, d.MemTotal, d.MemPct))
 	row("disk", fmt.Sprintf("%s / %s  (%d%%)", d.DiskUsed, d.DiskTotal, d.DiskPct))
 
 	subsection("Container")
+	hint("`status` / `restarts` / `uptime` → Docker `GET /containers/{name}/json`; `cpu` / `ram` → `GET /containers/{name}/stats?stream=false` (unix socket).")
 	nodeStatus := "stopped"
 	if d.NodeRunning {
 		nodeStatus = "running"
@@ -45,6 +48,7 @@ func buildMarkdown(d WebData) string {
 	fmt.Fprintf(w, "_This machine's CometBFT process — identity, listen addresses, and consensus view._\n\n")
 
 	subsection("Node")
+	hint("`moniker`, `node ID`, `version`, `chain ID`, `p2p listen`, `rpc listen` → CometBFT RPC `GET /status` (`node_info`, `sync_info`, `validator_info` not used here).")
 	row("moniker", d.Moniker)
 	if d.NodeID != "" {
 		row("node ID", d.NodeID+"  _(CometBFT P2P peer ID)_")
@@ -63,6 +67,7 @@ func buildMarkdown(d WebData) string {
 	}
 
 	subsection("Consensus")
+	hint("`sync`, `height`, `last block`, `interval` → `/status` + `/block` (and `/block?height=h-1`); `consensus address`, `voting power` → `/status` `validator_info`; `mempool` → `/num_unconfirmed_txs`.")
 	row("sync", syncStr)
 	row("height", d.BlockHeight)
 	if d.BlockInterval != "" {
@@ -85,7 +90,7 @@ func buildMarkdown(d WebData) string {
 	fmt.Fprintf(w, "_All validators on the chain — identity and P2P per validator, then stake and security tables._\n\n")
 
 	subsection("Network (P2P)")
-	fmt.Fprintf(w, "_Per validator: `p2p dial` / `node ID` from CometBFT `/status` (this node) or `/net_info` (peers); `operator` / `consensus` from Cosmos REST `x/staking`._\n\n")
+	hint("Per validator: `p2p dial` / `node ID` → CometBFT `/status` (this node) or `/net_info` (peers); `operator` / `consensus` → REST `GET /cosmos/staking/v1beta1/validators`.")
 	for _, v := range d.Validators {
 		hdr := "**" + v.Moniker + "**"
 		if v.IsLocal {
@@ -116,7 +121,7 @@ func buildMarkdown(d WebData) string {
 	fmt.Fprintln(w)
 
 	subsection("Stake")
-	fmt.Fprintf(w, "_`vp%%`, `commission`, `status` → REST `GET /cosmos/staking/v1beta1/validators` (all bond statuses)._\n\n")
+	hint("`vp%%`, `commission`, `status` → REST `GET /cosmos/staking/v1beta1/validators` (bonded, unbonding, unbonded).")
 	fmt.Fprintf(w, "| moniker | vp%% | commission | status | local |\n")
 	fmt.Fprintf(w, "|---------|-----|------------|--------|-------|\n")
 	for _, v := range d.Validators {
@@ -131,7 +136,7 @@ func buildMarkdown(d WebData) string {
 	fmt.Fprintln(w)
 
 	subsection("Security")
-	fmt.Fprintf(w, "_`missed`, `tombstoned` → REST `GET /cosmos/slashing/v1beta1/signing_infos`; `jailed` → `x/staking` validators; `health` → derived (missed vs `min_signed_per_window` from slashing params)._\n\n")
+	hint("`missed`, `tombstoned` → REST `GET /cosmos/slashing/v1beta1/signing_infos`; `jailed` → `x/staking` validators; `health` → derived (missed vs `min_signed_per_window` from slashing params).")
 	fmt.Fprintf(w, "| moniker | missed | jailed | tombstoned | health | local |\n")
 	fmt.Fprintf(w, "|---------|--------|--------|------------|--------|-------|\n")
 	for _, v := range d.Validators {
@@ -167,6 +172,7 @@ func buildMarkdown(d WebData) string {
 	fmt.Fprintln(w)
 
 	subsection("Summary")
+	hint("`bonded` / `jailed` / `tombstoned` / `below min signed` → counts from §3 tables; `next proposer` → CometBFT `GET /validators` (highest `proposer_priority`).")
 	row("bonded", fmt.Sprintf("%d", d.BondedCount))
 	row("jailed", fmt.Sprintf("%d", d.JailedCount))
 	row("tombstoned", fmt.Sprintf("%d", d.TombstonedCount))
@@ -186,12 +192,14 @@ func buildMarkdown(d WebData) string {
 		row("moniker", d.Moniker)
 	} else {
 		subsection("Operator")
+		hint("`operator address`, `moniker` → matched local validator from `x/staking` (consensus address from `/status` `validator_info`).")
 		if lv.OperatorAddr != "" {
 			row("operator address", lv.OperatorAddr+"  _(staking / rewards — `evmd query/distribution` use this)_")
 		}
 		row("moniker", lv.Moniker)
 
 		subsection("Staking")
+		hint("`status`, `jailed`, `voting power`, `commission` → `x/staking` validators; `outstanding rewards` / `commission earned` → `x/distribution` per-valoper (`…/outstanding_rewards`, `…/commission`).")
 		row("status", lv.Status)
 		if lv.Jailed {
 			row("jailed", "yes")
@@ -213,6 +221,7 @@ func buildMarkdown(d WebData) string {
 		}
 
 		subsection("Block Signing")
+		hint("`signing health`, `missed / window` → `x/slashing` signing_infos + params; `proposer` / `proposer priority` → CometBFT `GET /validators`.")
 		row("signing health", lv.SigningStatus)
 		if d.SlashWindow != "" && d.SlashWindow != "0" {
 			row("missed / window", fmt.Sprintf("%d / %s blocks  (max allowed: %d)", lv.Missed, d.SlashWindow, lv.MaxMissed))
@@ -233,6 +242,7 @@ func buildMarkdown(d WebData) string {
 	fmt.Fprintf(w, "_How money moves on this chain — staking, inflation, fees, and rewards._\n\n")
 
 	subsection("Overview")
+	hint("Diagram only (no API). Snapshot below: `bond denom` → `x/staking` params; `total supply` → `x/bank` supply; `bonded` / `not bonded` → `x/staking` pool.")
 	fmt.Fprintf(w, "```\n")
 	fmt.Fprintf(w, "                         WHERE VALUE COMES FROM\n")
 	fmt.Fprintf(w, "  ┌─────────────────────┐              ┌──────────────────────┐\n")
@@ -263,6 +273,7 @@ func buildMarkdown(d WebData) string {
 	row("not bonded", d.NotBonded)
 
 	subsection("Staking Pool")
+	hint("`bond denom`, `unbonding time`, `max validators` → `GET /cosmos/staking/v1beta1/params`; `total supply` → `x/bank` supply; `bonded` / `not bonded` → `GET /cosmos/staking/v1beta1/pool`.")
 	if d.BondDenom != "" {
 		row("bond denom", d.BondDenom)
 	}
@@ -277,6 +288,7 @@ func buildMarkdown(d WebData) string {
 	}
 
 	subsection("Slashing Params")
+	hint("`signed blocks window`, `min signed`, slash fractions → `GET /cosmos/slashing/v1beta1/params`.")
 	if d.SlashWindow != "" && d.SlashWindow != "0" {
 		row("signed blocks window", d.SlashWindow+" blocks")
 	}
@@ -299,6 +311,7 @@ func buildMarkdown(d WebData) string {
 	}
 
 	subsection("Staking & Inflation  (x/mint + x/staking)")
+	hint("`inflation rate` → `GET /cosmos/mint/v1beta1/inflation`; `annual provisions` → `…/annual-provisions`; `goal bonded`, `blocks / year` → `…/params`; `unbonding time` → `x/staking` params.")
 	inflationStr := fmt.Sprintf("%.2f%%", d.Inflation)
 	if d.Inflation == 0 {
 		inflationStr += "  ⚠ inactive"
@@ -316,6 +329,7 @@ func buildMarkdown(d WebData) string {
 	}
 
 	subsection("Distribution  (x/distribution)")
+	hint("`community tax` → `GET /cosmos/distribution/v1beta1/params`; `community pool` → `…/community_pool`; `unclaimed staking rewards` → sum of per-validator `…/validators/{valoper}/outstanding_rewards`.")
 	row("community tax", d.CommunityTax+"  _(%% of block rewards → community pool, not validators)_")
 	row("community pool", d.CommunityPool+"  _(governance-controlled treasury)_")
 	if d.TotalOutstanding != "" {
@@ -323,6 +337,7 @@ func buildMarkdown(d WebData) string {
 	}
 
 	subsection("Fee Structure & Flow")
+	hint("Diagram + fee fields: `base fee`, `block gas`, feemarket params → REST `/cosmos/evm/feemarket/v1/{base_fee,block_gas,params}`; `gas price` → JSON-RPC `eth_gasPrice`; split % uses `x/distribution` community tax.")
 	fmt.Fprintf(w, "_Every EVM transaction pays gas. Fees are collected on-chain and routed to validators (and optionally the community pool)._\n\n")
 	fmt.Fprintf(w, "```\n")
 	fmt.Fprintf(w, "  User submits EVM tx\n")
@@ -378,6 +393,7 @@ func buildMarkdown(d WebData) string {
 	row("no_base_fee flag", noBaseFeeStr)
 
 	subsection("PMT Rewards  (x/pmtrewards — custom)")
+	hint("`status`, `reward rate`, pool address → `GET /cosmos/evm/pmtrewards/v1/params`; `pool balance` → `x/bank` balances for pool address; runway/emissions derived in pmtop.")
 	row("status", mdPMTStatus(d))
 	if d.PMTRate != "" {
 		row("reward rate", d.PMTRate+"  _(extra tokens per block from PMT pool)_")
@@ -406,6 +422,7 @@ func buildMarkdown(d WebData) string {
 
 	if len(d.Proposals) > 0 {
 		subsection(fmt.Sprintf("Active Proposals  (%d)", len(d.Proposals)))
+		hint("`GET /cosmos/gov/v1beta1/proposals?proposal_status=2` (v1 fallback if empty); tallies from per-proposal tally queries when available.")
 		for _, pr := range d.Proposals {
 			fmt.Fprintf(w, "- **#%d** %s  _(voting ends %s)_\n", pr.ID, truncate(pr.Title, 40), pr.End)
 			if pr.HasTally {
@@ -418,6 +435,7 @@ func buildMarkdown(d WebData) string {
 
 	if len(d.DepositProposals) > 0 {
 		subsection(fmt.Sprintf("Deposit-Period Proposals  (%d)", len(d.DepositProposals)))
+		hint("`GET /cosmos/gov/v1beta1/proposals?proposal_status=1` (deposit period).")
 		for _, pr := range d.DepositProposals {
 			fmt.Fprintf(w, "- **#%d** %s  _(deposit ends %s)_\n", pr.ID, truncate(pr.Title, 40), pr.End)
 		}
@@ -429,6 +447,7 @@ func buildMarkdown(d WebData) string {
 	}
 
 	subsection("Voting Params")
+	hint("`voting period` → `GET /cosmos/gov/v1beta1/params/voting`; `quorum`, `threshold`, `veto threshold` → `…/params/tallying`.")
 	row("voting period", d.VotingPeriod)
 	row("quorum", fmt.Sprintf("%.1f%%", d.Quorum))
 	row("threshold", fmt.Sprintf("%.1f%%", d.Threshold))
@@ -437,6 +456,7 @@ func buildMarkdown(d WebData) string {
 	}
 
 	subsection("Upgrade")
+	hint("`name`, `target height` → `GET /cosmos/upgrade/v1beta1/current_plan` (`plan` null when none pending).")
 	if d.UpgradeName == "" {
 		row("pending", "none")
 	} else {
@@ -448,9 +468,11 @@ func buildMarkdown(d WebData) string {
 	}
 
 	subsection("IBC")
+	hint("`active clients` → count of `GET /ibc/core/client/v1/client_states`.")
 	row("active clients", fmt.Sprintf("%d", d.IBCClients))
 
 	subsection(fmt.Sprintf("Token Pairs  (%d)", len(d.TokenPairs)))
+	hint("Each row → `GET /cosmos/evm/erc20/v1/token_pairs` (`denom`, `erc20_address`, `enabled`).")
 	if len(d.TokenPairs) == 0 {
 		fmt.Fprintf(w, "none registered\n\n")
 	}
@@ -473,6 +495,7 @@ func buildMarkdown(d WebData) string {
 	}
 
 	subsection("Endpoint Health")
+	hint("Aggregate of JSON-RPC probes on `:8545` (`eth_*`, `net_*`); `peers` also available as §2 EVM peer count via `net_peerCount`.")
 	okStr := "error"
 	if d.EVMRPCOk {
 		okStr = fmt.Sprintf("ok  (%d/%d methods responded)", d.RPCProbeOK, d.RPCProbeTotal)
@@ -490,6 +513,7 @@ func buildMarkdown(d WebData) string {
 	}
 
 	subsection("Live Metrics")
+	hint("`chain ID`, `block height`, `sync`, `txpool` → `eth_chainId`, `eth_blockNumber`, `eth_syncing`, `txpool_status`; `denom` → `x/vm` params (`evm_denom`); `last block age` from `eth_getBlockByNumber`.")
 	row("chain ID", fmt.Sprintf("%d  _(eth_chainId)_", d.EVMChainID))
 	if d.EVMDenom != "" {
 		row("denom", d.EVMDenom)
@@ -507,6 +531,7 @@ func buildMarkdown(d WebData) string {
 	row("txpool", fmt.Sprintf("pending %d   queued %d  _(txpool_status)_", d.PendingTx, d.QueuedTx))
 
 	subsection("Method Probes")
+	hint("Each row → `POST` JSON-RPC 2.0 to `:8545` (one request per method; latency measured client-side).")
 	fmt.Fprintf(w, "| method | status | latency | error |\n")
 	fmt.Fprintf(w, "|--------|--------|---------|-------|\n")
 	for _, p := range d.RPCProbes {
@@ -521,6 +546,7 @@ func buildMarkdown(d WebData) string {
 	fmt.Fprintln(w)
 
 	subsection("Raw JSON-RPC Samples")
+	hint("Request/response bodies from the same probe pass as **Method Probes** (truncated for display).")
 	for _, p := range d.RPCProbes {
 		status := "ok"
 		if !p.OK {
@@ -531,6 +557,7 @@ func buildMarkdown(d WebData) string {
 	}
 
 	subsection("EVM Config")
+	hint("`precompiles`, `history serve window`, `evm_denom` → `GET /cosmos/evm/vm/v1/params`; hardfork heights → `…/config`; `ERC20 module` → `GET /cosmos/evm/erc20/v1/params`.")
 	if len(d.Precompiles) > 0 {
 		row("precompiles", fmt.Sprintf("%d active", len(d.Precompiles)))
 		for _, pc := range d.Precompiles {
