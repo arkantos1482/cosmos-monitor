@@ -22,7 +22,7 @@ func TestEconomicsOverviewLiveLabels(t *testing.T) {
 		},
 	}
 	src := economicsOverviewMermaid(d)
-	for _, want := range []string{"mempool 2", "400M PMT", "4 validators", "0 PMT", "500K PMT", "0.1 PMT/block", "across 4 validators"} {
+	for _, want := range []string{"mempool 2", "400M PMT", "4 validators", "0 PMT", "500K PMT", "0.1 PMT/block", "across 4 validators", "x/staking", "voting power"} {
 		if !strings.Contains(src, want) {
 			t.Fatalf("expected live label fragment %q in:\n%s", want, src)
 		}
@@ -45,7 +45,7 @@ func TestEconomicsOverviewStackedLabelsRender(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"fee_collector", "outstanding 0.006854 PMT", "across 4 validators", "400.00M PMT bonded"} {
+	for _, want := range []string{"fee_collector", "unclaimed 0.006854 PMT", "across 4 validators", "400.00M PMT bonded", "0% inflation", "x/mint BeginBlock", "x/staking"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("expected %q in render output", want)
 		}

@@ -113,30 +113,31 @@ func economicsFeesLabel(d WebData) string {
 }
 
 func economicsFCLabel(d WebData) string {
-	lines := []string{"fee_collector"}
-	if d.TotalOutstanding != "" {
-		amt, suffix := splitOutstandingSuffix(d.TotalOutstanding)
-		lines = append(lines, "outstanding "+amt)
-		if suffix != "" {
-			lines = append(lines, suffix)
-		}
-	} else {
-		lines = append(lines, "cleared each BeginBlock")
-	}
-	return stackLabelText(lines...)
+	return stackLabelText("fee_collector", "cleared each BeginBlock")
 }
 
-func economicsValLabel(d WebData) string {
-	var lines []string
+func economicsStakeLabel(d WebData) string {
+	lines := []string{"x/staking"}
 	if d.BondedCount > 0 {
 		lines = append(lines, fmt.Sprintf("%d validators", d.BondedCount))
-	} else {
-		lines = append(lines, "Validators")
 	}
 	if d.BondedAmt != "" {
 		lines = append(lines, d.BondedAmt+" bonded")
 	} else if d.BondedPct > 0 {
-		lines = append(lines, fmt.Sprintf("%.1f%% stake", d.BondedPct))
+		lines = append(lines, fmt.Sprintf("%.1f%% of supply", d.BondedPct))
+	}
+	lines = append(lines, "defines voting power")
+	return stackLabelText(lines...)
+}
+
+func economicsValLabel(d WebData) string {
+	lines := []string{"validator rewards", "per block allocation"}
+	if d.TotalOutstanding != "" {
+		amt, suffix := splitOutstandingSuffix(d.TotalOutstanding)
+		lines = append(lines, "unclaimed "+amt)
+		if suffix != "" {
+			lines = append(lines, suffix)
+		}
 	}
 	return stackLabelText(lines...)
 }
@@ -152,30 +153,33 @@ func economicsCommLabel(d WebData) string {
 	return stackLabelText(comm)
 }
 
-func economicsOpLabel(d WebData) string {
+func economicsCommissionPct(d WebData) (pct float64, ok bool) {
 	if d.Local.IsValidator && d.Local.Commission > 0 {
-		return stackLabelText(fmt.Sprintf("commission %.1f%%", d.Local.Commission), "→ operator")
+		return d.Local.Commission, true
 	}
 	if n := len(d.Validators); n > 0 {
 		sum := 0.0
 		for _, v := range d.Validators {
 			sum += v.CommissionFloat
 		}
-		return stackLabelText(fmt.Sprintf("commission ~%.1f%%", sum/float64(n)), "→ operator")
+		return sum / float64(n), true
 	}
-	return stackLabelText("commission", "→ operator")
+	return 0, false
+}
+
+func economicsOpLabel(d WebData) string {
+	if pct, ok := economicsCommissionPct(d); ok {
+		return stackLabelText(fmt.Sprintf("operator %.1f%%", pct), "commission slice")
+	}
+	return stackLabelText("validator operator", "commission slice")
 }
 
 func economicsDelLabel(d WebData) string {
-	if d.TotalOutstanding != "" {
-		amt, suffix := splitOutstandingSuffix(d.TotalOutstanding)
-		lines := []string{"delegators", "outstanding " + amt}
-		if suffix != "" {
-			lines = append(lines, suffix)
-		}
-		return stackLabelText(lines...)
+	lines := []string{"delegators", "remainder share"}
+	if pct, ok := economicsCommissionPct(d); ok && pct < 100 {
+		lines = append(lines, fmt.Sprintf("(1 − %.1f%%)", pct))
 	}
-	return stackLabelText("remainder", "→ delegators")
+	return stackLabelText(lines...)
 }
 
 func economicsPMTPoolLabel(d WebData) string {
@@ -195,37 +199,35 @@ func economicsPMTPoolLabel(d WebData) string {
 }
 
 func economicsDistLabel(d WebData) string {
+	return stackLabelText(
+		"x/distribution BeginBlock",
+		"allocates block rewards",
+		"reads x/staking",
+	)
+}
+
+func economicsInflLabel(d WebData) string {
 	var lines []string
-	if d.BondedPct > 0 && d.GoalBonded > 0 {
-		lines = append(lines, fmt.Sprintf("x/distribution · %.1f%% bonded", d.BondedPct))
-		lines = append(lines, fmt.Sprintf("(goal %.0f%%)", d.GoalBonded))
-	} else if d.BondedPct > 0 {
-		lines = append(lines, fmt.Sprintf("x/distribution · %.1f%% bonded", d.BondedPct))
-	} else {
-		lines = append(lines, "x/distribution BeginBlock")
-	}
-	if d.TotalOutstanding != "" {
-		amt, suffix := splitOutstandingSuffix(d.TotalOutstanding)
-		lines = append(lines, "outstanding "+amt)
-		if suffix != "" {
-			lines = append(lines, suffix)
+	lines = append(lines, "x/mint BeginBlock")
+	if d.Inflation > 0 {
+		lines = append(lines, fmt.Sprintf("inflation %.2f%%", d.Inflation))
+		if d.AnnualProvisions != "" {
+			lines = append(lines, d.AnnualProvisions+"/yr")
 		}
+	} else {
+		lines = append(lines, "0% inflation (inactive)")
+	}
+	if d.GoalBonded > 0 {
+		lines = append(lines, fmt.Sprintf("goal bonded %.0f%%", d.GoalBonded))
 	}
 	return stackLabelText(lines...)
 }
 
-func economicsInflLabel(d WebData) string {
-	if d.Inflation <= 0 {
-		return ""
+func economicsSplitEdgeLabels(d WebData) (comm, del string) {
+	if pct, ok := economicsCommissionPct(d); ok {
+		return fmt.Sprintf("commission %.0f%%", pct), fmt.Sprintf("remainder %.0f%%", 100-pct)
 	}
-	if d.AnnualProvisions != "" {
-		return stackLabelText(
-			fmt.Sprintf("Inflation %.2f%%", d.Inflation),
-			d.AnnualProvisions+"/yr",
-			"(x/mint)",
-		)
-	}
-	return stackLabelText(fmt.Sprintf("Inflation %.2f%%", d.Inflation), "(x/mint)")
+	return "commission", "remainder"
 }
 
 func stackMermaidQuoted(label string) string {
@@ -242,32 +244,31 @@ func economicsOverviewMermaid(d WebData) string {
 	fmt.Fprintf(&b, "graph TD\n")
 
 	writeStackNode(&b, "fees", economicsFeesLabel(d))
+	writeStackNode(&b, "infl", economicsInflLabel(d))
 	writeStackNode(&b, "fc", economicsFCLabel(d))
 	writeStackNode(&b, "dist", economicsDistLabel(d))
-	writeStackNode(&b, "val", economicsValLabel(d))
+	writeStackNode(&b, "stake", economicsStakeLabel(d))
 	writeStackNode(&b, "comm", economicsCommLabel(d))
+	writeStackNode(&b, "val", economicsValLabel(d))
 	writeStackNode(&b, "op", economicsOpLabel(d))
 	writeStackNode(&b, "del", economicsDelLabel(d))
 
-	if d.Inflation > 0 {
-		writeStackNode(&b, "infl", economicsInflLabel(d))
-	}
 	if d.PMTEnabled {
 		writeStackNode(&b, "pmtPool", economicsPMTPoolLabel(d))
 	}
 
 	fmt.Fprintf(&b, "  fees --> fc\n")
-	if d.Inflation > 0 {
-		fmt.Fprintf(&b, "  infl --> fc\n")
-	}
+	fmt.Fprintf(&b, "  infl -->|mint if active| fc\n")
 	if d.PMTEnabled {
-		fmt.Fprintf(&b, "  pmtPool -->|mint BeginBlock hook| fc\n")
+		fmt.Fprintf(&b, "  pmtPool -->|mint hook| fc\n")
 	}
 	fmt.Fprintf(&b, "  fc --> dist\n")
-	fmt.Fprintf(&b, "  dist --> val\n")
+	fmt.Fprintf(&b, "  stake -.->|voting power| dist\n")
 	fmt.Fprintf(&b, "  dist --> comm\n")
-	fmt.Fprintf(&b, "  val --> op\n")
-	fmt.Fprintf(&b, "  op --> del\n")
+	fmt.Fprintf(&b, "  dist --> val\n")
+	commEdge, delEdge := economicsSplitEdgeLabels(d)
+	fmt.Fprintf(&b, "  val -->|%s| op\n", commEdge)
+	fmt.Fprintf(&b, "  val -->|%s| del\n", delEdge)
 	return b.String()
 }
 

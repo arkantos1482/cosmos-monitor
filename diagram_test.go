@@ -5,6 +5,17 @@ import (
 	"testing"
 )
 
+func TestMermaidDottedEdgeRenders(t *testing.T) {
+	src := "graph TD\n  stake[x/staking]\n  dist[x/distribution]\n  stake -.->|voting power| dist\n"
+	out, err := renderMermaid(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "staking") || !strings.Contains(out, "distribution") {
+		t.Fatalf("expected both nodes in render:\n%s", out)
+	}
+}
+
 func TestRenderMermaidEconomicsOverview(t *testing.T) {
 	d := WebData{
 		Inflation:        3.5,
@@ -55,10 +66,30 @@ func TestEconomicsOverviewMermaidTopology(t *testing.T) {
 	}
 }
 
-func TestEconomicsOverviewNoInflationNode(t *testing.T) {
-	src := economicsOverviewMermaid(WebData{Inflation: 0, PMTEnabled: false})
-	if strings.Contains(src, "infl[") {
-		t.Fatal("inflation node should be omitted when rate is 0")
+func TestEconomicsOverviewZeroInflationShowsMint(t *testing.T) {
+	src := economicsOverviewMermaid(WebData{Inflation: 0, GoalBonded: 67, PMTEnabled: false})
+	if !strings.Contains(src, "infl[") {
+		t.Fatal("x/mint node should always be present")
+	}
+	if !strings.Contains(src, "0% inflation") {
+		t.Fatal("expected inactive inflation label")
+	}
+	if !strings.Contains(src, "goal bonded 67%") {
+		t.Fatal("goal bonded belongs on x/mint, not distribution")
+	}
+	for _, line := range strings.Split(src, "\n") {
+		if strings.Contains(line, "dist[") && strings.Contains(line, "goal bonded") {
+			t.Fatal("goal bonded must not appear on distribution node")
+		}
+	}
+	if !strings.Contains(src, "infl -->") {
+		t.Fatal("expected mint → fee_collector edge")
+	}
+	if strings.Contains(src, "op --> del") {
+		t.Fatal("operator and delegators are parallel splits from validators, not sequential")
+	}
+	if !strings.Contains(src, "val -->|commission") || !strings.Contains(src, "val -->|remainder") {
+		t.Fatal("expected parallel commission/remainder edges from validators")
 	}
 }
 
