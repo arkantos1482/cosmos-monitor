@@ -312,10 +312,10 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 		}
 		d.Validators = append(d.Validators, WebValidator{
 			Moniker:         v.Moniker,
-			Operator:        truncate(v.OperatorAddr, 18),
-			NodeID:          truncate(v.NodeID, 12),
-			ConsensusAddr:   truncate(strings.ToUpper(v.ConsensusAddr), 12),
-			P2PDial:         truncate(p2p, 36),
+			Operator:        v.OperatorAddr,
+			NodeID:          v.NodeID,
+			ConsensusAddr:   strings.ToUpper(v.ConsensusAddr),
+			P2PDial:         p2p,
 			P2PConnected:    v.P2PConnected,
 			VPFloat:         v.VotingPowerPercent,
 			CommissionFloat: v.Commission * 100,

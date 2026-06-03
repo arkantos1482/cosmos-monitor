@@ -82,47 +82,75 @@ func buildMarkdown(d WebData) string {
 	// ── 3. VALIDATOR SET ─────────────────────────────────────────────────────
 	section("3. VALIDATOR SET")
 
-	fmt.Fprintf(w, "_All validators on the chain — P2P dial from `/status` + `/net_info`, stake, signing health, and params._\n\n")
-	fmt.Fprintf(w, "_P2P dial is `node_id@listen_addr` when this node sees the peer in `/net_info`, or from `/status` for this node. Other validators show — until peered._\n\n")
+	fmt.Fprintf(w, "_All validators on the chain — split for readability. P2P dial is `node_id@listen_addr` from `/status` (this node) or `/net_info` (peered validators); otherwise —._\n\n")
 
-	fmt.Fprintf(w, "| moniker | operator | p2p dial | node ID | consensus | vp%% | commission | missed | status | jailed | local |\n")
-	fmt.Fprintf(w, "|---------|----------|----------|---------|-----------|-----|------------|--------|--------|--------|-------|\n")
+	subsection("Network (P2P)")
+	fmt.Fprintf(w, "| moniker | p2p dial | node ID | consensus | local |\n")
+	fmt.Fprintf(w, "|---------|----------|---------|-----------|-------|\n")
 	for _, v := range d.Validators {
-		missed := fmt.Sprintf("%d", v.Missed)
-		if v.MissedHigh {
-			missed += " ⚠"
+		p2p := v.P2PDial
+		if p2p == "" {
+			p2p = "—"
 		}
+		fmt.Fprintf(w, "| %s | %s | %s | %s | %s |\n",
+			truncate(v.Moniker, 14),
+			truncate(p2p, 42),
+			truncate(v.NodeID, 14),
+			truncate(v.ConsensusAddr, 14),
+			valLocalMark(v),
+		)
+	}
+	fmt.Fprintln(w)
+
+	subsection("Stake")
+	fmt.Fprintf(w, "| moniker | operator | vp%% | commission | status | jailed | local |\n")
+	fmt.Fprintf(w, "|---------|----------|-----|------------|--------|--------|-------|\n")
+	for _, v := range d.Validators {
 		jailed := ""
 		if v.Jailed {
 			jailed = "yes"
 		}
-		local := ""
-		if v.IsLocal {
-			local = "**this node**"
+		fmt.Fprintf(w, "| %s | %s | %.1f%% | %.1f%% | %s | %s | %s |\n",
+			truncate(v.Moniker, 14),
+			truncate(v.Operator, 22),
+			v.VPFloat,
+			v.CommissionFloat,
+			v.Status,
+			jailed,
+			valLocalMark(v),
+		)
+	}
+	fmt.Fprintln(w)
+
+	subsection("Signing")
+	fmt.Fprintf(w, "| moniker | missed | health | tombstoned | local |\n")
+	fmt.Fprintf(w, "|---------|--------|--------|------------|-------|\n")
+	for _, v := range d.Validators {
+		missed := fmt.Sprintf("%d", v.Missed)
+		health := "ok"
+		if v.Tombstoned {
+			health = "tombstoned"
+		} else if v.Jailed {
+			health = "jailed"
+		} else if v.MissedHigh {
+			health = "⚠ below min signed"
+			missed += " ⚠"
+		} else if v.Missed > 0 {
+			health = "ok (some misses)"
 		}
 		tomb := ""
 		if v.Tombstoned {
-			tomb = "  tombstoned"
+			tomb = "yes"
 		}
-		p2p := v.P2PDial
-		if p2p == "" || p2p == "—" {
-			p2p = "—"
-		}
-		fmt.Fprintf(w, "| %s | %s | %s | %s | %s | %.1f%% | %.1f%% | %s | %s%s | %s | %s |\n",
-			truncate(v.Moniker, 12),
-			v.Operator,
-			p2p,
-			v.NodeID,
-			v.ConsensusAddr,
-			v.VPFloat,
-			v.CommissionFloat,
+		fmt.Fprintf(w, "| %s | %s | %s | %s | %s |\n",
+			truncate(v.Moniker, 14),
 			missed,
-			v.Status,
+			health,
 			tomb,
-			jailed,
-			local,
+			valLocalMark(v),
 		)
 	}
+	fmt.Fprintln(w)
 
 	subsection("P2P on this node")
 	if len(d.PeerMonikers) > 0 {
@@ -138,42 +166,6 @@ func buildMarkdown(d WebData) string {
 	row("below min signed", fmt.Sprintf("%d", d.BelowThreshold))
 	if d.NextProposer != "" {
 		row("next proposer", d.NextProposer)
-	}
-
-	subsection("Staking Pool")
-	if d.BondDenom != "" {
-		row("bond denom", d.BondDenom)
-	}
-	row("total supply", d.TotalSupply)
-	row("bonded", fmt.Sprintf("%s  (%.2f%%, goal %.0f%%)", d.BondedAmt, d.BondedPct, d.GoalBonded))
-	row("not bonded", d.NotBonded)
-	if d.UnbondingTime != "" {
-		row("unbonding time", d.UnbondingTime+"  _(time locked after unstaking)_")
-	}
-	if d.MaxValidators > 0 {
-		row("max validators", fmt.Sprintf("%d", d.MaxValidators))
-	}
-
-	subsection("Slashing Params")
-	if d.SlashWindow != "" && d.SlashWindow != "0" {
-		row("signed blocks window", d.SlashWindow+" blocks")
-	}
-	if d.MinSigned > 0 {
-		row("min signed per window", fmt.Sprintf("%.1f%%  _(miss more → downtime slash risk)_", d.MinSigned))
-	}
-	if d.SlashDowntime != "" {
-		dtStr := d.SlashDowntime
-		if d.SlashDTInactive {
-			dtStr += "  ⚠ inactive"
-		}
-		row("slash / downtime", dtStr)
-	}
-	if d.SlashDS != "" {
-		dsStr := d.SlashDS
-		if d.SlashDSInactive {
-			dsStr += "  ⚠ inactive"
-		}
-		row("slash / double-sign", dsStr)
 	}
 
 	// ── 4. THIS VALIDATOR ──────────────────────────────────────────────────────
@@ -264,6 +256,42 @@ func buildMarkdown(d WebData) string {
 	row("total supply", d.TotalSupply)
 	row("bonded stake", fmt.Sprintf("%s  (%.1f%% of supply)", d.BondedAmt, d.BondedPct))
 	row("not bonded", d.NotBonded)
+
+	subsection("Staking Pool")
+	if d.BondDenom != "" {
+		row("bond denom", d.BondDenom)
+	}
+	row("total supply", d.TotalSupply)
+	row("bonded", fmt.Sprintf("%s  (%.2f%%, goal %.0f%%)", d.BondedAmt, d.BondedPct, d.GoalBonded))
+	row("not bonded", d.NotBonded)
+	if d.UnbondingTime != "" {
+		row("unbonding time", d.UnbondingTime+"  _(time locked after unstaking)_")
+	}
+	if d.MaxValidators > 0 {
+		row("max validators", fmt.Sprintf("%d", d.MaxValidators))
+	}
+
+	subsection("Slashing Params")
+	if d.SlashWindow != "" && d.SlashWindow != "0" {
+		row("signed blocks window", d.SlashWindow+" blocks")
+	}
+	if d.MinSigned > 0 {
+		row("min signed per window", fmt.Sprintf("%.1f%%  _(miss more → downtime slash risk)_", d.MinSigned))
+	}
+	if d.SlashDowntime != "" {
+		dtStr := d.SlashDowntime
+		if d.SlashDTInactive {
+			dtStr += "  ⚠ inactive"
+		}
+		row("slash / downtime", dtStr)
+	}
+	if d.SlashDS != "" {
+		dsStr := d.SlashDS
+		if d.SlashDSInactive {
+			dsStr += "  ⚠ inactive"
+		}
+		row("slash / double-sign", dsStr)
+	}
 
 	subsection("Staking & Inflation  (x/mint + x/staking)")
 	inflationStr := fmt.Sprintf("%.2f%%", d.Inflation)
@@ -520,6 +548,13 @@ func buildMarkdown(d WebData) string {
 
 	fmt.Fprintln(w)
 	return b.String()
+}
+
+func valLocalMark(v WebValidator) string {
+	if v.IsLocal {
+		return "**this node**"
+	}
+	return ""
 }
 
 func mdPMTStatus(d WebData) string {
