@@ -41,7 +41,7 @@ func TestEconomicsOverviewStackedLabelsRender(t *testing.T) {
 		PMTRate:          "0.1 PMT/block",
 		PMTPoolEmpty:     true,
 	}
-	out, err := renderEconomicsMermaid(economicsOverviewMermaid(d), 1)
+	out, err := renderMermaid(economicsOverviewMermaidASCII(d))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,8 +56,13 @@ func TestEconomicsOverviewStackedLabelsRender(t *testing.T) {
 	if w > 410 {
 		t.Fatalf("diagram too wide for one page: %d cols", w)
 	}
-	if h > 42 {
+	if h > 45 {
 		t.Fatalf("diagram too tall for one page: %d lines", h)
+	}
+	for _, bad := range []string{"validator┴", "st┴king", "dist┴"} {
+		if strings.Contains(out, bad) {
+			t.Fatalf("ASCII label/box collision %q in:\n%s", bad, out)
+		}
 	}
 }
 

@@ -31,7 +31,7 @@ func TestRenderMermaidEconomicsOverview(t *testing.T) {
 		Elasticity:       2,
 		BaseFeeChangeDenominator: 8,
 	}
-	out, err := renderEconomicsMermaid(economicsOverviewMermaid(d), 1)
+	out, err := renderMermaid(economicsOverviewMermaidASCII(d))
 	if err != nil {
 		t.Fatalf("render economics: %v", err)
 	}
@@ -67,6 +67,16 @@ func TestEconomicsOverviewMermaidTopology(t *testing.T) {
 	}
 	if !strings.Contains(src, "fees --> fc") {
 		t.Fatal("expected fees → fee_collector path")
+	}
+}
+
+func TestEconomicsOverviewASCIINoSubgraph(t *testing.T) {
+	src := economicsOverviewMermaidASCII(WebData{Inflation: 0, GoalBonded: 67, PMTEnabled: true, PMTRate: "0.1 PMT/block"})
+	if strings.Contains(src, "subgraph") {
+		t.Fatal("ASCII economics diagram must not use subgraphs")
+	}
+	if !strings.HasPrefix(strings.TrimSpace(src), "graph TD") {
+		t.Fatal("ASCII economics diagram should be top-down")
 	}
 }
 

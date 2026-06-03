@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func buildMarkdown(d WebData) string {
+func buildMarkdown(d WebData, web bool) string {
 	var b strings.Builder
 	w := &b
 
@@ -242,8 +242,12 @@ func buildMarkdown(d WebData) string {
 	fmt.Fprintf(w, "_How money moves on this chain — tx fees, PMT pool rewards, and (if active) inflation accumulate in `fee_collector`, then `x/distribution` pays validators each block._\n\n")
 
 	subsection("Overview")
-	hint("Mermaid → ASCII via mermaid-ascii. Coins: tx fees / inflation / PMT → `fee_collector` → `x/distribution`. Dotted line: `x/staking` supplies voting power (no coin flow). Payout split: community tax, then per-validator commission vs delegators. `goal bonded` → `GET /cosmos/mint/v1beta1/params`.")
-	writeEconomicsDiagram(w, d)
+	if web {
+		hint("Interactive Mermaid diagram (below). Coins: tx fees / inflation / PMT → `fee_collector` → `x/distribution`. Dotted line: `x/staking` supplies voting power (no coin flow). Payout split: community tax, then per-validator commission vs delegators. `goal bonded` → `GET /cosmos/mint/v1beta1/params`.")
+	} else {
+		hint("ASCII diagram via mermaid-ascii. Coins: tx fees / inflation / PMT → `fee_collector` → `x/distribution`. `x/staking` supplies voting power (no coin flow). Payout split: community tax, then per-validator commission vs delegators. `goal bonded` → `GET /cosmos/mint/v1beta1/params`.")
+	}
+	writeEconomicsDiagram(w, d, web)
 	if d.PMTEnabled {
 		fmt.Fprintf(w, "_PMT pool funds per-block rewards via mint hook → `fee_collector` (see PMT Rewards table below)._\n\n")
 	}
@@ -318,9 +322,13 @@ func buildMarkdown(d WebData) string {
 	}
 
 	subsection("Fee market (x/feemarket)")
-	hint("Mermaid → ASCII. `base fee`, `block gas` → REST `/cosmos/evm/feemarket/v1/...`; `gas price` → `eth_gasPrice`; params → `/cosmos/evm/feemarket/v1/params`. Payout path is in Overview above.")
+	if web {
+		hint("Interactive Mermaid diagram (below). `base fee`, `block gas` → REST `/cosmos/evm/feemarket/v1/...`; `gas price` → `eth_gasPrice`; params → `/cosmos/evm/feemarket/v1/params`. Payout path is in Overview above.")
+	} else {
+		hint("ASCII diagram via mermaid-ascii. `base fee`, `block gas` → REST `/cosmos/evm/feemarket/v1/...`; `gas price` → `eth_gasPrice`; params → `/cosmos/evm/feemarket/v1/params`. Payout path is in Overview above.")
+	}
 	fmt.Fprintf(w, "_EIP-1559 adjusts base fee from last block gas vs target; ante enforces it on each EVM tx._\n\n")
-	writeDiagram(w, feemarketMechanicsMermaid(d))
+	writeDiagram(w, feemarketMechanicsMermaid(d), web)
 
 	row("model", "EIP-1559  _(base fee rises when blocks are full, falls when empty)_")
 	if d.BaseFee != "" {

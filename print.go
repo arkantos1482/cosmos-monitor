@@ -11,7 +11,7 @@ import (
 
 func printDashboard(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, docker fetch.DockerSnapshot) {
 	d := buildWebData(chain, ev, sys, docker)
-	md := buildMarkdown(d)
+	md := buildMarkdown(d, false)
 	r, err := glamour.NewTermRenderer(
 		glamour.WithStandardStyle("dark"),
 		glamour.WithWordWrap(0),

@@ -10,14 +10,16 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/fetch"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
+	gmhtml "github.com/yuin/goldmark/renderer/html"
 )
 
 var mdRenderer = goldmark.New(
 	goldmark.WithExtensions(extension.GFM),
+	goldmark.WithRendererOptions(gmhtml.WithUnsafe()),
 )
 
 func renderFragment(d WebData) string {
-	src := buildMarkdown(d)
+	src := buildMarkdown(d, true)
 	var buf bytes.Buffer
 	if err := mdRenderer.Convert([]byte(src), &buf); err != nil {
 		return "<pre>" + html.EscapeString(src) + "</pre>"
@@ -33,12 +35,19 @@ func fullPage(moniker, fragment string) string {
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>pmtop — %s</title>
 <script src="https://unpkg.com/htmx.org@2.0.3/dist/htmx.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <style>%s</style>
 </head>
 <body>
 <div id="data" hx-get="/fragment" hx-trigger="every 5s" hx-swap="innerHTML">
 %s
 </div>
+<script>
+mermaid.initialize({startOnLoad:false,theme:'dark',securityLevel:'loose'});
+function renderMermaid(){mermaid.run({querySelector:'#data .mermaid'});}
+document.addEventListener('DOMContentLoaded',renderMermaid);
+document.body.addEventListener('htmx:afterSwap',function(e){if(e.detail.target.id==='data')renderMermaid();});
+</script>
 </body>
 </html>`, html.EscapeString(moniker), pageCSS, fragment)
 }
@@ -60,6 +69,8 @@ tbody td{padding:4px 10px;border-bottom:1px solid #1c2128;white-space:nowrap}
 tbody tr:last-child td{border-bottom:none}
 tbody tr:hover td{background:#1c2128}
 pre{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:.6rem 1rem;margin:.4rem 0 .6rem;overflow-x:auto}
+.mermaid{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:.6rem;margin:.4rem 0 .6rem;overflow-x:auto;text-align:center}
+.mermaid svg{max-width:100%;height:auto}
 code{font-family:inherit;font-size:12px;color:var(--cyan);background:transparent}
 pre code{color:var(--fg)}
 p{margin:.3rem 0;color:var(--dim);font-size:12px}
