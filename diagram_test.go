@@ -13,9 +13,9 @@ func TestRenderMermaidEconomicsOverview(t *testing.T) {
 		CommunityTax:     "2.00%",
 		CommunityTaxPct:  2,
 		PMTEnabled:       true,
-		PMTRate:          "1000apmt",
-		BaseFee:          "1000000000",
-		GasPrice:         "20000000000",
+		PMTRate:          "0.1000 PMT/block",
+		BaseFee:          "0.000000000000000000",
+		GasPrice:         "0",
 	}
 	for _, src := range []string{
 		economicsOverviewMermaid(d),

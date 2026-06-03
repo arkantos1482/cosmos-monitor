@@ -488,6 +488,31 @@ func formatDisplayAmount(v float64) string {
 	}
 }
 
+// FormatFeeAmount formats base fee or gas price for compact display.
+// Handles integer atto/wei strings, long decimal zeros from REST, and pre-formatted values.
+func FormatFeeAmount(raw, denom string) string {
+	if raw == "" || raw == "0" {
+		return "0"
+	}
+	if strings.Contains(raw, " ") {
+		return raw
+	}
+	v, err := strconv.ParseFloat(raw, 64)
+	if err != nil {
+		return raw
+	}
+	if v == 0 {
+		return "0"
+	}
+	if !strings.Contains(raw, ".") {
+		return FormatCoin(raw, denom)
+	}
+	if v >= 1 {
+		return FormatCoin(fmt.Sprintf("%.0f", v), denom)
+	}
+	return formatDisplayAmount(v)
+}
+
 // FormatCoin converts a raw Cosmos amount string + on-chain denom to a
 // human-readable display string, e.g. "400000000000000000000000000" + "apmt"
 // → "400.00M PMT".

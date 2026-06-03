@@ -5,6 +5,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/arkantos1482/cosmos-monitor/fetch"
 	mcmd "github.com/AlexanderGrooff/mermaid-ascii/cmd"
 	"github.com/AlexanderGrooff/mermaid-ascii/pkg/diagram"
 )
@@ -69,13 +70,26 @@ func mermaidLabel(s string) string {
 	return `"` + s + `"`
 }
 
-// shortenLabel keeps diagram nodes narrow (long REST amounts blow up box width).
-func shortenLabel(s string, max int) string {
-	s = strings.TrimSpace(s)
-	if max <= 0 || len(s) <= max {
-		return s
+func diagramDenom(d WebData) string {
+	if d.EVMDenom != "" {
+		return d.EVMDenom
 	}
-	return s[:max-1] + "…"
+	if d.BondDenom != "" {
+		return d.BondDenom
+	}
+	return "apmt"
+}
+
+func feeMetricsSuffix(d WebData) string {
+	denom := diagramDenom(d)
+	var parts []string
+	if d.BaseFee != "" {
+		parts = append(parts, "base "+fetch.FormatFeeAmount(d.BaseFee, denom))
+	}
+	if d.GasPrice != "" {
+		parts = append(parts, "gas "+fetch.FormatFeeAmount(d.GasPrice, denom))
+	}
+	return strings.Join(parts, " · ")
 }
 
 func economicsOverviewMermaid(d WebData) string {
@@ -108,7 +122,7 @@ func economicsOverviewMermaid(d WebData) string {
 	if d.PMTEnabled {
 		pmt := "PMT pool (x/pmtrewards)"
 		if d.PMTRate != "" {
-			pmt = "PMT " + d.PMTRate + "/block"
+			pmt = "PMT " + d.PMTRate
 		}
 		if d.PMTPoolEmpty {
 			pmt += " — empty"
@@ -142,14 +156,8 @@ func feeFlowMermaid(d WebData) string {
 	}
 
 	fmLabel := fm
-	if d.BaseFee != "" || d.GasPrice != "" {
-		if d.BaseFee != "" && d.GasPrice != "" {
-			fmLabel = fm + " · " + shortenLabel("base "+d.BaseFee, 22) + " · " + shortenLabel("gas "+d.GasPrice, 18)
-		} else if d.BaseFee != "" {
-			fmLabel = fm + " · " + shortenLabel("base "+d.BaseFee, 28)
-		} else {
-			fmLabel = fm + " · " + shortenLabel("gas "+d.GasPrice, 28)
-		}
+	if suffix := feeMetricsSuffix(d); suffix != "" {
+		fmLabel = fm + " · " + suffix
 	}
 
 	var b strings.Builder
@@ -162,7 +170,7 @@ func feeFlowMermaid(d WebData) string {
 		fmt.Fprintf(&b, "  comm[%s]\n", mermaidLabel("Community pool"))
 	}
 	if d.PMTEnabled && d.PMTRate != "" {
-		fmt.Fprintf(&b, "  pmt[%s]\n", mermaidLabel("PMT +"+d.PMTRate+"/block"))
+		fmt.Fprintf(&b, "  pmt[%s]\n", mermaidLabel("PMT +"+d.PMTRate))
 	}
 	fmt.Fprintf(&b, "  user -->|gas used x price| fm\n")
 	fmt.Fprintf(&b, "  fm --> split\n")
@@ -191,7 +199,7 @@ func pmtRewardsMermaid(d WebData) string {
 	}
 	rate := "per-block emission"
 	if d.PMTRate != "" {
-		rate = d.PMTRate + "/block"
+		rate = d.PMTRate
 	}
 	if d.PMTPoolEmpty {
 		rate = rate + " — pool empty"
