@@ -465,29 +465,6 @@ func convertDenom(v float64, denom string) (float64, string) {
 	return v, strings.ToUpper(denom)
 }
 
-// formatDisplayAmount renders a post-conversion float as a compact human string.
-func formatDisplayAmount(v float64) string {
-	switch {
-	case v >= 1e12:
-		return fmt.Sprintf("%.2fT", v/1e12)
-	case v >= 1e9:
-		return fmt.Sprintf("%.2fB", v/1e9)
-	case v >= 1e6:
-		return fmt.Sprintf("%.2fM", v/1e6)
-	case v >= 1e3:
-		return fmt.Sprintf("%.2fK", v/1e3)
-	case v >= 0.001:
-		return fmt.Sprintf("%.4f", v)
-	case v >= 1e-7:
-		// Fixed-point is easier to read in narrow columns than scientific notation.
-		return fmt.Sprintf("%.6f", v)
-	case v > 0:
-		return fmt.Sprintf("%.2e", v)
-	default:
-		return "0"
-	}
-}
-
 // FormatFeeAmount formats base fee or gas price for compact display.
 // Handles integer atto/wei strings, long decimal zeros from REST, and pre-formatted values.
 func FormatFeeAmount(raw, denom string) string {
@@ -510,26 +487,24 @@ func FormatFeeAmount(raw, denom string) string {
 	if v >= 1 {
 		return FormatCoin(fmt.Sprintf("%.0f", v), denom)
 	}
-	return formatDisplayAmount(v)
+	return FormatAmount(v)
 }
 
 // FormatCoin converts a raw Cosmos amount string + on-chain denom to a
 // human-readable display string, e.g. "400000000000000000000000000" + "apmt"
 // → "400.00M PMT".
 func FormatCoin(rawAmount, denom string) string {
-	v, _ := strconv.ParseFloat(rawAmount, 64)
-	displayVal, displayDenom := convertDenom(v, denom)
+	displayVal, displayDenom := coinToDisplay(rawAmount, denom)
 	if displayDenom == "" {
-		return formatDisplayAmount(displayVal)
+		return FormatAmount(displayVal)
 	}
-	return formatDisplayAmount(displayVal) + " " + displayDenom
+	return FormatAmountUnit(displayVal, displayDenom)
 }
 
 // NormalizeCoin returns the display float value and display denom for a raw
 // Cosmos coin, useful when the caller needs the numeric value for calculations.
 func NormalizeCoin(rawAmount, denom string) (float64, string) {
-	v, _ := strconv.ParseFloat(rawAmount, 64)
-	return convertDenom(v, denom)
+	return coinToDisplay(rawAmount, denom)
 }
 
 func formatCoins(coins []struct {

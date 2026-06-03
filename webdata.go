@@ -374,13 +374,13 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 		if p.BlocksPerYear > 0 {
 			rewardF, _ := fetch.NormalizeCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)
 			_, dispDenom := fetch.NormalizeCoin("0", p.RewardPerBlockDenom)
-			d.PMTAnnual = fmt.Sprintf("~%.0f %s/year", rewardF*float64(p.BlocksPerYear), dispDenom)
+			d.PMTAnnual = "~" + fetch.FormatAmountUnit(rewardF*float64(p.BlocksPerYear), dispDenom) + "/year"
 		}
 		if chain.BlockInterval > 0 {
 			rewardF, _ := fetch.NormalizeCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom)
 			_, dispDenom := fetch.NormalizeCoin("0", p.RewardPerBlockDenom)
 			blocksPerDay := 86400.0 / chain.BlockInterval.Seconds()
-			d.PMTDailyEmit = fmt.Sprintf("~%.0f %s/day", rewardF*blocksPerDay, dispDenom)
+			d.PMTDailyEmit = "~" + fetch.FormatAmountUnit(rewardF*blocksPerDay, dispDenom) + "/day"
 		}
 	}
 	if !d.PMTPoolEmpty {
@@ -406,7 +406,8 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 		}
 	}
 	if outDenom != "" {
-		d.TotalOutstanding = fmt.Sprintf("%.6f %s  across %d validators", totalOutF, outDenom, len(chain.Validators))
+		d.TotalOutstanding = fetch.FormatAmountUnit(totalOutF, outDenom) +
+			fmt.Sprintf("  across %d validators", len(chain.Validators))
 	}
 
 	d.SlashWindow = fmtInt(p.SignedBlocksWindow)
@@ -421,7 +422,7 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	d.GasPrice = ev.GasPrice
 	d.BaseFeeChangeDenominator = p.BaseFeeChangeDenominator
 	if p.MinGasPrice > 0 {
-		d.MinGasPrice = fmt.Sprintf("%.9f %s", p.MinGasPrice, denom)
+		d.MinGasPrice = fetch.FormatAmountUnit(p.MinGasPrice, denom)
 	}
 	d.NoBaseFee = p.NoBaseFee
 	d.Elasticity = p.Elasticity
