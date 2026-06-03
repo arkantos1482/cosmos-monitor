@@ -85,20 +85,27 @@ func buildMarkdown(d WebData) string {
 	fmt.Fprintf(w, "_All validators on the chain — split for readability. P2P dial is `node_id@listen_addr` from `/status` (this node) or `/net_info` (peered validators); otherwise —._\n\n")
 
 	subsection("Network (P2P)")
-	fmt.Fprintf(w, "| moniker | p2p dial | node ID | consensus | local |\n")
-	fmt.Fprintf(w, "|---------|----------|---------|-----------|-------|\n")
 	for _, v := range d.Validators {
+		hdr := "**" + v.Moniker + "**"
+		if v.IsLocal {
+			hdr += "  _(this node)_"
+		}
+		fmt.Fprintf(w, "\n%s\n\n", hdr)
 		p2p := v.P2PDial
 		if p2p == "" {
-			p2p = "—"
+			p2p = "—  _(not in this node's `/net_info` peers)_"
 		}
-		fmt.Fprintf(w, "| %s | %s | %s | %s | %s |\n",
-			truncate(v.Moniker, 14),
-			truncate(p2p, 42),
-			truncate(v.NodeID, 14),
-			truncate(v.ConsensusAddr, 14),
-			valLocalMark(v),
-		)
+		row("p2p dial", "`"+p2p+"`")
+		if v.NodeID != "" {
+			row("node ID", "`"+v.NodeID+"`")
+		} else {
+			row("node ID", "—")
+		}
+		if v.ConsensusAddr != "" {
+			row("consensus", "`"+v.ConsensusAddr+"`")
+		} else {
+			row("consensus", "—")
+		}
 	}
 	fmt.Fprintln(w)
 
@@ -151,13 +158,6 @@ func buildMarkdown(d WebData) string {
 		)
 	}
 	fmt.Fprintln(w)
-
-	subsection("P2P on this node")
-	if len(d.PeerMonikers) > 0 {
-		row("connected", fmt.Sprintf("%d — %s", d.PeerCount, strings.Join(d.PeerMonikers, ", "))+"  _(from `/net_info`)_")
-	} else {
-		row("connected", fmt.Sprintf("%d peers  _(from `/net_info`)_", d.PeerCount))
-	}
 
 	subsection("Summary")
 	row("bonded", fmt.Sprintf("%d", d.BondedCount))
