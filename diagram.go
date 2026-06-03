@@ -80,11 +80,97 @@ func diagramDenom(d WebData) string {
 	return "apmt"
 }
 
-func economicsOverviewMermaid(d WebData) string {
-	comm := fmt.Sprintf("Community tax %s", d.CommunityTax)
-	if d.CommunityTaxZero {
-		comm = "Community tax 0%"
+func joinLabel(parts ...string) string {
+	var out []string
+	for _, p := range parts {
+		if p != "" {
+			out = append(out, p)
+		}
 	}
+	return strings.Join(out, " · ")
+}
+
+func economicsFeesLabel(d WebData) string {
+	label := "Tx fees (ante / EVM)"
+	if d.MempoolTxs > 0 {
+		label = joinLabel(label, fmt.Sprintf("mempool %d", d.MempoolTxs))
+	}
+	if d.PendingTx > 0 {
+		label = joinLabel(label, fmt.Sprintf("evm pending %d", d.PendingTx))
+	}
+	return label
+}
+
+func economicsFCLabel(d WebData) string {
+	label := "fee_collector"
+	if d.TotalOutstanding != "" {
+		return joinLabel(label, "outstanding "+d.TotalOutstanding)
+	}
+	return joinLabel(label, "cleared each BeginBlock")
+}
+
+func economicsValLabel(d WebData) string {
+	label := "Validators"
+	if d.BondedCount > 0 {
+		label = fmt.Sprintf("%d validators", d.BondedCount)
+	}
+	if d.BondedAmt != "" {
+		label = joinLabel(label, d.BondedAmt+" bonded")
+	} else if d.BondedPct > 0 {
+		label = joinLabel(label, fmt.Sprintf("%.1f%% stake", d.BondedPct))
+	}
+	return label
+}
+
+func economicsCommLabel(d WebData) string {
+	comm := fmt.Sprintf("community tax %s", d.CommunityTax)
+	if d.CommunityTaxZero {
+		comm = "community tax 0%"
+	}
+	if d.CommunityPool != "" {
+		return joinLabel(comm, "pool "+d.CommunityPool)
+	}
+	return comm
+}
+
+func economicsOpLabel(d WebData) string {
+	if d.Local.IsValidator && d.Local.Commission > 0 {
+		return fmt.Sprintf("commission %.1f%% → operator", d.Local.Commission)
+	}
+	if n := len(d.Validators); n > 0 {
+		sum := 0.0
+		for _, v := range d.Validators {
+			sum += v.CommissionFloat
+		}
+		return fmt.Sprintf("commission ~%.1f%% → operator", sum/float64(n))
+	}
+	return "commission → operator"
+}
+
+func economicsDelLabel(d WebData) string {
+	if d.TotalOutstanding != "" {
+		return joinLabel("delegators", "outstanding "+d.TotalOutstanding)
+	}
+	return "remainder → delegators"
+}
+
+func economicsPMTPoolLabel(d WebData) string {
+	pmt := "PMT pool (x/pmtrewards)"
+	if d.PMTRate != "" {
+		pmt = joinLabel(pmt, d.PMTRate)
+	}
+	if d.PMTBalance != "" {
+		pmt = joinLabel(pmt, d.PMTBalance)
+		if d.PMTRunway != "" {
+			pmt = joinLabel(pmt, d.PMTRunway)
+		}
+	} else if d.PMTPoolEmpty {
+		pmt += " — empty"
+	}
+	return pmt
+}
+
+func economicsOverviewMermaid(d WebData) string {
 	distLabel := "x/distribution BeginBlock"
 	if d.BondedPct > 0 {
 		if d.GoalBonded > 0 {
@@ -93,30 +179,32 @@ func economicsOverviewMermaid(d WebData) string {
 			distLabel = fmt.Sprintf("x/distribution · %.1f%% bonded", d.BondedPct)
 		}
 	}
+	if d.TotalOutstanding != "" {
+		distLabel = joinLabel(distLabel, "outstanding "+d.TotalOutstanding)
+	}
 
 	var b strings.Builder
 	fmt.Fprintf(&b, "graph TD\n")
-	fmt.Fprintf(&b, "  fees[%s]\n", mermaidLabel("Tx fees (ante / EVM)"))
-	fmt.Fprintf(&b, "  fc[%s]\n", mermaidLabel("fee_collector module"))
+	fmt.Fprintf(&b, "  fees[%s]\n", mermaidLabel(economicsFeesLabel(d)))
+	fmt.Fprintf(&b, "  fc[%s]\n", mermaidLabel(economicsFCLabel(d)))
 	fmt.Fprintf(&b, "  dist[%s]\n", mermaidLabel(distLabel))
-	fmt.Fprintf(&b, "  val[%s]\n", mermaidLabel("Validators (by stake %)"))
-	fmt.Fprintf(&b, "  comm[%s]\n", mermaidLabel(comm))
-	fmt.Fprintf(&b, "  op[%s]\n", mermaidLabel("commission → operator"))
-	fmt.Fprintf(&b, "  del[%s]\n", mermaidLabel("remainder → delegators"))
+	fmt.Fprintf(&b, "  val[%s]\n", mermaidLabel(economicsValLabel(d)))
+	fmt.Fprintf(&b, "  comm[%s]\n", mermaidLabel(economicsCommLabel(d)))
+	fmt.Fprintf(&b, "  op[%s]\n", mermaidLabel(economicsOpLabel(d)))
+	fmt.Fprintf(&b, "  del[%s]\n", mermaidLabel(economicsDelLabel(d)))
 
 	if d.Inflation > 0 {
 		infl := fmt.Sprintf("Inflation %.2f%% (x/mint)", d.Inflation)
 		fmt.Fprintf(&b, "  infl[%s]\n", mermaidLabel(infl))
 	}
 	if d.PMTEnabled {
-		pmt := "PMT pool (x/pmtrewards)"
-		if d.PMTRate != "" {
-			pmt = "PMT pool · " + d.PMTRate
-		}
-		if d.PMTPoolEmpty {
-			pmt += " — empty"
-		}
-		fmt.Fprintf(&b, "  pmtPool[%s]\n", mermaidLabel(pmt))
+		fmt.Fprintf(&b, "  pmtPool[%s]\n", mermaidLabel(economicsPMTPoolLabel(d)))
+	}
+	if d.Inflation > 0 && d.AnnualProvisions != "" {
+		infl := fmt.Sprintf("Inflation %.2f%%", d.Inflation)
+		fmt.Fprintf(&b, "  infl[%s]\n", mermaidLabel(joinLabel(infl, d.AnnualProvisions+"/yr")))
+	} else if d.Inflation > 0 {
+		fmt.Fprintf(&b, "  infl[%s]\n", mermaidLabel(fmt.Sprintf("Inflation %.2f%% (x/mint)", d.Inflation)))
 	}
 
 	fmt.Fprintf(&b, "  fees --> fc\n")
@@ -130,7 +218,7 @@ func economicsOverviewMermaid(d WebData) string {
 	fmt.Fprintf(&b, "  dist --> val\n")
 	fmt.Fprintf(&b, "  dist --> comm\n")
 	fmt.Fprintf(&b, "  val --> op\n")
-	fmt.Fprintf(&b, "  val --> del\n")
+	fmt.Fprintf(&b, "  op --> del\n")
 	return b.String()
 }
 
@@ -148,7 +236,7 @@ func feemarketMechanicsMermaid(d WebData) string {
 
 	parentBF := "parent base fee"
 	if d.BaseFee != "" {
-		parentBF = "base fee: " + fetch.FormatFeeAmount(d.BaseFee, denom)
+		parentBF = "parent base fee: " + fetch.FormatFeeAmount(d.BaseFee, denom)
 	}
 
 	baseFeeLabel := "base fee (this block)"
@@ -163,22 +251,28 @@ func feemarketMechanicsMermaid(d WebData) string {
 		gasRPC = "gas price: " + fetch.FormatFeeAmount(d.GasPrice, denom)
 	}
 
-	var paramsParts []string
+	var paramsTune []string
 	if d.BaseFeeChangeDenominator > 0 {
-		paramsParts = append(paramsParts, fmt.Sprintf("denom %d", d.BaseFeeChangeDenominator))
+		paramsTune = append(paramsTune, fmt.Sprintf("change denom %d", d.BaseFeeChangeDenominator))
 	}
 	if d.Elasticity > 0 {
-		paramsParts = append(paramsParts, fmt.Sprintf("elasticity %d", d.Elasticity))
+		paramsTune = append(paramsTune, fmt.Sprintf("elasticity %d", d.Elasticity))
 	}
+	paramsTuneLabel := "feemarket tuning"
+	if len(paramsTune) > 0 {
+		paramsTuneLabel = strings.Join(paramsTune, " · ")
+	}
+
+	var paramsFloor []string
 	if d.MinGasPrice != "" {
-		paramsParts = append(paramsParts, "min_gas "+d.MinGasPrice)
+		paramsFloor = append(paramsFloor, "min_gas "+d.MinGasPrice)
 	}
 	if d.AdjCap != "" {
-		paramsParts = append(paramsParts, "max Δ "+d.AdjCap)
+		paramsFloor = append(paramsFloor, "max Δ "+d.AdjCap)
 	}
-	paramsLabel := "feemarket params"
-	if len(paramsParts) > 0 {
-		paramsLabel = strings.Join(paramsParts, " · ")
+	paramsFloorLabel := "feemarket floors"
+	if len(paramsFloor) > 0 {
+		paramsFloorLabel = strings.Join(paramsFloor, " · ")
 	}
 
 	var b strings.Builder
@@ -186,22 +280,25 @@ func feemarketMechanicsMermaid(d WebData) string {
 	fmt.Fprintf(&b, "  gasUsed[%s]\n", mermaidLabel(gasUsed))
 	fmt.Fprintf(&b, "  gasTarget[%s]\n", mermaidLabel(gasTarget))
 	fmt.Fprintf(&b, "  parentBF[%s]\n", mermaidLabel(parentBF))
-	fmt.Fprintf(&b, "  params[%s]\n", mermaidLabel(paramsLabel))
+	fmt.Fprintf(&b, "  paramsTune[%s]\n", mermaidLabel(paramsTuneLabel))
+	fmt.Fprintf(&b, "  paramsFloor[%s]\n", mermaidLabel(paramsFloorLabel))
 	fmt.Fprintf(&b, "  calc[%s]\n", mermaidLabel("BeginBlock: CalculateBaseFee"))
 	fmt.Fprintf(&b, "  baseFee[%s]\n", mermaidLabel(baseFeeLabel))
-	fmt.Fprintf(&b, "  ante[%s]\n", mermaidLabel("ante: VerifyFee + DeductFees"))
 	fmt.Fprintf(&b, "  eff[%s]\n", mermaidLabel("effective price ≥ base fee"))
+	fmt.Fprintf(&b, "  ante[%s]\n", mermaidLabel("ante: VerifyFee + DeductFees"))
 	fmt.Fprintf(&b, "  gasRPC[%s]\n", mermaidLabel(gasRPC))
 	fmt.Fprintf(&b, "  endBlk[%s]\n", mermaidLabel("EndBlock: block_gas_wanted"))
 
-	fmt.Fprintf(&b, "  gasUsed --> calc\n")
-	fmt.Fprintf(&b, "  gasTarget --> calc\n")
-	fmt.Fprintf(&b, "  parentBF --> calc\n")
-	fmt.Fprintf(&b, "  params --> calc\n")
+	// Vertical spine (avoids wide fan-in to calc / baseFee).
+	fmt.Fprintf(&b, "  gasUsed --> gasTarget\n")
+	fmt.Fprintf(&b, "  gasTarget --> parentBF\n")
+	fmt.Fprintf(&b, "  parentBF --> paramsTune\n")
+	fmt.Fprintf(&b, "  paramsTune --> paramsFloor\n")
+	fmt.Fprintf(&b, "  paramsFloor --> calc\n")
 	fmt.Fprintf(&b, "  calc -->|gasUsed > target ⇒ fee ↑| baseFee\n")
 	fmt.Fprintf(&b, "  baseFee --> eff\n")
-	fmt.Fprintf(&b, "  baseFee --> gasRPC\n")
 	fmt.Fprintf(&b, "  eff --> ante\n")
-	fmt.Fprintf(&b, "  baseFee --> endBlk\n")
+	fmt.Fprintf(&b, "  baseFee --> gasRPC\n")
+	fmt.Fprintf(&b, "  ante --> endBlk\n")
 	return b.String()
 }
