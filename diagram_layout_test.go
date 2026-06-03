@@ -41,7 +41,7 @@ func TestEconomicsOverviewStackedLabelsRender(t *testing.T) {
 		PMTRate:          "0.1 PMT/block",
 		PMTPoolEmpty:     true,
 	}
-	out, err := renderMermaid(economicsOverviewMermaid(d))
+	out, err := renderEconomicsMermaid(economicsOverviewMermaid(d), 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,9 +50,14 @@ func TestEconomicsOverviewStackedLabelsRender(t *testing.T) {
 			t.Fatalf("expected %q in render output", want)
 		}
 	}
-	if diagramMaxWidth(out) >= diagramMaxWidth(strings.ReplaceAll(out, "\n\n", "\n")) {
-		// Multiline boxes should be taller; main column width should stay moderate.
-		t.Logf("rendered width=%d", diagramMaxWidth(out))
+	h := strings.Count(out, "\n") + 1
+	w := diagramMaxWidth(out)
+	t.Logf("economics diagram: %dx%d", w, h)
+	if w > 410 {
+		t.Fatalf("diagram too wide for one page: %d cols", w)
+	}
+	if h > 42 {
+		t.Fatalf("diagram too tall for one page: %d lines", h)
 	}
 }
 

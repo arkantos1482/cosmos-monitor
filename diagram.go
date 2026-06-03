@@ -37,9 +37,22 @@ func mermaidConfig(useAscii bool) (*diagram.Config, error) {
 	return diagram.NewCLIConfig(useAscii, false, false, diagramBorderPad, diagramPadX, diagramPadY, "TD")
 }
 
+func mermaidConfigDirection(useAscii bool, direction string, padX, padY int) (*diagram.Config, error) {
+	return diagram.NewCLIConfig(useAscii, false, false, diagramBorderPad, padX, padY, direction)
+}
+
 // renderMermaid converts Mermaid source to Unicode box-drawing text (terminal + web).
 func renderMermaid(src string) (string, error) {
-	cfg, err := mermaidConfig(false)
+	return renderMermaidWith(src, diagramPadX, diagramPadY, "TD")
+}
+
+// renderEconomicsMermaid lays out the tokenomics diagram left-to-right with tighter gaps.
+func renderEconomicsMermaid(src string, padX int) (string, error) {
+	return renderMermaidWith(src, padX, 1, "LR")
+}
+
+func renderMermaidWith(src string, padX, padY int, direction string) (string, error) {
+	cfg, err := mermaidConfigDirection(false, direction, padX, padY)
 	if err != nil {
 		return "", err
 	}
@@ -47,7 +60,7 @@ func renderMermaid(src string) (string, error) {
 	if err == nil {
 		return strings.TrimRight(out, "\n"), nil
 	}
-	cfg2, err2 := mermaidConfig(true)
+	cfg2, err2 := mermaidConfigDirection(true, direction, padX, padY)
 	if err2 != nil {
 		return "", err
 	}
@@ -57,6 +70,15 @@ func renderMermaid(src string) (string, error) {
 
 func writeDiagram(w io.Writer, mermaid string) {
 	out, err := renderMermaid(mermaid)
+	if err != nil {
+		fmt.Fprintf(w, "_diagram render failed: %v_\n\n", err)
+		return
+	}
+	fmt.Fprintf(w, "```text\n%s\n```\n\n", out)
+}
+
+func writeEconomicsDiagram(w io.Writer, d WebData) {
+	out, err := renderEconomicsMermaid(economicsOverviewMermaid(d), 1)
 	if err != nil {
 		fmt.Fprintf(w, "_diagram render failed: %v_\n\n", err)
 		return
@@ -241,21 +263,27 @@ func writeStackNode(b *strings.Builder, id, label string) {
 
 func economicsOverviewMermaid(d WebData) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "graph TD\n")
+	// LR + inflows subgraph: coin path left→right; staking sits under fc→dist (state, not funds).
+	fmt.Fprintf(&b, "graph LR\n")
 
 	writeStackNode(&b, "fees", economicsFeesLabel(d))
 	writeStackNode(&b, "infl", economicsInflLabel(d))
+	if d.PMTEnabled {
+		writeStackNode(&b, "pmtPool", economicsPMTPoolLabel(d))
+	}
 	writeStackNode(&b, "fc", economicsFCLabel(d))
+	writeStackNode(&b, "staking", economicsStakeLabel(d))
 	writeStackNode(&b, "dist", economicsDistLabel(d))
-	writeStackNode(&b, "stake", economicsStakeLabel(d))
 	writeStackNode(&b, "comm", economicsCommLabel(d))
 	writeStackNode(&b, "val", economicsValLabel(d))
 	writeStackNode(&b, "op", economicsOpLabel(d))
 	writeStackNode(&b, "del", economicsDelLabel(d))
 
+	fmt.Fprintf(&b, "  subgraph sources\n    fees\n    infl\n")
 	if d.PMTEnabled {
-		writeStackNode(&b, "pmtPool", economicsPMTPoolLabel(d))
+		fmt.Fprintf(&b, "    pmtPool\n")
 	}
+	fmt.Fprintf(&b, "  end\n")
 
 	fmt.Fprintf(&b, "  fees --> fc\n")
 	fmt.Fprintf(&b, "  infl -->|mint if active| fc\n")
@@ -263,7 +291,7 @@ func economicsOverviewMermaid(d WebData) string {
 		fmt.Fprintf(&b, "  pmtPool -->|mint hook| fc\n")
 	}
 	fmt.Fprintf(&b, "  fc --> dist\n")
-	fmt.Fprintf(&b, "  stake -.->|voting power| dist\n")
+	fmt.Fprintf(&b, "  staking -->|voting power| dist\n")
 	fmt.Fprintf(&b, "  dist --> comm\n")
 	fmt.Fprintf(&b, "  dist --> val\n")
 	commEdge, delEdge := economicsSplitEdgeLabels(d)

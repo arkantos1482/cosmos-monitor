@@ -243,7 +243,7 @@ func buildMarkdown(d WebData) string {
 
 	subsection("Overview")
 	hint("Mermaid → ASCII via mermaid-ascii. Coins: tx fees / inflation / PMT → `fee_collector` → `x/distribution`. Dotted line: `x/staking` supplies voting power (no coin flow). Payout split: community tax, then per-validator commission vs delegators. `goal bonded` → `GET /cosmos/mint/v1beta1/params`.")
-	writeDiagram(w, economicsOverviewMermaid(d))
+	writeEconomicsDiagram(w, d)
 	if d.PMTEnabled {
 		fmt.Fprintf(w, "_PMT pool funds per-block rewards via mint hook → `fee_collector` (see PMT Rewards table below)._\n\n")
 	}

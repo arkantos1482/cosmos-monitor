@@ -31,10 +31,14 @@ func TestRenderMermaidEconomicsOverview(t *testing.T) {
 		Elasticity:       2,
 		BaseFeeChangeDenominator: 8,
 	}
-	for _, src := range []string{
-		economicsOverviewMermaid(d),
-		feemarketMechanicsMermaid(d),
-	} {
+	out, err := renderEconomicsMermaid(economicsOverviewMermaid(d), 1)
+	if err != nil {
+		t.Fatalf("render economics: %v", err)
+	}
+	if !strings.Contains(out, "┌") && !strings.Contains(out, "+") {
+		t.Fatalf("expected box drawing, got:\n%s", out)
+	}
+	for _, src := range []string{feemarketMechanicsMermaid(d)} {
 		out, err := renderMermaid(src)
 		if err != nil {
 			t.Fatalf("render: %v\nsource:\n%s", err, src)
@@ -84,6 +88,15 @@ func TestEconomicsOverviewZeroInflationShowsMint(t *testing.T) {
 	}
 	if !strings.Contains(src, "infl -->") {
 		t.Fatal("expected mint → fee_collector edge")
+	}
+	if !strings.Contains(src, "subgraph sources") {
+		t.Fatal("expected inflows subgraph for layout")
+	}
+	if strings.Contains(src, "subgraph modules") {
+		t.Fatal("modules subgraph breaks mermaid-ascii layout")
+	}
+	if strings.Contains(src, "stake -.->") || strings.Contains(src, "stake[") {
+		t.Fatal("use staking node with solid voting-power edge")
 	}
 	if strings.Contains(src, "op --> del") {
 		t.Fatal("operator and delegators are parallel splits from validators, not sequential")
