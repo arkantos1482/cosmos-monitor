@@ -11,7 +11,7 @@ import (
 
 // Defaults aligned with tools/ops/deploy/configs/app.toml (EVM mempool + json-rpc).
 const (
-	defaultJSONRPCAPIs     = "eth,txpool,net,debug,web3"
+	defaultJSONRPCAPIs       = "eth,txpool,net,debug,web3"
 	defaultTxpoolGlobalSlots = 5120
 	defaultTxpoolGlobalQueue = 1024
 )
@@ -66,25 +66,11 @@ func sortedRPCProbes(probes []WebRPCProbe) []WebRPCProbe {
 			return ni < nj
 		}
 		if pi.OK != pj.OK {
-			return !pi.OK // failures first within namespace
+			return !pi.OK
 		}
 		return pi.Method < pj.Method
 	})
 	return out
-}
-
-func probeLatencyClass(latency string) string {
-	ms := probeLatencyMs(latency)
-	switch {
-	case ms < 0:
-		return ""
-	case ms >= 500:
-		return "evm-lat-slow"
-	case ms >= 200:
-		return "evm-lat-warn"
-	default:
-		return "evm-lat-ok"
-	}
 }
 
 func probeLatencyMs(latency string) int {
@@ -206,12 +192,8 @@ func writeEVMRPCSection(w io.Writer, d WebData, web bool) {
 	row("EVM peers", fmt.Sprintf("%d  _(net_peerCount — often 0 on validators)_", d.EVMPeerCount))
 
 	subsection("Probe health")
-	hint("Client-side `POST` JSON-RPC 2.0; latency measured on this host. Failed methods expand with curl + bodies.")
-	if web {
-		writeEVMProbeTableWeb(w, d, httpEP)
-	} else {
-		writeEVMProbeTableTerm(w, d, httpEP)
-	}
+	hint("Client-side `POST` JSON-RPC 2.0; latency measured on this host. Failed methods show curl + bodies below the log.")
+	writeEVMProbeLog(w, d, httpEP, web)
 }
 
 func formatTxpoolCount(n, limit uint64) string {
@@ -254,75 +236,81 @@ func writeEVMPill(w io.Writer, label, extraClass string) {
 	fmt.Fprintf(w, `<span class="%s">%s</span>`, class, html.EscapeString(label))
 }
 
-func writeEVMProbeTableWeb(w io.Writer, d WebData, endpoint string) {
-	probes := sortedRPCProbes(d.RPCProbes)
+// renderProbeLog builds a fixed-width monospace probe table grouped by JSON-RPC namespace.
+func renderProbeLog(probes []WebRPCProbe) string {
+	const (
+		padMethod  = 24
+		padStatus  = 6
+		padLatency = 7
+	)
+	var b strings.Builder
+	b.WriteString("  method                    status  latency\n")
+	b.WriteString("  ─────────────────────────────────────────\n")
+
 	lastNS := ""
-	fmt.Fprint(w, `<table class="evm-probe-table"><thead><tr>`+
-		`<th>method</th><th>status</th><th>latency</th><th>error</th></tr></thead><tbody>`+"\n")
-	for _, p := range probes {
+	for _, p := range sortedRPCProbes(probes) {
 		ns := probeNamespace(p.Method)
 		if ns != lastNS {
-			fmt.Fprintf(w, `<tr class="evm-probe-group"><td colspan="4">%s</td></tr>`+"\n", html.EscapeString(ns))
+			if lastNS != "" {
+				b.WriteByte('\n')
+			}
+			fmt.Fprintf(&b, "  [%s]\n", strings.ToUpper(ns))
 			lastNS = ns
 		}
-		statusClass := "evm-probe-ok"
 		status := "ok"
+		mark := "·"
 		if !p.OK {
-			statusClass = "evm-probe-fail"
 			status = "FAIL"
+			mark = "✗"
 		}
-		latClass := probeLatencyClass(p.Latency)
-		errCell := html.EscapeString(truncate(p.Error, 48))
-		fmt.Fprintf(w, `<tr class="%s %s"><td><code>%s</code></td><td>%s</td><td class="%s">%s</td><td>%s</td></tr>`+"\n",
-			statusClass, latClass, html.EscapeString(p.Method), status, latClass, html.EscapeString(p.Latency), errCell)
+		line := fmt.Sprintf("  %s  %-*s  %-*s  %-*s",
+			mark, padMethod, p.Method, padStatus, status, padLatency, p.Latency)
+		if !p.OK && p.Error != "" {
+			line += "  " + truncate(p.Error, 44)
+		}
+		b.WriteString(line + "\n")
 	}
-	fmt.Fprint(w, `</tbody></table>`+"\n\n")
+	return strings.TrimRight(b.String(), "\n")
+}
 
-	for _, p := range probes {
+func writeEVMProbeLog(w io.Writer, d WebData, endpoint string, web bool) {
+	log := renderProbeLog(d.RPCProbes)
+	if web {
+		fmt.Fprintf(w, `<pre class="evm-probe-log">%s</pre>`+"\n\n", html.EscapeString(log))
+	} else {
+		fmt.Fprintf(w, "```text\n%s\n```\n\n", log)
+	}
+
+	failures := 0
+	for _, p := range sortedRPCProbes(d.RPCProbes) {
 		if p.OK {
 			continue
 		}
-		fmt.Fprintf(w, `<details class="evm-probe-detail" open><summary><code>%s</code> FAIL · %s</summary>`+"\n",
-			html.EscapeString(p.Method), html.EscapeString(p.Latency))
-		if p.Error != "" {
-			fmt.Fprintf(w, `<p class="evm-probe-err">%s</p>`+"\n", html.EscapeString(p.Error))
-		}
-		fmt.Fprintf(w, `<pre class="evm-curl">%s</pre>`+"\n", html.EscapeString(jsonRPCCurl(endpoint, p.Request)))
-		fmt.Fprintf(w, `<pre class="evm-json">%s`+"\n"+`→`+"\n"+`%s</pre>`+"\n",
-			html.EscapeString(p.Request), html.EscapeString(p.Response))
-		fmt.Fprint(w, `</details>`+"\n\n")
+		failures++
+		writeEVMProbeFailure(w, p, endpoint, web)
+	}
+	if failures == 0 {
+		return
 	}
 }
 
-func writeEVMProbeTableTerm(w io.Writer, d WebData, endpoint string) {
-	probes := sortedRPCProbes(d.RPCProbes)
-	lastNS := ""
-	fmt.Fprintf(w, "| method | status | latency | error |\n|--------|--------|---------|-------|\n")
-	for _, p := range probes {
-		ns := probeNamespace(p.Method)
-		if ns != lastNS {
-			fmt.Fprintf(w, "| _%s_ | | | |\n", ns)
-			lastNS = ns
-		}
-		status := "ok"
-		errStr := ""
-		if !p.OK {
-			status = "FAIL"
-			errStr = truncate(p.Error, 40)
-		}
-		fmt.Fprintf(w, "| `%s` | %s | %s | %s |\n", p.Method, status, p.Latency, errStr)
-	}
-	fmt.Fprintln(w)
-
-	for _, p := range probes {
-		if p.OK {
-			continue
-		}
-		fmt.Fprintf(w, "**%s** FAIL (%s)\n\n", p.Method, p.Latency)
+func writeEVMProbeFailure(w io.Writer, p WebRPCProbe, endpoint string, web bool) {
+	header := fmt.Sprintf("── %s  FAIL  %s ──", p.Method, p.Latency)
+	if web {
+		fmt.Fprintf(w, `<pre class="evm-probe-fail-head">%s</pre>`+"\n", html.EscapeString(header))
 		if p.Error != "" {
-			fmt.Fprintf(w, "error: %s\n\n", p.Error)
+			fmt.Fprintf(w, `<pre class="evm-probe-fail-err">error: %s</pre>`+"\n", html.EscapeString(p.Error))
 		}
-		fmt.Fprintf(w, "```bash\n%s\n```\n\n", jsonRPCCurl(endpoint, p.Request))
-		fmt.Fprintf(w, "```json\n%s\n→\n%s\n```\n\n", p.Request, p.Response)
+		fmt.Fprintf(w, "<pre class=\"evm-probe-cmd\">%s</pre>\n", html.EscapeString(jsonRPCCurl(endpoint, p.Request)))
+		fmt.Fprintf(w, "<pre class=\"evm-probe-json\">%s\n→\n%s</pre>\n\n",
+			html.EscapeString(p.Request), html.EscapeString(p.Response))
+		return
 	}
+
+	fmt.Fprintf(w, "**%s**\n\n", header)
+	if p.Error != "" {
+		fmt.Fprintf(w, "error: %s\n\n", p.Error)
+	}
+	fmt.Fprintf(w, "```bash\n%s\n```\n\n", jsonRPCCurl(endpoint, p.Request))
+	fmt.Fprintf(w, "```json\n%s\n→\n%s\n```\n\n", p.Request, p.Response)
 }

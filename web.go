@@ -116,18 +116,11 @@ em{font-style:normal;color:var(--dim)}
 .evm-pill-err{border-color:var(--red);color:var(--red)}
 .evm-wallet-snippet{margin:.4rem 0 .8rem}
 .evm-wallet-snippet pre{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:.6rem 1rem;margin:0;color:var(--fg);font-size:12px}
-.evm-probe-table{display:table;width:100%;margin:.5rem 0 1rem}
-.evm-probe-table thead th{position:sticky;top:0;background:var(--bg)}
-.evm-probe-group td{color:var(--cyan);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding-top:.6rem;border-bottom:1px solid var(--border)}
-.evm-probe-ok td:nth-child(2){color:var(--green)}
-.evm-probe-fail td:nth-child(2){color:var(--red);font-weight:600}
-.evm-lat-ok td:nth-child(3){color:var(--green)}
-.evm-lat-warn td:nth-child(3){color:var(--yellow)}
-.evm-lat-slow td:nth-child(3){color:var(--red)}
-.evm-probe-detail{margin:.35rem 0 .65rem 1rem;border:1px solid var(--border);border-radius:4px;padding:.35rem .6rem;background:var(--surface)}
-.evm-probe-detail summary{cursor:pointer;color:var(--yellow);font-size:12px}
-.evm-probe-err{color:var(--red);font-size:12px;margin:.25rem 0}
-.evm-curl,.evm-json{background:#0d1117;border:1px solid var(--border);border-radius:4px;padding:.5rem .75rem;margin:.35rem 0;font-size:11px;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+.evm-probe-log{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:.65rem 1rem;margin:.45rem 0 .75rem;font-size:12px;line-height:1.55;color:var(--fg);overflow-x:auto;white-space:pre;tab-size:4}
+.evm-probe-fail-head{margin:.5rem 0 .15rem;padding:.35rem .75rem;background:#2d1f1f;border:1px solid #6e3030;border-radius:4px 4px 0 0;color:var(--red);font-size:12px}
+.evm-probe-fail-err{margin:0 0 .15rem;padding:.25rem .75rem;background:#1c1414;border-left:1px solid #6e3030;border-right:1px solid #6e3030;color:var(--red);font-size:11px}
+.evm-probe-cmd,.evm-probe-json{margin:0 0 .5rem;padding:.5rem .75rem;background:#0d1117;border:1px solid var(--border);border-radius:0;font-size:11px;line-height:1.5;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+.evm-probe-json{border-radius:0 0 4px 4px;margin-bottom:.75rem;color:var(--dim)}
 `
 
 func startWeb(addr string, evmEndpoint string, doFetch func() (fetch.ChainSnapshot, fetch.EVMSnapshot, fetch.SystemSnapshot, fetch.DockerSnapshot)) {

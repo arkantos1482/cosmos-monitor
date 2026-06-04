@@ -37,7 +37,7 @@ func TestBuildMarkdownEVMRPCWebStrip(t *testing.T) {
 	}
 }
 
-func TestRenderFragmentEVMProbeTable(t *testing.T) {
+func TestRenderFragmentEVMProbeLog(t *testing.T) {
 	d := WebData{
 		EVMRPCOk: false, EVMSynced: true,
 		EVMHTTPEndpoint: "http://127.0.0.1:8545",
@@ -50,14 +50,30 @@ func TestRenderFragmentEVMProbeTable(t *testing.T) {
 		},
 	}
 	out := renderFragment(d)
-	if !strings.Contains(out, `class="evm-probe-table"`) {
-		t.Fatal("fragment should include probe table")
+	if !strings.Contains(out, `class="evm-probe-log"`) {
+		t.Fatal("fragment should include monospace probe log")
 	}
-	if !strings.Contains(out, `<details class="evm-probe-detail"`) {
-		t.Fatal("failed probe should expand in details")
+	if !strings.Contains(out, "[ETH]") || !strings.Contains(out, "eth_chainId") {
+		t.Fatal("probe log should list eth namespace and methods")
+	}
+	if !strings.Contains(out, `class="evm-probe-fail-head"`) {
+		t.Fatal("failed probe should show text failure header")
 	}
 	if !strings.Contains(out, "curl -sS") {
 		t.Fatal("failed probe should include curl command")
+	}
+}
+
+func TestRenderProbeLogFormat(t *testing.T) {
+	log := renderProbeLog([]WebRPCProbe{
+		{Method: "eth_blockNumber", OK: true, Latency: "3ms"},
+		{Method: "net_listening", OK: true, Latency: "1ms"},
+	})
+	if !strings.Contains(log, "[ETH]") || !strings.Contains(log, "[NET]") {
+		t.Fatalf("expected namespace headers: %q", log)
+	}
+	if !strings.Contains(log, "·  eth_blockNumber") {
+		t.Fatalf("expected ok marker line: %q", log)
 	}
 }
 
