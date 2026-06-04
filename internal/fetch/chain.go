@@ -64,6 +64,10 @@ type ChainSnapshot struct {
 
 	IBCClientCount int
 
+	ModuleBalances []ModuleBalanceInfo
+	// LastBlockFeeRaw is parent block gas_used × base_fee (atto), when both are known.
+	LastBlockFeeRaw string
+
 	Params ChainParams
 
 	Err error
@@ -800,6 +804,12 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 		snap.CommunityPool = formatCoins(cp.Pool, "")
 	}
 
+	preferDenom := snap.Params.BondDenom
+	if preferDenom == "" {
+		preferDenom = snap.TotalSupplyDenom
+	}
+	snap.ModuleBalances = FetchModuleBalances(rest, preferDenom)
+
 	// base fee
 	var bf baseFeeResp
 	if err := doJSON(rest+"/cosmos/evm/feemarket/v1/base_fee", &bf); err == nil {
@@ -829,6 +839,13 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 	}
 	if snap.ParentBlockGasWanted == 0 && snap.BlockGas > 0 {
 		snap.ParentBlockGasWanted = snap.BlockGas
+	}
+	if snap.ParentBlockGasUsed > 0 && snap.BaseFee != "" {
+		baseFeeF := parseFloat(snap.BaseFee)
+		if baseFeeF > 0 {
+			fee := baseFeeF * float64(snap.ParentBlockGasUsed)
+			snap.LastBlockFeeRaw = fmt.Sprintf("%.0f", fee)
+		}
 	}
 
 	// governance proposals — try v1beta1 first, fall back to v1

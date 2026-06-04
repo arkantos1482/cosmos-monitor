@@ -63,6 +63,11 @@ type Report struct {
 	UnclaimedDelegator  string // sum of validator outstanding_rewards (delegator share)
 	UnclaimedCommission string // sum of accumulated validator commission
 
+	ModuleAccounts   []ModuleAccountRow
+	LastBlockFees    string // parent block gas_used × base_fee (estimate)
+	InflationPerBlock string
+	InflationPerDay   string
+
 	PMTEnabled     bool
 	PMTPoolEmpty   bool
 	PMTRate        string
@@ -198,4 +203,12 @@ type TokenPair struct {
 	Denom   string
 	ERC20   string
 	Enabled bool
+}
+
+// ModuleAccountRow is a module account balance for the economics overview tables.
+type ModuleAccountRow struct {
+	Name    string
+	Address string
+	Balance string
+	Role    string
 }

@@ -229,6 +229,40 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 		}
 	}
 
+	for _, mod := range chain.ModuleBalances {
+		if mod.Name == "" {
+			continue
+		}
+		bal := "0"
+		if mod.Amount != "" {
+			bal = fetch.FormatCoin(mod.Amount, mod.Denom)
+		}
+		role := moduleAccountRole(mod.Name)
+		d.ModuleAccounts = append(d.ModuleAccounts, model.ModuleAccountRow{
+			Name:    mod.Name,
+			Address: mod.Address,
+			Balance: bal,
+			Role:    role,
+		})
+	}
+	if chain.LastBlockFeeRaw != "" {
+		lastFeeDenom := denom
+		if p.EVMDenom != "" {
+			lastFeeDenom = p.EVMDenom
+		}
+		d.LastBlockFees = fetch.FormatFeeAmount(chain.LastBlockFeeRaw, lastFeeDenom) + "  _(parent block gas × base fee)_"
+	}
+	if chain.Inflation > 0 && chain.AnnualProvisions != "" && p.BlocksPerYear > 0 {
+		provF, _ := fetch.NormalizeCoin(chain.AnnualProvisions, denom)
+		_, dispDenom := fetch.NormalizeCoin("0", denom)
+		perBlock := provF / float64(p.BlocksPerYear)
+		d.InflationPerBlock = fetch.FormatAmountUnit(perBlock, dispDenom) + "/block"
+		if chain.BlockInterval > 0 {
+			blocksPerDay := 86400.0 / chain.BlockInterval.Seconds()
+			d.InflationPerDay = "~" + fetch.FormatAmountUnit(perBlock*blocksPerDay, dispDenom) + "/day"
+		}
+	}
+
 	d.SlashWindow = FormatInt(p.SignedBlocksWindow)
 	d.MinSigned = p.MinSignedPerWindow * 100
 	d.SlashDowntime, d.SlashDTInactive = slashFraction(p.SlashFractionDowntime)
@@ -420,6 +454,20 @@ func buildLocalValidator(chain fetch.ChainSnapshot, v *fetch.ValidatorInfo, maxM
 		lv.SigningStatus = "ok  (no missed blocks in current window)"
 	}
 	return lv
+}
+
+func moduleAccountRole(name string) string {
+	for _, spec := range []struct{ name, role string }{
+		{"fee_collector", "Fees + minted rewards land here each block, then distribution clears"},
+		{"distribution", "x/distribution module escrow (often ~0 after BeginBlock payout)"},
+		{"bonded_tokens_pool", "Staked tokens (locked; matches staking pool bonded)"},
+		{"not_bonded_tokens_pool", "Unbonding / unbonded stake in staking pool"},
+	} {
+		if spec.name == name {
+			return spec.role
+		}
+	}
+	return ""
 }
 
 func slashFraction(raw string) (string, bool) {

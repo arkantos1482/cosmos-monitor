@@ -21,10 +21,13 @@ func TestRenderFragmentFeeMarket(t *testing.T) {
 	}
 }
 
-func TestRenderFragmentMermaid(t *testing.T) {
-	d := model.Report{Inflation: 3.5, PMTEnabled: true, PMTRate: "0.1 PMT/block", GoalBonded: 67}
+func TestRenderFragmentEconomicsTables(t *testing.T) {
+	d := model.Report{
+		Inflation: 3.5, PMTEnabled: true, PMTRate: "0.1 PMT/block", GoalBonded: 67,
+		ModuleAccounts: []model.ModuleAccountRow{{Name: "fee_collector", Balance: "1 PMT"}},
+	}
 	out := RenderFragment(d)
-	if !strings.Contains(out, "mermaid") {
-		t.Fatal("rendered fragment should include mermaid source")
+	if !strings.Contains(out, "Money flow (live balances)") {
+		t.Fatal("rendered fragment should include economics balance tables")
 	}
 }

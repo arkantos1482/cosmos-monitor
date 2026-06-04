@@ -10,11 +10,9 @@ func writeEconomics(w Writer, d model.Report) {
 	w.Section("5. ECONOMICS")
 	w.Em("How money moves on this chain — tx fees, PMT pool rewards, and (if active) inflation accumulate in `fee_collector`, then `x/distribution` pays validators each block.")
 
-	w.Subsection("Overview")
-	w.Hint("Mermaid diagram (below). Coins: tx fees / inflation / PMT → `fee_collector` → `x/distribution`. `x/staking` supplies voting power (no coin flow). Payout split: community tax, then per-validator commission vs delegators. `goal bonded` → `GET /cosmos/mint/v1beta1/params`. Preview in VS Code/Obsidian or use `pmtop --web`.")
-	writeEconomicsDiagram(w, d)
+	writeEconomicsOverview(w, d)
 	if d.PMTEnabled {
-		w.Em("PMT pool funds per-block rewards via mint hook → `fee_collector` (see PMT Rewards table below).")
+		w.Em("PMT pool funds per-block rewards via mint hook → `fee_collector` (see PMT Rewards below).")
 	}
 
 	w.Subsection("Staking Pool")

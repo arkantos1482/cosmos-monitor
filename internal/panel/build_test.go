@@ -7,17 +7,25 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-func TestBuildMermaidDiv(t *testing.T) {
-	d := model.Report{Inflation: 3.5, PMTEnabled: true, PMTRate: "0.1 PMT/block"}
+func TestBuildEconomicsUsesTablesNotMermaid(t *testing.T) {
+	d := model.Report{
+		Inflation: 3.5, PMTEnabled: true, PMTRate: "0.1 PMT/block",
+		BaseFee: "1000", Elasticity: 2, BlockGas: "21000",
+		ParentBlockGasWanted: 21000, ParentBlockResultsOK: true,
+		ModuleAccounts: []model.ModuleAccountRow{{Name: "fee_collector", Balance: "1 PMT"}},
+	}
 	out := Build(d)
-	if !strings.Contains(out, `class="diagram-panel mermaid"`) {
-		t.Fatal("panel should emit mermaid divs")
+	idx := strings.Index(out, "5. ECONOMICS")
+	end := strings.Index(out, "6. GOVERNANCE")
+	if idx < 0 || end < 0 {
+		t.Fatal("expected economics and governance sections")
 	}
-	if strings.Contains(out, "```mermaid") {
-		t.Fatal("panel should not use markdown mermaid fences")
+	eco := out[idx:end]
+	if strings.Contains(eco, `class="diagram-panel mermaid"`) || strings.Contains(eco, "graph LR") {
+		t.Fatal("economics section should not use mermaid")
 	}
-	if !strings.Contains(out, "graph LR") {
-		t.Fatal("economics diagram should use LR layout")
+	if !strings.Contains(eco, "Money flow (live balances)") {
+		t.Fatal("economics should use live balance tables")
 	}
 }
 
@@ -39,45 +47,9 @@ func TestBuildFeeMarketPanel(t *testing.T) {
 		if end := strings.Index(chunk, `PMT Rewards`); end > 0 {
 			chunk = chunk[:end]
 		}
-		if strings.Contains(chunk, `math-panel`) || strings.Contains(chunk, `class="diagram-panel mermaid"`) {
-			t.Fatal("fee market subsection should not use KaTeX or feemarket mermaid")
+		if strings.Contains(chunk, `math-panel`) {
+			t.Fatal("fee market subsection should not use KaTeX")
 		}
-	}
-}
-
-func TestEconomicsOverviewMermaidSyntax(t *testing.T) {
-	d := model.Report{
-		Inflation:           3.5,
-		BondedPct:           72.3,
-		BlockHeight:         "482,160",
-		CommunityTax:        "2.00%",
-		CommunityTaxPct:     2,
-		PMTEnabled:          true,
-		PMTRate:             "0.1000 PMT/block",
-		BondedCount:         4,
-		TotalOutstanding:    "0.006854 PMT  across 4 validators",
-		UnclaimedDelegator:  "0.006169 PMT",
-		UnclaimedCommission: "0.000685 PMT",
-		Validators:          []model.Validator{{CommissionFloat: 10}},
-	}
-	src := economicsOverviewMermaid(d)
-	if !strings.Contains(src, "unclaimed 0.000685 PMT") {
-		t.Fatal("operator node should show unclaimed commission amount")
-	}
-	if !strings.Contains(src, "unclaimed 0.006169 PMT") {
-		t.Fatal("delegators node should show unclaimed delegator rewards")
-	}
-	if !strings.Contains(src, "PMT/block in") {
-		t.Fatal("distribution node should show per-block inflow from PMTRate")
-	}
-	if strings.Contains(src, "\nheight ") || strings.Contains(src, "\nmempool ") {
-		t.Fatal("node labels must use <br/> not literal newlines")
-	}
-	if !strings.Contains(src, "<br/>") {
-		t.Fatal("node labels should use <br/> line breaks")
-	}
-	if !strings.Contains(src, `|"block 482,160"|`) {
-		t.Fatal("edge labels with commas must be quoted for mermaid.js")
 	}
 }
 
@@ -100,6 +72,7 @@ func TestContentInventory(t *testing.T) {
 		Moniker: "node1", Synced: true, BlockHeight: "482,160",
 		PMTEnabled: true, PMTRate: "0.1 PMT/block",
 		EVMHTTPEndpoint: "http://localhost:8545", EVMChainID: 290290,
+		ModuleAccounts: []model.ModuleAccountRow{{Name: "fee_collector", Balance: "1 PMT"}},
 	}
 	out := Build(d)
 	for _, want := range []string{
@@ -114,6 +87,7 @@ func TestContentInventory(t *testing.T) {
 		`class="dash-subheading">Probe health</h3>`,
 		`class="stat-grid"`,
 		`class="data-table"`,
+		"Money flow (live balances)",
 		"Fee market (x/feemarket)",
 	} {
 		if !strings.Contains(out, want) {
