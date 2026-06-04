@@ -59,7 +59,9 @@ type Report struct {
 	CommunityTaxZero bool
 	CommunityTaxPct  float64
 	BlocksPerYear    string
-	TotalOutstanding string
+	TotalOutstanding    string
+	UnclaimedDelegator  string // sum of validator outstanding_rewards (delegator share)
+	UnclaimedCommission string // sum of accumulated validator commission
 
 	PMTEnabled     bool
 	PMTPoolEmpty   bool

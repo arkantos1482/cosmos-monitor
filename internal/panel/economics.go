@@ -74,7 +74,7 @@ func writeEconomics(w Writer, d model.Report) {
 	}
 
 	w.Subsection("Distribution  (x/distribution)")
-	w.Hint("`community tax` → `GET /cosmos/distribution/v1beta1/params`; `community pool` → `…/community_pool`; `unclaimed staking rewards` → sum of per-validator `…/validators/{valoper}/outstanding_rewards`.")
+	w.Hint("`community tax` → `GET /cosmos/distribution/v1beta1/params`; `community pool` → `…/community_pool`; unclaimed rewards → sum of `…/outstanding_rewards` (delegators) + `…/commission` (operators).")
 	w.Row("community tax", d.CommunityTax+"  _(%% of block rewards → community pool, not validators)_")
 	w.Row("community pool", d.CommunityPool+"  _(governance-controlled treasury)_")
 	if d.TotalOutstanding != "" {

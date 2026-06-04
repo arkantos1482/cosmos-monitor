@@ -200,7 +200,7 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 	}
 	d.PMTPoolAddress = p.PMTRewardsPoolAddress
 
-	var totalOutF float64
+	var totalOutF, totalCommF float64
 	var outDenom string
 	for _, v := range chain.Validators {
 		if v.OutstandingRewardsAmt != "" {
@@ -208,10 +208,25 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 			totalOutF += f
 			outDenom = dd
 		}
+		if v.CommissionEarnedAmt != "" {
+			f, dd := fetch.NormalizeCoin(v.CommissionEarnedAmt, v.CommissionEarnedDenom)
+			totalCommF += f
+			if outDenom == "" {
+				outDenom = dd
+			}
+		}
 	}
 	if outDenom != "" {
-		d.TotalOutstanding = fetch.FormatAmountUnit(totalOutF, outDenom) +
-			fmt.Sprintf("  across %d validators", len(chain.Validators))
+		if totalOutF > 0 || totalCommF > 0 {
+			d.TotalOutstanding = fetch.FormatAmountUnit(totalOutF+totalCommF, outDenom) +
+				fmt.Sprintf("  across %d validators", len(chain.Validators))
+		}
+		if totalOutF > 0 {
+			d.UnclaimedDelegator = fetch.FormatAmountUnit(totalOutF, outDenom)
+		}
+		if totalCommF > 0 {
+			d.UnclaimedCommission = fetch.FormatAmountUnit(totalCommF, outDenom)
+		}
 	}
 
 	d.SlashWindow = FormatInt(p.SignedBlocksWindow)

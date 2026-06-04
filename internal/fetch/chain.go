@@ -96,6 +96,8 @@ type ValidatorInfo struct {
 	OutstandingRewardsAmt   string // raw base-denom amount for summing
 	OutstandingRewardsDenom string
 	CommissionEarned        string
+	CommissionEarnedAmt     string
+	CommissionEarnedDenom   string
 	ProposerPriority        int64
 }
 
@@ -904,11 +906,13 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 
 	// per-validator rewards and commission (concurrent, max 10 workers)
 	type valResult struct {
-		valoper      string
-		rewards      string
-		rewardsAmt   string
-		rewardsDenom string
-		commEarned   string
+		valoper       string
+		rewards       string
+		rewardsAmt    string
+		rewardsDenom  string
+		commEarned    string
+		commEarnedAmt string
+		commEarnedDen string
 	}
 	valList := make([]ValidatorInfo, 0, len(allVals))
 	for _, v := range allVals {
@@ -939,6 +943,10 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 			var comm validatorCommissionResp
 			if err := doJSON(fmt.Sprintf("%s/cosmos/distribution/v1beta1/validators/%s/commission", rest, val.OperatorAddr), &comm); err == nil {
 				res.commEarned = formatCoins(comm.Commission.Commission, "")
+				if len(comm.Commission.Commission) > 0 {
+					res.commEarnedAmt = comm.Commission.Commission[0].Amount
+					res.commEarnedDen = comm.Commission.Commission[0].Denom
+				}
 			}
 
 			results[idx] = res
@@ -960,6 +968,8 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 			valList[i].OutstandingRewardsAmt = r.rewardsAmt
 			valList[i].OutstandingRewardsDenom = r.rewardsDenom
 			valList[i].CommissionEarned = r.commEarned
+			valList[i].CommissionEarnedAmt = r.commEarnedAmt
+			valList[i].CommissionEarnedDenom = r.commEarnedDen
 		}
 		// VP%
 		tokens := parseFloat(v.VotingPowerTokens)

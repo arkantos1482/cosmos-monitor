@@ -7,6 +7,23 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
+func TestEconomicsOpDelPerBlockEdges(t *testing.T) {
+	d := model.Report{
+		PMTEnabled:  true,
+		PMTRate:     "0.1 PMT/block",
+		BondedCount: 4,
+		Validators: []model.Validator{
+			{CommissionFloat: 10}, {CommissionFloat: 10},
+			{CommissionFloat: 10}, {CommissionFloat: 10},
+		},
+	}
+	src := economicsOverviewMermaid(d)
+	// 0.1/block, 4 equal vals → 0.025/val; 10% comm → ~0.0025 op
+	if !strings.Contains(src, "~0.0025 PMT/blk") {
+		t.Fatalf("expected per-block commission edge; got excerpt:\n%s", src)
+	}
+}
+
 func TestEconomicsOverviewMermaidTopology(t *testing.T) {
 	d := model.Report{
 		Inflation:  3.5,

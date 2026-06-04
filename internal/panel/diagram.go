@@ -46,6 +46,103 @@ func splitOutstandingSuffix(s string) (amount, suffix string) {
 	return strings.TrimSpace(s), ""
 }
 
+// economicsPMTPerBlock parses display PMTRate (e.g. "0.1000 PMT/block").
+func economicsPMTPerBlock(d model.Report) (perBlock float64, unit string, ok bool) {
+	if !d.PMTEnabled || d.PMTRate == "" {
+		return 0, "", false
+	}
+	s := strings.TrimSuffix(strings.TrimSpace(d.PMTRate), "/block")
+	parts := strings.Fields(s)
+	if len(parts) == 0 {
+		return 0, "", false
+	}
+	v, err := strconv.ParseFloat(parts[0], 64)
+	if err != nil || v <= 0 {
+		return 0, "", false
+	}
+	unit = diagramDenom(d)
+	if len(parts) >= 2 {
+		unit = parts[1]
+	}
+	return v, unit, true
+}
+
+func economicsUnclaimedDelegator(d model.Report) string {
+	if d.UnclaimedDelegator != "" {
+		return d.UnclaimedDelegator
+	}
+	if d.Local.IsValidator && d.Local.Outstanding != "" {
+		return d.Local.Outstanding
+	}
+	amt, _ := splitOutstandingSuffix(d.TotalOutstanding)
+	return amt
+}
+
+func economicsUnclaimedCommission(d model.Report) string {
+	if d.UnclaimedCommission != "" {
+		return d.UnclaimedCommission
+	}
+	if d.Local.IsValidator && d.Local.CommissionEarned != "" {
+		return d.Local.CommissionEarned
+	}
+	return ""
+}
+
+func economicsUnclaimedTotal(d model.Report) string {
+	del := economicsUnclaimedDelegator(d)
+	comm := economicsUnclaimedCommission(d)
+	if del == "" && comm == "" {
+		amt, _ := splitOutstandingSuffix(d.TotalOutstanding)
+		return amt
+	}
+	if del != "" && comm != "" {
+		delF, _ := strconv.ParseFloat(strings.Fields(del)[0], 64)
+		commF, _ := strconv.ParseFloat(strings.Fields(comm)[0], 64)
+		unit := diagramDenom(d)
+		if p := strings.Fields(del); len(p) >= 2 {
+			unit = p[1]
+		}
+		return fetch.FormatAmountUnit(delF+commF, unit)
+	}
+	if del != "" {
+		return del
+	}
+	return comm
+}
+
+// economicsPerBlockSplit estimates per-block community tax and per-validator op/delegator
+// slices from PMTRate (Cosmos: tax first, then VP-weighted validator share, then commission).
+func economicsPerBlockSplit(d model.Report) (tax, valPool, op, del float64, unit string, ok bool) {
+	perBlock, unit, ok := economicsPMTPerBlock(d)
+	if !ok {
+		return 0, 0, 0, 0, "", false
+	}
+	tax = perBlock * d.CommunityTaxPct / 100
+	valPool = perBlock - tax
+	commPct, hasComm := economicsCommissionPct(d)
+	if !hasComm {
+		commPct = 0
+	}
+	n := float64(d.BondedCount)
+	if n <= 0 && len(d.Validators) > 0 {
+		n = float64(len(d.Validators))
+	}
+	if n <= 0 {
+		n = 1
+	}
+	perVal := valPool / n
+	op = perVal * commPct / 100
+	del = perVal - op
+	return tax, valPool, op, del, unit, true
+}
+
+func economicsEdgeAmount(v float64, unit string) string {
+	if v <= 0 || unit == "" {
+		return ""
+	}
+	return "~" + fetch.FormatAmountUnit(v, unit) + "/blk"
+}
+
 func economicsFeesLabel(d model.Report) string {
 	lines := []string{"Tx fees (ante / EVM)"}
 	lines = append(lines, fmt.Sprintf("mempool %d · evm %d+%d", d.MempoolTxs, d.PendingTx, d.QueuedTx))
@@ -78,12 +175,18 @@ func economicsStakeLabel(d model.Report) string {
 }
 
 func economicsValLabel(d model.Report) string {
-	lines := []string{"validator rewards", "per block allocation"}
-	if d.TotalOutstanding != "" {
-		amt, suffix := splitOutstandingSuffix(d.TotalOutstanding)
-		lines = append(lines, "unclaimed "+amt)
-		if suffix != "" {
-			lines = append(lines, suffix)
+	lines := []string{"validator rewards", "VP-weighted share"}
+	if total := economicsUnclaimedTotal(d); total != "" {
+		lines = append(lines, "unclaimed "+total)
+	}
+	if _, suffix := splitOutstandingSuffix(d.TotalOutstanding); suffix != "" {
+		lines = append(lines, suffix)
+	} else if d.BondedCount > 0 {
+		lines = append(lines, fmt.Sprintf("%d validators", d.BondedCount))
+	}
+	if _, valPool, _, _, unit, ok := economicsPerBlockSplit(d); ok {
+		if s := economicsEdgeAmount(valPool, unit); s != "" {
+			lines = append(lines, s+" to validators")
 		}
 	}
 	return stackLabelText(lines...)
@@ -94,37 +197,62 @@ func economicsCommLabel(d model.Report) string {
 	if d.CommunityTaxZero {
 		comm = "community tax 0%"
 	}
-	if d.CommunityPool != "" {
-		return stackLabelText(comm, "pool "+d.CommunityPool)
+	lines := []string{comm}
+	if d.CommunityPool != "" && d.CommunityPool != "0" {
+		lines = append(lines, "pool "+d.CommunityPool)
 	}
-	return stackLabelText(comm)
+	if tax, _, _, _, unit, ok := economicsPerBlockSplit(d); ok && tax > 0 {
+		lines = append(lines, economicsEdgeAmount(tax, unit))
+	}
+	return stackLabelText(lines...)
 }
 
 func economicsCommissionPct(d model.Report) (pct float64, ok bool) {
 	if d.Local.IsValidator && d.Local.Commission > 0 {
 		return d.Local.Commission, true
 	}
-	if n := len(d.Validators); n > 0 {
-		sum := 0.0
-		for _, v := range d.Validators {
+	var sum float64
+	var n int
+	for _, v := range d.Validators {
+		if v.CommissionFloat > 0 {
 			sum += v.CommissionFloat
+			n++
 		}
+	}
+	if n > 0 {
 		return sum / float64(n), true
 	}
 	return 0, false
 }
 
 func economicsOpLabel(d model.Report) string {
+	lines := []string{"validator operator", "accumulated commission"}
 	if pct, ok := economicsCommissionPct(d); ok {
-		return stackLabelText(fmt.Sprintf("operator %.1f%%", pct), "commission slice")
+		lines[0] = fmt.Sprintf("operator %.1f%%", pct)
 	}
-	return stackLabelText("validator operator", "commission slice")
+	if d.Local.IsValidator && d.Local.CommissionEarned != "" {
+		lines = append(lines, "unclaimed "+d.Local.CommissionEarned)
+	} else if amt := economicsUnclaimedCommission(d); amt != "" {
+		lines = append(lines, "unclaimed "+amt)
+	}
+	if _, _, op, _, unit, ok := economicsPerBlockSplit(d); ok && op > 0 {
+		lines = append(lines, economicsEdgeAmount(op, unit)+" / val (avg)")
+	}
+	return stackLabelText(lines...)
 }
 
 func economicsDelLabel(d model.Report) string {
-	lines := []string{"delegators", "remainder share"}
+	lines := []string{"delegators", "outstanding_rewards"}
 	if pct, ok := economicsCommissionPct(d); ok && pct < 100 {
-		lines = append(lines, fmt.Sprintf("(1 − %.1f%%)", pct))
+		lines = append(lines, fmt.Sprintf("%.1f%% of val share", 100-pct))
+	}
+	if d.Local.IsValidator && d.Local.Outstanding != "" {
+		lines = append(lines, "unclaimed "+d.Local.Outstanding)
+	} else if amt := economicsUnclaimedDelegator(d); amt != "" {
+		lines = append(lines, "unclaimed "+amt)
+	}
+	if _, _, _, del, unit, ok := economicsPerBlockSplit(d); ok && del > 0 {
+		lines = append(lines, economicsEdgeAmount(del, unit)+" / val (avg)")
 	}
 	return stackLabelText(lines...)
 }
@@ -146,16 +274,14 @@ func economicsPMTPoolLabel(d model.Report) string {
 }
 
 func economicsDistLabel(d model.Report) string {
-	lines := []string{"x/distribution BeginBlock"}
-	if d.CommunityTax != "" {
-		lines = append(lines, "community tax "+d.CommunityTax)
+	lines := []string{"x/distribution BeginBlock", "AllocateRewards"}
+	if perBlock, unit, ok := economicsPMTPerBlock(d); ok {
+		lines = append(lines, fetch.FormatAmountUnit(perBlock, unit)+"/block in")
+	} else if d.Inflation > 0 {
+		lines = append(lines, fmt.Sprintf("inflation %.2f%%", d.Inflation))
 	}
-	if d.TotalOutstanding != "" {
-		amt, suffix := splitOutstandingSuffix(d.TotalOutstanding)
-		lines = append(lines, "unclaimed "+amt)
-		if suffix != "" {
-			lines = append(lines, suffix)
-		}
+	if d.CommunityTax != "" {
+		lines = append(lines, "tax "+d.CommunityTax)
 	}
 	return stackLabelText(lines...)
 }
@@ -175,13 +301,28 @@ func economicsPMTEdge(d model.Report) string {
 }
 
 func economicsDistCommEdge(d model.Report) string {
-	if d.CommunityTaxZero {
+	if tax, _, _, _, unit, ok := economicsPerBlockSplit(d); ok {
+		if tax > 0 {
+			if s := economicsEdgeAmount(tax, unit); s != "" {
+				return s
+			}
+		}
+		if d.CommunityTaxZero || d.CommunityTaxPct == 0 {
+			return "tax 0%"
+		}
+	}
+	if d.CommunityTaxZero || d.CommunityTax == "" {
 		return "tax 0%"
 	}
 	return "tax " + d.CommunityTax
 }
 
 func economicsDistValEdge(d model.Report) string {
+	if _, valPool, _, _, unit, ok := economicsPerBlockSplit(d); ok {
+		if s := economicsEdgeAmount(valPool, unit); s != "" {
+			return s
+		}
+	}
 	pct := 100.0 - d.CommunityTaxPct
 	if pct <= 0 {
 		return "to validators"
@@ -206,11 +347,33 @@ func economicsInflLabel(d model.Report) string {
 	return stackLabelText(lines...)
 }
 
-func economicsSplitEdgeLabels(d model.Report) (comm, del string) {
-	if pct, ok := economicsCommissionPct(d); ok {
-		return fmt.Sprintf("commission %.0f%%", pct), fmt.Sprintf("remainder %.0f%%", 100-pct)
+func economicsSplitEdgeLabels(d model.Report) (op, del string) {
+	if _, _, opAmt, delAmt, unit, ok := economicsPerBlockSplit(d); ok {
+		if s := economicsEdgeAmount(opAmt, unit); s != "" {
+			op = s
+		}
+		if s := economicsEdgeAmount(delAmt, unit); s != "" {
+			del = s
+		}
 	}
-	return "commission", "remainder"
+	if op == "" || del == "" {
+		if pct, ok := economicsCommissionPct(d); ok {
+			if op == "" {
+				op = fmt.Sprintf("commission %.0f%%", pct)
+			}
+			if del == "" {
+				del = fmt.Sprintf("delegators %.0f%%", 100-pct)
+			}
+		} else {
+			if op == "" {
+				op = "commission"
+			}
+			if del == "" {
+				del = "delegators"
+			}
+		}
+	}
+	return op, del
 }
 
 func stackMermaidQuoted(label string) string {

@@ -47,16 +47,29 @@ func TestBuildFeeMarketPanel(t *testing.T) {
 
 func TestEconomicsOverviewMermaidSyntax(t *testing.T) {
 	d := model.Report{
-		Inflation:        3.5,
-		BondedPct:        72.3,
-		BlockHeight:      "482,160",
-		CommunityTax:     "2.00%",
-		PMTEnabled:       true,
-		PMTRate:          "0.1000 PMT/block",
-		TotalOutstanding: "0.006854 PMT  across 4 validators",
-		Validators:       []model.Validator{{CommissionFloat: 10}},
+		Inflation:           3.5,
+		BondedPct:           72.3,
+		BlockHeight:         "482,160",
+		CommunityTax:        "2.00%",
+		CommunityTaxPct:     2,
+		PMTEnabled:          true,
+		PMTRate:             "0.1000 PMT/block",
+		BondedCount:         4,
+		TotalOutstanding:    "0.006854 PMT  across 4 validators",
+		UnclaimedDelegator:  "0.006169 PMT",
+		UnclaimedCommission: "0.000685 PMT",
+		Validators:          []model.Validator{{CommissionFloat: 10}},
 	}
 	src := economicsOverviewMermaid(d)
+	if !strings.Contains(src, "unclaimed 0.000685 PMT") {
+		t.Fatal("operator node should show unclaimed commission amount")
+	}
+	if !strings.Contains(src, "unclaimed 0.006169 PMT") {
+		t.Fatal("delegators node should show unclaimed delegator rewards")
+	}
+	if !strings.Contains(src, "PMT/block in") {
+		t.Fatal("distribution node should show per-block inflow from PMTRate")
+	}
 	if strings.Contains(src, "\nheight ") || strings.Contains(src, "\nmempool ") {
 		t.Fatal("node labels must use <br/> not literal newlines")
 	}
