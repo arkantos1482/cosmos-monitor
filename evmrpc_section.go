@@ -1,13 +1,15 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
-	"html"
 	"io"
 	"sort"
 	"strconv"
 	"strings"
 )
+
+const maxProbeJSONBytes = 12_000
 
 // Defaults aligned with tools/ops/deploy/configs/app.toml (EVM mempool + json-rpc).
 const (
@@ -40,14 +42,14 @@ func evmDisplaySymbol(denom string) string {
 	}
 }
 
-func evmRPCOverallStatus(d WebData) (label, cssClass string) {
+func evmRPCOverallStatus(d WebData) string {
 	if !d.EVMRPCOk {
-		return "DOWN", "evm-pill-err"
+		return "DOWN"
 	}
 	if d.EVMBlockAgeErr || !d.EVMSynced || d.RPCProbeOK < d.RPCProbeTotal {
-		return "DEGRADED", "evm-pill-warn"
+		return "DEGRADED"
 	}
-	return "OK", "evm-pill-ok"
+	return "OK"
 }
 
 func probeNamespace(method string) string {
@@ -87,12 +89,12 @@ func jsonRPCCurl(endpoint, requestJSON string) string {
 	return fmt.Sprintf("curl -sS -X POST %s \\\n  -H 'Content-Type: application/json' \\\n  -d '%s'", endpoint, escaped)
 }
 
-func writeEVMRPCSection(w io.Writer, d WebData, web bool) {
+func writeEVMRPCSection(w io.Writer, d WebData) {
 	hint := func(text string) { fmt.Fprintf(w, "_%s_\n\n", text) }
 	subsection := func(name string) { fmt.Fprintf(w, "\n## %s\n\n", name) }
 	row := func(label, value string) { fmt.Fprintf(w, "- **%s**: %s\n", label, value) }
 
-	overall, overallClass := evmRPCOverallStatus(d)
+	overall := evmRPCOverallStatus(d)
 
 	syncLabel := "synced"
 	if !d.EVMSynced {
@@ -111,24 +113,12 @@ func writeEVMRPCSection(w io.Writer, d WebData, web bool) {
 
 	probeSummary := fmt.Sprintf("%d/%d probes", d.RPCProbeOK, d.RPCProbeTotal)
 	listenLabel := "not listening"
-	listenClass := "evm-pill-warn"
 	if d.EVMListening {
 		listenLabel = "listening"
-		listenClass = "evm-pill-ok"
 	}
 
-	if web {
-		fmt.Fprint(w, `<div class="evm-rpc-strip">`+"\n")
-		writeEVMPill(w, overall, overallClass)
-		writeEVMPill(w, "block "+html.EscapeString(blockAge), pillClassForBlockAge(d))
-		writeEVMPill(w, syncLabel, pillClassForSync(d.EVMSynced))
-		writeEVMPill(w, probeSummary, pillClassForProbes(d))
-		writeEVMPill(w, listenLabel, listenClass)
-		fmt.Fprint(w, `</div>`+"\n\n")
-	} else {
-		fmt.Fprintf(w, "**%s** · block %s · %s · %s · %s\n\n",
-			overall, blockAge, syncLabel, probeSummary, listenLabel)
-	}
+	fmt.Fprintf(w, "**RPC: %s** · block %s · %s · %s · %s\n\n",
+		overall, blockAge, syncLabel, probeSummary, listenLabel)
 
 	subsection("For operators")
 	hint("HTTP/WS bind addresses from node `app.toml` `[json-rpc]`; APIs list is the deployed default for PMT.")
@@ -162,12 +152,7 @@ func writeEVMRPCSection(w io.Writer, d WebData, web bool) {
 	}
 	wallet := fmt.Sprintf("Network name: %s\nRPC URL: %s\nChain ID: %d\nCurrency symbol: %s",
 		networkName, httpEP, d.EVMChainID, symbol)
-	if web {
-		fmt.Fprintf(w, "\n<div class=\"evm-wallet-snippet\"><pre>%s</pre></div>\n\n",
-			html.EscapeString(wallet))
-	} else {
-		fmt.Fprintf(w, "\n```text\n%s\n```\n\n", wallet)
-	}
+	fmt.Fprintf(w, "\n```text\n%s\n```\n\n", wallet)
 
 	subsection("Live (JSON-RPC)")
 	hint("`eth_*` / `txpool_*` probes on each refresh; gas price also feeds §4 fee market.")
@@ -192,8 +177,8 @@ func writeEVMRPCSection(w io.Writer, d WebData, web bool) {
 	row("EVM peers", fmt.Sprintf("%d  _(net_peerCount — often 0 on validators)_", d.EVMPeerCount))
 
 	subsection("Probe health")
-	hint("Client-side `POST` JSON-RPC 2.0; latency measured on this host. Failed methods show curl + bodies below the log.")
-	writeEVMProbeLog(w, d, httpEP, web)
+	hint("Client-side `POST` JSON-RPC 2.0; each method shows the request line and pretty-printed response body from the last refresh.")
+	writeEVMProbeLog(w, d, httpEP)
 }
 
 func formatTxpoolCount(n, limit uint64) string {
@@ -201,39 +186,6 @@ func formatTxpoolCount(n, limit uint64) string {
 		return fmt.Sprintf("%d", n)
 	}
 	return fmt.Sprintf("%d / %d", n, limit)
-}
-
-func pillClassForBlockAge(d WebData) string {
-	switch {
-	case d.EVMBlockAgeErr:
-		return "evm-pill-err"
-	case d.EVMBlockAgeWarn:
-		return "evm-pill-warn"
-	default:
-		return ""
-	}
-}
-
-func pillClassForSync(synced bool) string {
-	if synced {
-		return "evm-pill-ok"
-	}
-	return "evm-pill-warn"
-}
-
-func pillClassForProbes(d WebData) string {
-	if d.RPCProbeOK < d.RPCProbeTotal {
-		return "evm-pill-warn"
-	}
-	return "evm-pill-ok"
-}
-
-func writeEVMPill(w io.Writer, label, extraClass string) {
-	class := "evm-pill"
-	if extraClass != "" {
-		class += " " + extraClass
-	}
-	fmt.Fprintf(w, `<span class="%s">%s</span>`, class, html.EscapeString(label))
 }
 
 // renderProbeLog builds a fixed-width monospace probe table grouped by JSON-RPC namespace.
@@ -273,44 +225,69 @@ func renderProbeLog(probes []WebRPCProbe) string {
 	return strings.TrimRight(b.String(), "\n")
 }
 
-func writeEVMProbeLog(w io.Writer, d WebData, endpoint string, web bool) {
-	log := renderProbeLog(d.RPCProbes)
-	if web {
-		fmt.Fprintf(w, `<pre class="evm-probe-log">%s</pre>`+"\n\n", html.EscapeString(log))
-	} else {
-		fmt.Fprintf(w, "```text\n%s\n```\n\n", log)
+func probeStatusLabel(ok bool) string {
+	if ok {
+		return "ok"
 	}
-
-	failures := 0
-	for _, p := range sortedRPCProbes(d.RPCProbes) {
-		if p.OK {
-			continue
-		}
-		failures++
-		writeEVMProbeFailure(w, p, endpoint, web)
-	}
-	if failures == 0 {
-		return
-	}
+	return "FAIL"
 }
 
-func writeEVMProbeFailure(w io.Writer, p WebRPCProbe, endpoint string, web bool) {
-	header := fmt.Sprintf("── %s  FAIL  %s ──", p.Method, p.Latency)
-	if web {
-		fmt.Fprintf(w, `<pre class="evm-probe-fail-head">%s</pre>`+"\n", html.EscapeString(header))
-		if p.Error != "" {
-			fmt.Fprintf(w, `<pre class="evm-probe-fail-err">error: %s</pre>`+"\n", html.EscapeString(p.Error))
-		}
-		fmt.Fprintf(w, "<pre class=\"evm-probe-cmd\">%s</pre>\n", html.EscapeString(jsonRPCCurl(endpoint, p.Request)))
-		fmt.Fprintf(w, "<pre class=\"evm-probe-json\">%s\n→\n%s</pre>\n\n",
-			html.EscapeString(p.Request), html.EscapeString(p.Response))
-		return
+func prettyProbeJSON(raw string, maxBytes int) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "(empty)"
 	}
+	var v any
+	if err := json.Unmarshal([]byte(raw), &v); err != nil {
+		return truncateJSON(raw, maxBytes)
+	}
+	out, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return truncateJSON(raw, maxBytes)
+	}
+	return truncateJSON(string(out), maxBytes)
+}
 
-	fmt.Fprintf(w, "**%s**\n\n", header)
-	if p.Error != "" {
-		fmt.Fprintf(w, "error: %s\n\n", p.Error)
+func truncateJSON(s string, maxBytes int) string {
+	if maxBytes <= 0 || len(s) <= maxBytes {
+		return s
 	}
-	fmt.Fprintf(w, "```bash\n%s\n```\n\n", jsonRPCCurl(endpoint, p.Request))
-	fmt.Fprintf(w, "```json\n%s\n→\n%s\n```\n\n", p.Request, p.Response)
+	return s[:maxBytes] + "\n… (truncated)"
+}
+
+// formatProbeExchange renders one method's request/response as monospace text.
+func formatProbeExchange(p WebRPCProbe) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "── %s · %s · %s ──\n", p.Method, probeStatusLabel(p.OK), p.Latency)
+	if !p.OK && p.Error != "" {
+		fmt.Fprintf(&b, "err » %s\n", p.Error)
+	}
+	if p.Request != "" {
+		fmt.Fprintf(&b, "req » %s\n", strings.TrimSpace(p.Request))
+	}
+	b.WriteString("res » ")
+	res := prettyProbeJSON(p.Response, maxProbeJSONBytes)
+	if !strings.Contains(res, "\n") {
+		b.WriteString(res + "\n")
+		return strings.TrimRight(b.String(), "\n")
+	}
+	lines := strings.Split(res, "\n")
+	b.WriteString(lines[0] + "\n")
+	for _, line := range lines[1:] {
+		b.WriteString("      " + line + "\n")
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+func writeEVMProbeLog(w io.Writer, d WebData, endpoint string) {
+	log := renderProbeLog(d.RPCProbes)
+	fmt.Fprintf(w, "```text\n%s\n```\n\n", log)
+
+	for _, p := range sortedRPCProbes(d.RPCProbes) {
+		body := formatProbeExchange(p)
+		fmt.Fprintf(w, "```text\n%s\n```\n\n", body)
+		if !p.OK {
+			fmt.Fprintf(w, "```bash\n%s\n```\n\n", jsonRPCCurl(endpoint, p.Request))
+		}
+	}
 }

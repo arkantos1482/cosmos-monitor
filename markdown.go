@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func buildMarkdown(d WebData, web bool) string {
+func buildMarkdown(d WebData) string {
 	var b strings.Builder
 	w := &b
 
@@ -242,12 +242,8 @@ func buildMarkdown(d WebData, web bool) string {
 	fmt.Fprintf(w, "_How money moves on this chain — tx fees, PMT pool rewards, and (if active) inflation accumulate in `fee_collector`, then `x/distribution` pays validators each block._\n\n")
 
 	subsection("Overview")
-	if web {
-		hint("Interactive Mermaid diagram (below). Coins: tx fees / inflation / PMT → `fee_collector` → `x/distribution`. Dotted line: `x/staking` supplies voting power (no coin flow). Payout split: community tax, then per-validator commission vs delegators. `goal bonded` → `GET /cosmos/mint/v1beta1/params`.")
-	} else {
-		hint("ASCII diagram via mermaid-ascii. Coins: tx fees / inflation / PMT → `fee_collector` → `x/distribution`. `x/staking` supplies voting power (no coin flow). Payout split: community tax, then per-validator commission vs delegators. `goal bonded` → `GET /cosmos/mint/v1beta1/params`.")
-	}
-	writeEconomicsDiagram(w, d, web)
+	hint("Mermaid diagram (below). Coins: tx fees / inflation / PMT → `fee_collector` → `x/distribution`. `x/staking` supplies voting power (no coin flow). Payout split: community tax, then per-validator commission vs delegators. `goal bonded` → `GET /cosmos/mint/v1beta1/params`. Preview in VS Code/Obsidian or use `pmtop --web`.")
+	writeEconomicsDiagram(w, d)
 	if d.PMTEnabled {
 		fmt.Fprintf(w, "_PMT pool funds per-block rewards via mint hook → `fee_collector` (see PMT Rewards table below)._\n\n")
 	}
@@ -322,12 +318,8 @@ func buildMarkdown(d WebData, web bool) string {
 	}
 
 	subsection("Fee market (x/feemarket)")
-	if web {
-		hint("KaTeX formulas (below) show live EIP-1559 math from chain REST, CometBFT `block_results`, and `eth_gasPrice`. Slim Mermaid diagram shows ABCI order only. Payout path is in Overview above.")
-	} else {
-		hint("Text receipt + ASCII diagram. Live values from feemarket REST, CometBFT `block_results`, and `eth_gasPrice`. Payout path is in Overview above.")
-	}
-	writeFeemarketSection(w, d, web)
+	hint("KaTeX math (`$$` blocks below) and Mermaid diagram use live values from feemarket REST, CometBFT `block_results`, and `eth_gasPrice`. Payout path is in Overview above.")
+	writeFeemarketSection(w, d)
 
 	row("model", "EIP-1559  _(base fee rises when blocks are full, falls when empty)_")
 	if d.BaseFee != "" {
@@ -455,7 +447,7 @@ func buildMarkdown(d WebData, web bool) string {
 	section("7. EVM JSON-RPC")
 
 	fmt.Fprintf(w, "_Wallet and dApp connectivity (`eth_*`, `net_*`, `txpool_*`) on this node's JSON-RPC._\n\n")
-	writeEVMRPCSection(w, d, web)
+	writeEVMRPCSection(w, d)
 	fmt.Fprintln(w)
 	return b.String()
 }

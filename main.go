@@ -31,12 +31,8 @@ func main() {
 	rest      := flag.String("rest",      "http://localhost:1317",  "Cosmos REST/LCD endpoint")
 	evm       := flag.String("evm",       "http://localhost:8545",  "EVM JSON-RPC endpoint")
 	container := flag.String("container", "evmd-node",              "Docker container name")
-	webAddr   := flag.String("web",       "",                       "address to serve web UI (e.g. :7777); empty = disabled")
-	diagramBorder := flag.Int("diagram-border", 0, "mermaid-ascii: padding inside node boxes (default 0)")
-	diagramPadX   := flag.Int("diagram-padx",   2, "mermaid-ascii: horizontal gap between nodes (default 2)")
-	diagramPadY   := flag.Int("diagram-pady",   2, "mermaid-ascii: vertical gap between nodes (default 2)")
+	webAddr := flag.String("web", "", "address to serve web UI (e.g. :7777); empty = disabled")
 	flag.Parse()
-	SetDiagramPadding(*diagramBorder, *diagramPadX, *diagramPadY)
 
 	doFetch := func() (fetch.ChainSnapshot, fetch.EVMSnapshot, fetch.SystemSnapshot, fetch.DockerSnapshot) {
 		var (

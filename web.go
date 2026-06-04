@@ -10,16 +10,14 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/fetch"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
-	gmhtml "github.com/yuin/goldmark/renderer/html"
 )
 
 var mdRenderer = goldmark.New(
 	goldmark.WithExtensions(extension.GFM),
-	goldmark.WithRendererOptions(gmhtml.WithUnsafe()),
 )
 
 func renderFragment(d WebData) string {
-	src := buildMarkdown(d, true)
+	src := buildMarkdown(d)
 	var buf bytes.Buffer
 	if err := mdRenderer.Convert([]byte(src), &buf); err != nil {
 		return "<pre>" + html.EscapeString(src) + "</pre>"
@@ -47,22 +45,21 @@ func fullPage(moniker, fragment string) string {
 </div>
 <script>
 mermaid.initialize({startOnLoad:false,theme:'dark',securityLevel:'loose'});
-function renderMermaid(){mermaid.run({querySelector:'#data .mermaid'});}
-function renderFeeMathTex(){
-  if(typeof katex==='undefined')return;
-  document.querySelectorAll('#data .fee-math-tex').forEach(function(el){
-    if(el.dataset.rendered)return;
-    var b64=el.getAttribute('data-tex-b64');
-    if(!b64)return;
-    try{
-      var tex=decodeURIComponent(escape(atob(b64)));
-      katex.render(tex,el,{displayMode:true,throwOnError:false});
-      el.dataset.rendered='1';
-    }catch(e){}
+function promoteMermaidFences(){
+  document.querySelectorAll('#data pre > code.language-mermaid').forEach(function(code){
+    if(code.dataset.promoted)return;
+    var div=document.createElement('div');
+    div.className='mermaid';
+    div.textContent=code.textContent;
+    code.parentElement.replaceWith(div);
+    code.dataset.promoted='1';
   });
 }
+function renderMermaid(){
+  promoteMermaidFences();
+  mermaid.run({querySelector:'#data .mermaid'});
+}
 function renderMath(){
-  renderFeeMathTex();
   if(typeof renderMathInElement!=='function')return;
   renderMathInElement(document.getElementById('data'),{
     delimiters:[
@@ -71,7 +68,6 @@ function renderMath(){
       {left:'\\[',right:'\\]',display:true}
     ],
     ignoredTags:['script','noscript','style','textarea','pre','code'],
-    ignoredClasses:['fee-math'],
     throwOnError:false
   });
 }
@@ -102,25 +98,11 @@ tbody tr:hover td{background:#1c2128}
 pre{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:.6rem 1rem;margin:.4rem 0 .6rem;overflow-x:auto}
 .mermaid{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:.6rem;margin:.4rem 0 .6rem;overflow-x:auto;text-align:center}
 .mermaid svg{max-width:100%;height:auto}
-.fee-math{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:.8rem 1rem;margin:.4rem 0 .6rem;overflow-x:auto}
-.fee-math .katex{font-size:1.05em}
-.fee-math-tex{margin:.35rem 0}
+.katex-display{margin:.5rem 0;overflow-x:auto}
 code{font-family:inherit;font-size:12px;color:var(--cyan);background:transparent}
 pre code{color:var(--fg)}
 p{margin:.3rem 0;color:var(--dim);font-size:12px}
 em{font-style:normal;color:var(--dim)}
-.evm-rpc-strip{display:flex;flex-wrap:wrap;gap:.35rem;margin:.5rem 0 1rem;padding:.5rem .65rem;background:var(--surface);border:1px solid var(--border);border-radius:6px}
-.evm-pill{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;color:var(--bright);background:#21262d;border:1px solid var(--border)}
-.evm-pill-ok{border-color:var(--green);color:var(--green)}
-.evm-pill-warn{border-color:var(--yellow);color:var(--yellow)}
-.evm-pill-err{border-color:var(--red);color:var(--red)}
-.evm-wallet-snippet{margin:.4rem 0 .8rem}
-.evm-wallet-snippet pre{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:.6rem 1rem;margin:0;color:var(--fg);font-size:12px}
-.evm-probe-log{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:.65rem 1rem;margin:.45rem 0 .75rem;font-size:12px;line-height:1.55;color:var(--fg);overflow-x:auto;white-space:pre;tab-size:4}
-.evm-probe-fail-head{margin:.5rem 0 .15rem;padding:.35rem .75rem;background:#2d1f1f;border:1px solid #6e3030;border-radius:4px 4px 0 0;color:var(--red);font-size:12px}
-.evm-probe-fail-err{margin:0 0 .15rem;padding:.25rem .75rem;background:#1c1414;border-left:1px solid #6e3030;border-right:1px solid #6e3030;color:var(--red);font-size:11px}
-.evm-probe-cmd,.evm-probe-json{margin:0 0 .5rem;padding:.5rem .75rem;background:#0d1117;border:1px solid var(--border);border-radius:0;font-size:11px;line-height:1.5;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
-.evm-probe-json{border-radius:0 0 4px 4px;margin-bottom:.75rem;color:var(--dim)}
 `
 
 func startWeb(addr string, evmEndpoint string, doFetch func() (fetch.ChainSnapshot, fetch.EVMSnapshot, fetch.SystemSnapshot, fetch.DockerSnapshot)) {

@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestBuildMarkdownEVMRPCWebStrip(t *testing.T) {
+func TestBuildMarkdownEVMRPCStrip(t *testing.T) {
 	d := WebData{
 		EVMRPCOk: true, EVMSynced: true, EVMListening: true,
 		EVMBlockAge: "4.2s", EVMBlock: "100", EVMChainID: 290290,
@@ -16,9 +16,12 @@ func TestBuildMarkdownEVMRPCWebStrip(t *testing.T) {
 		},
 		GasPrice: "1 apmt", PendingTx: 2, QueuedTx: 1,
 	}
-	md := buildMarkdown(d, true)
-	if !strings.Contains(md, `class="evm-rpc-strip"`) {
-		t.Fatal("web markdown should include EVM status strip")
+	md := buildMarkdown(d)
+	if !strings.Contains(md, "**RPC: OK**") {
+		t.Fatal("markdown should include RPC status line")
+	}
+	if strings.Contains(md, `class="evm-rpc-strip"`) {
+		t.Fatal("markdown should not use HTML pill strip")
 	}
 	if !strings.Contains(md, "## For operators") {
 		t.Fatal("expected For operators subsection")
@@ -32,9 +35,6 @@ func TestBuildMarkdownEVMRPCWebStrip(t *testing.T) {
 	if strings.Contains(md, "## EVM Config") {
 		t.Fatal("EVM Config should be removed from section 7")
 	}
-	if strings.Contains(md, "Raw JSON-RPC Samples") {
-		t.Fatal("raw samples section should be removed")
-	}
 }
 
 func TestRenderFragmentEVMProbeLog(t *testing.T) {
@@ -43,24 +43,37 @@ func TestRenderFragmentEVMProbeLog(t *testing.T) {
 		EVMHTTPEndpoint: "http://127.0.0.1:8545",
 		RPCProbeOK: 8, RPCProbeTotal: 9,
 		RPCProbes: []WebRPCProbe{
-			{Method: "eth_chainId", OK: true, Latency: "5ms", Request: `{}`, Response: `{}`},
+			{Method: "eth_chainId", OK: true, Latency: "5ms",
+				Request: `{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}`,
+				Response: `{"jsonrpc":"2.0","id":1,"result":"0x46f92"}`},
 			{Method: "txpool_status", OK: false, Latency: "1ms", Error: "connection refused",
 				Request: `{"jsonrpc":"2.0","method":"txpool_status","params":[],"id":1}`,
-				Response: `{}`},
+				Response: `{"jsonrpc":"2.0","id":1,"error":{"message":"connection refused"}}`},
 		},
 	}
 	out := renderFragment(d)
-	if !strings.Contains(out, `class="evm-probe-log"`) {
-		t.Fatal("fragment should include monospace probe log")
-	}
 	if !strings.Contains(out, "[ETH]") || !strings.Contains(out, "eth_chainId") {
 		t.Fatal("probe log should list eth namespace and methods")
 	}
-	if !strings.Contains(out, `class="evm-probe-fail-head"`) {
-		t.Fatal("failed probe should show text failure header")
+	if !strings.Contains(out, "res »") || !strings.Contains(out, "0x46f92") {
+		t.Fatal("each probe should show JSON response body")
 	}
 	if !strings.Contains(out, "curl -sS") {
-		t.Fatal("failed probe should include curl command")
+		t.Fatal("failed probe should include curl in bash fence")
+	}
+}
+
+func TestFormatProbeExchange(t *testing.T) {
+	body := formatProbeExchange(WebRPCProbe{
+		Method: "eth_blockNumber", OK: true, Latency: "3ms",
+		Request:  `{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}`,
+		Response: `{"jsonrpc":"2.0","id":1,"result":"0x10"}`,
+	})
+	if !strings.Contains(body, "req »") || !strings.Contains(body, "res »") {
+		t.Fatalf("expected req/res markers: %q", body)
+	}
+	if !strings.Contains(body, `"result": "0x10"`) {
+		t.Fatalf("expected indented result: %q", body)
 	}
 }
 

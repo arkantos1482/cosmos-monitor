@@ -8,12 +8,12 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/fetch"
 )
 
-// FeemarketExplain holds rendered fee-market explanation for web and terminal.
+// FeemarketExplain holds rendered fee-market explanation (portable Markdown + KaTeX).
 type FeemarketExplain struct {
 	SummaryLine      string
 	LatexGeneral     string
 	LatexSubstituted string
-	TextReceipt      string
+	TextReceipt      string // kept for unit tests / debugging
 	Verdict          string // "↑" "↓" "="
 	UtilizationPct   string
 	MatchOK          bool
@@ -109,6 +109,21 @@ func feemarketGasTarget(d WebData) (uint64, bool) {
 		return d.BlockGasLimit / uint64(d.Elasticity), true
 	}
 	return 0, false
+}
+
+func isUnlimitedBlockGas(n uint64) bool {
+	return n == ^uint64(0)
+}
+
+// katexUint formats a uint64 for KaTeX (avoids int64 overflow on unlimited max_gas).
+func katexUint(n uint64) string {
+	if isUnlimitedBlockGas(n) {
+		return `\text{unlimited}`
+	}
+	if n > uint64(1<<63-1) {
+		return fmt.Sprintf(`%d`, n)
+	}
+	return katexInt(int64(n))
 }
 
 func katexTextLit(s string) string {

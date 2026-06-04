@@ -6,26 +6,11 @@ import (
 	"time"
 
 	"github.com/arkantos1482/cosmos-monitor/fetch"
-	"github.com/charmbracelet/glamour"
 )
 
 func printDashboard(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, docker fetch.DockerSnapshot, evmEndpoint string) {
 	d := buildWebData(chain, ev, sys, docker, evmEndpoint)
-	md := buildMarkdown(d, false)
-	r, err := glamour.NewTermRenderer(
-		glamour.WithStandardStyle("dark"),
-		glamour.WithWordWrap(0),
-	)
-	if err != nil {
-		fmt.Fprint(w, md)
-		return
-	}
-	rendered, err := r.Render(md)
-	if err != nil {
-		fmt.Fprint(w, md)
-		return
-	}
-	fmt.Fprint(w, rendered)
+	fmt.Fprint(w, buildMarkdown(d))
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────

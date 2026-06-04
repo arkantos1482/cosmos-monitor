@@ -6,93 +6,11 @@ import (
 	"strconv"
 	"strings"
 
-	mcmd "github.com/AlexanderGrooff/mermaid-ascii/cmd"
-	"github.com/AlexanderGrooff/mermaid-ascii/pkg/diagram"
 	"github.com/arkantos1482/cosmos-monitor/fetch"
 )
 
-// Diagram padding (mermaid-ascii): border = space inside each box; padX/padY = gap between nodes.
-// Defaults are compact for TUI scrolling; override with -diagram-border / -diagram-padx / -diagram-pady.
-var (
-	diagramBorderPad = 0
-	diagramPadX      = 2
-	diagramPadY      = 2
-)
-
-func SetDiagramPadding(border, padX, padY int) {
-	if border < 0 {
-		border = 0
-	}
-	if padX < 0 {
-		padX = 0
-	}
-	if padY < 0 {
-		padY = 0
-	}
-	diagramBorderPad = border
-	diagramPadX = padX
-	diagramPadY = padY
-}
-
-func mermaidConfig(useAscii bool) (*diagram.Config, error) {
-	return diagram.NewCLIConfig(useAscii, false, false, diagramBorderPad, diagramPadX, diagramPadY, "TD")
-}
-
-func mermaidConfigDirection(useAscii bool, direction string, padX, padY int) (*diagram.Config, error) {
-	return diagram.NewCLIConfig(useAscii, false, false, diagramBorderPad, padX, padY, direction)
-}
-
-// renderMermaid converts Mermaid source to Unicode box-drawing text (terminal TUI).
-func renderMermaid(src string) (string, error) {
-	return renderMermaidWith(src, diagramPadX, diagramPadY, "TD")
-}
-
-func renderMermaidWith(src string, padX, padY int, direction string) (string, error) {
-	cfg, err := mermaidConfigDirection(false, direction, padX, padY)
-	if err != nil {
-		return "", err
-	}
-	out, err := mcmd.RenderDiagram(src, cfg)
-	if err == nil {
-		return strings.TrimRight(out, "\n"), nil
-	}
-	cfg2, err2 := mermaidConfigDirection(true, direction, padX, padY)
-	if err2 != nil {
-		return "", err
-	}
-	out, err = mcmd.RenderDiagram(src, cfg2)
-	return strings.TrimRight(out, "\n"), err
-}
-
-func writeMermaidWeb(w io.Writer, src string) {
-	fmt.Fprintf(w, "<div class=\"mermaid\">\n%s</div>\n\n", src)
-}
-
-func writeDiagram(w io.Writer, mermaid string, web bool) {
-	if web {
-		writeMermaidWeb(w, mermaid)
-		return
-	}
-	out, err := renderMermaid(mermaid)
-	if err != nil {
-		fmt.Fprintf(w, "_diagram render failed: %v_\n\n", err)
-		return
-	}
-	fmt.Fprintf(w, "```text\n%s\n```\n\n", out)
-}
-
-func writeEconomicsDiagram(w io.Writer, d WebData, web bool) {
-	src := economicsOverviewMermaid(d)
-	if web {
-		writeMermaidWeb(w, src)
-		return
-	}
-	out, err := renderMermaid(economicsOverviewMermaidASCII(d))
-	if err != nil {
-		fmt.Fprintf(w, "_diagram render failed: %v_\n\n", err)
-		return
-	}
-	fmt.Fprintf(w, "```text\n%s\n```\n\n", out)
+func writeMermaidFence(w io.Writer, src string) {
+	fmt.Fprintf(w, "```mermaid\n%s\n```\n\n", strings.TrimSpace(src))
 }
 
 func mermaidLabel(s string) string {
@@ -101,7 +19,6 @@ func mermaidLabel(s string) string {
 	return `"` + s + `"`
 }
 
-// stackLabelText joins parts with newlines for taller, narrower mermaid-ascii boxes.
 func stackLabelText(parts ...string) string {
 	var lines []string
 	for _, p := range parts {
@@ -299,82 +216,73 @@ func economicsSplitEdgeLabels(d WebData) (comm, del string) {
 	return "commission", "remainder"
 }
 
-func stackMermaidQuoted(label string, web bool) string {
+func stackMermaidQuoted(label string) string {
 	label = strings.ReplaceAll(label, `"`, `'`)
-	if web {
-		label = strings.ReplaceAll(label, "\n", "<br/>")
-	}
+	label = strings.ReplaceAll(label, "\n", "<br/>")
 	return `"` + label + `"`
 }
 
-// mermaidEdgeText formats edge labels for mermaid.js (commas, %, parens need quoting).
-func mermaidEdgeText(s string, web bool) string {
-	if !web || s == "" {
+func mermaidEdgeText(s string) string {
+	if s == "" {
 		return s
 	}
 	s = strings.ReplaceAll(s, `"`, `'`)
 	return `"` + s + `"`
 }
 
-func writeStackNode(b *strings.Builder, id, label string, web bool) {
-	fmt.Fprintf(b, "  %s[%s]\n", id, stackMermaidQuoted(label, web))
+func writeStackNode(b *strings.Builder, id, label string) {
+	fmt.Fprintf(b, "  %s[%s]\n", id, stackMermaidQuoted(label))
 }
 
-func writeEconomicsNodes(b *strings.Builder, d WebData, web bool) {
-	writeStackNode(b, "fees", economicsFeesLabel(d), web)
-	writeStackNode(b, "infl", economicsInflLabel(d), web)
+func writeEconomicsNodes(b *strings.Builder, d WebData) {
+	writeStackNode(b, "fees", economicsFeesLabel(d))
+	writeStackNode(b, "infl", economicsInflLabel(d))
 	if d.PMTEnabled {
-		writeStackNode(b, "pmtPool", economicsPMTPoolLabel(d), web)
+		writeStackNode(b, "pmtPool", economicsPMTPoolLabel(d))
 	}
-	writeStackNode(b, "fc", economicsFCLabel(d), web)
-	writeStackNode(b, "staking", economicsStakeLabel(d), web)
-	writeStackNode(b, "dist", economicsDistLabel(d), web)
-	writeStackNode(b, "comm", economicsCommLabel(d), web)
-	writeStackNode(b, "val", economicsValLabel(d), web)
-	writeStackNode(b, "op", economicsOpLabel(d), web)
-	writeStackNode(b, "del", economicsDelLabel(d), web)
+	writeStackNode(b, "fc", economicsFCLabel(d))
+	writeStackNode(b, "staking", economicsStakeLabel(d))
+	writeStackNode(b, "dist", economicsDistLabel(d))
+	writeStackNode(b, "comm", economicsCommLabel(d))
+	writeStackNode(b, "val", economicsValLabel(d))
+	writeStackNode(b, "op", economicsOpLabel(d))
+	writeStackNode(b, "del", economicsDelLabel(d))
 }
 
-func writeEconomicsEdges(b *strings.Builder, d WebData, web bool) {
+func writeEconomicsEdges(b *strings.Builder, d WebData) {
 	fmt.Fprintf(b, "  fees --> fc\n")
-	fmt.Fprintf(b, "  infl -->|%s| fc\n", mermaidEdgeText(economicsInflEdge(d), web))
+	fmt.Fprintf(b, "  infl -->|%s| fc\n", mermaidEdgeText(economicsInflEdge(d)))
 	if d.PMTEnabled {
-		fmt.Fprintf(b, "  pmtPool -->|%s| fc\n", mermaidEdgeText(economicsPMTEdge(d), web))
+		fmt.Fprintf(b, "  pmtPool -->|%s| fc\n", mermaidEdgeText(economicsPMTEdge(d)))
 	}
 	if d.BlockHeight != "" {
-		fmt.Fprintf(b, "  fc -->|%s| dist\n", mermaidEdgeText("block "+d.BlockHeight, web))
+		fmt.Fprintf(b, "  fc -->|%s| dist\n", mermaidEdgeText("block "+d.BlockHeight))
 	} else {
 		fmt.Fprintf(b, "  fc --> dist\n")
 	}
-	fmt.Fprintf(b, "  staking -->|%s| dist\n", mermaidEdgeText(fmt.Sprintf("%.1f%% bonded", d.BondedPct), web))
-	fmt.Fprintf(b, "  dist -->|%s| comm\n", mermaidEdgeText(economicsDistCommEdge(d), web))
-	fmt.Fprintf(b, "  dist -->|%s| val\n", mermaidEdgeText(economicsDistValEdge(d), web))
+	fmt.Fprintf(b, "  staking -->|%s| dist\n", mermaidEdgeText(fmt.Sprintf("%.1f%% bonded", d.BondedPct)))
+	fmt.Fprintf(b, "  dist -->|%s| comm\n", mermaidEdgeText(economicsDistCommEdge(d)))
+	fmt.Fprintf(b, "  dist -->|%s| val\n", mermaidEdgeText(economicsDistValEdge(d)))
 	commEdge, delEdge := economicsSplitEdgeLabels(d)
-	fmt.Fprintf(b, "  val -->|%s| op\n", mermaidEdgeText(commEdge, web))
-	fmt.Fprintf(b, "  val -->|%s| del\n", mermaidEdgeText(delEdge, web))
+	fmt.Fprintf(b, "  val -->|%s| op\n", mermaidEdgeText(commEdge))
+	fmt.Fprintf(b, "  val -->|%s| del\n", mermaidEdgeText(delEdge))
 }
 
-// economicsOverviewMermaid is the full LR graph for mermaid.js (web).
 func economicsOverviewMermaid(d WebData) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "graph LR\n")
-	writeEconomicsNodes(&b, d, true)
+	writeEconomicsNodes(&b, d)
 	fmt.Fprintf(&b, "  subgraph sources\n    fees\n    infl\n")
 	if d.PMTEnabled {
 		fmt.Fprintf(&b, "    pmtPool\n")
 	}
 	fmt.Fprintf(&b, "  end\n")
-	writeEconomicsEdges(&b, d, true)
+	writeEconomicsEdges(&b, d)
 	return b.String()
 }
 
-// economicsOverviewMermaidASCII is a TD spine without subgraphs — mermaid-ascii friendly (terminal).
-func economicsOverviewMermaidASCII(d WebData) string {
-	var b strings.Builder
-	fmt.Fprintf(&b, "graph TD\n")
-	writeEconomicsNodes(&b, d, false)
-	writeEconomicsEdges(&b, d, false)
-	return b.String()
+func writeEconomicsDiagram(w io.Writer, d WebData) {
+	writeMermaidFence(w, economicsOverviewMermaid(d))
 }
 
 func parseDiagramUint(s string) uint64 {
@@ -447,47 +355,33 @@ func feemarketSlimAnteLabel(d WebData) string {
 	return stackLabelText(lines...)
 }
 
-func writeFeemarketSlimNodes(b *strings.Builder, d WebData, web bool) {
-	writeStackNode(b, "endBlk", feemarketSlimEndBlockLabel(d), web)
-	writeStackNode(b, "stored", feemarketSlimStoredLabel(d), web)
-	writeStackNode(b, "calc", feemarketSlimCalcLabel(d), web)
-	writeStackNode(b, "baseFee", feemarketSlimBaseFeeLabel(d), web)
-	writeStackNode(b, "ante", feemarketSlimAnteLabel(d), web)
+func writeFeemarketSlimNodes(b *strings.Builder, d WebData) {
+	writeStackNode(b, "endBlk", feemarketSlimEndBlockLabel(d))
+	writeStackNode(b, "stored", feemarketSlimStoredLabel(d))
+	writeStackNode(b, "calc", feemarketSlimCalcLabel(d))
+	writeStackNode(b, "baseFee", feemarketSlimBaseFeeLabel(d))
+	writeStackNode(b, "ante", feemarketSlimAnteLabel(d))
 }
 
-func writeFeemarketSlimEdges(b *strings.Builder, d WebData, web bool) {
-	fmt.Fprintf(b, "  endBlk -->|%s| stored\n", mermaidEdgeText("prior block", web))
+func writeFeemarketSlimEdges(b *strings.Builder, d WebData) {
+	fmt.Fprintf(b, "  endBlk -->|%s| stored\n", mermaidEdgeText("prior block"))
 	fmt.Fprintf(b, "  stored --> calc\n")
-	fmt.Fprintf(b, "  calc -->|%s| baseFee\n", mermaidEdgeText(feemarketCalcEdge(d), web))
+	fmt.Fprintf(b, "  calc -->|%s| baseFee\n", mermaidEdgeText(feemarketCalcEdge(d)))
 	fmt.Fprintf(b, "  baseFee --> ante\n")
 	fmt.Fprintf(b, "  ante --> endBlk\n")
 }
 
-// feemarketMechanicsMermaid is TD spine for mermaid-ascii (terminal).
 func feemarketMechanicsMermaid(d WebData) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "graph TD\n")
-	writeFeemarketSlimNodes(&b, d, false)
-	writeFeemarketSlimEdges(&b, d, false)
-	return b.String()
-}
-
-// feemarketMechanicsMermaidWeb is LR with BeginBlock grouping for mermaid.js.
-func feemarketMechanicsMermaidWeb(d WebData) string {
-	var b strings.Builder
 	fmt.Fprintf(&b, "graph LR\n")
-	writeFeemarketSlimNodes(&b, d, true)
+	writeFeemarketSlimNodes(&b, d)
 	fmt.Fprintf(&b, "  subgraph endBlock[\"EndBlock N-1\"]\n    endBlk\n    stored\n  end\n")
 	fmt.Fprintf(&b, "  subgraph beginBlock[\"BeginBlock N\"]\n    calc\n    baseFee\n  end\n")
 	fmt.Fprintf(&b, "  subgraph execution[\"Block N\"]\n    ante\n  end\n")
-	writeFeemarketSlimEdges(&b, d, true)
+	writeFeemarketSlimEdges(&b, d)
 	return b.String()
 }
 
-func writeFeemarketDiagram(w io.Writer, d WebData, web bool) {
-	src := feemarketMechanicsMermaid(d)
-	if web {
-		src = feemarketMechanicsMermaidWeb(d)
-	}
-	writeDiagram(w, src, web)
+func writeFeemarketDiagram(w io.Writer, d WebData) {
+	writeMermaidFence(w, feemarketMechanicsMermaid(d))
 }

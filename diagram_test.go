@@ -5,50 +5,6 @@ import (
 	"testing"
 )
 
-func TestMermaidDottedEdgeRenders(t *testing.T) {
-	src := "graph TD\n  stake[x/staking]\n  dist[x/distribution]\n  stake -.->|voting power| dist\n"
-	out, err := renderMermaid(src)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(out, "staking") || !strings.Contains(out, "distribution") {
-		t.Fatalf("expected both nodes in render:\n%s", out)
-	}
-}
-
-func TestRenderMermaidEconomicsOverview(t *testing.T) {
-	d := WebData{
-		Inflation:        3.5,
-		BondedPct:        72.3,
-		GoalBonded:       67,
-		CommunityTax:     "2.00%",
-		CommunityTaxPct:  2,
-		PMTEnabled:       true,
-		PMTRate:          "0.1000 PMT/block",
-		BaseFee:          "0.000000000000000000",
-		GasPrice:         "0",
-		BlockGas:         "21000",
-		Elasticity:       2,
-		BaseFeeChangeDenominator: 8,
-	}
-	out, err := renderMermaid(economicsOverviewMermaidASCII(d))
-	if err != nil {
-		t.Fatalf("render economics: %v", err)
-	}
-	if !strings.Contains(out, "┌") && !strings.Contains(out, "+") {
-		t.Fatalf("expected box drawing, got:\n%s", out)
-	}
-	for _, src := range []string{feemarketMechanicsMermaid(d)} {
-		out, err := renderMermaid(src)
-		if err != nil {
-			t.Fatalf("render: %v\nsource:\n%s", err, src)
-		}
-		if !strings.Contains(out, "┌") && !strings.Contains(out, "+") {
-			t.Fatalf("expected box drawing, got:\n%s", out)
-		}
-	}
-}
-
 func TestEconomicsOverviewMermaidTopology(t *testing.T) {
 	d := WebData{
 		Inflation:  3.5,
@@ -67,16 +23,6 @@ func TestEconomicsOverviewMermaidTopology(t *testing.T) {
 	}
 	if !strings.Contains(src, "fees --> fc") {
 		t.Fatal("expected fees → fee_collector path")
-	}
-}
-
-func TestEconomicsOverviewASCIINoSubgraph(t *testing.T) {
-	src := economicsOverviewMermaidASCII(WebData{Inflation: 0, GoalBonded: 67, PMTEnabled: true, PMTRate: "0.1 PMT/block"})
-	if strings.Contains(src, "subgraph") {
-		t.Fatal("ASCII economics diagram must not use subgraphs")
-	}
-	if !strings.HasPrefix(strings.TrimSpace(src), "graph TD") {
-		t.Fatal("ASCII economics diagram should be top-down")
 	}
 }
 
@@ -106,7 +52,7 @@ func TestEconomicsOverviewZeroInflationShowsMint(t *testing.T) {
 		t.Fatal("expected inflows subgraph for layout")
 	}
 	if strings.Contains(src, "subgraph modules") {
-		t.Fatal("modules subgraph breaks mermaid-ascii layout")
+		t.Fatal("unexpected modules subgraph")
 	}
 	if strings.Contains(src, "stake -.->") || strings.Contains(src, "stake[") {
 		t.Fatal("use staking node with solid voting-power edge")
@@ -133,5 +79,8 @@ func TestFeemarketMechanicsNoDistribution(t *testing.T) {
 		if !strings.Contains(src, want) {
 			t.Fatalf("expected %q in feemarket diagram", want)
 		}
+	}
+	if !strings.HasPrefix(strings.TrimSpace(src), "graph LR") {
+		t.Fatal("feemarket diagram should be LR")
 	}
 }

@@ -20,14 +20,14 @@ func TestSplitLatexDisplayBlocks(t *testing.T) {
 	}
 }
 
-func TestWriteFeeMathHTMLEscapesBackslashes(t *testing.T) {
+func TestWriteFeeMathMarkdown(t *testing.T) {
 	var b strings.Builder
-	writeFeeMathHTML(&b, `\[ W_{\text{stored}} = 1 \]`)
+	writeFeeMathMarkdown(&b, `\[ W_{\text{stored}} = 1 \]`)
 	out := b.String()
-	if strings.Contains(out, `W_{\text{stored}}`) {
-		t.Fatal("raw latex must not appear in HTML")
+	if !strings.Contains(out, "$$\nW_{\\text{stored}} = 1\n$$") && !strings.Contains(out, "W_{\\text{stored}}") {
+		t.Fatalf("expected latex in $$ block, got %q", out)
 	}
-	if !strings.Contains(out, `data-tex-b64="`) {
-		t.Fatal("expected base64 attribute")
+	if strings.Contains(out, `class="fee-math`) {
+		t.Fatal("must not emit HTML fee-math hooks")
 	}
 }
