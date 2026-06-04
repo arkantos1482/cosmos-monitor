@@ -16,7 +16,7 @@ func TestWriteFeeMathHTML(t *testing.T) {
 	w := newWriter(&b)
 	w.MathLatex(`\[ W_{\text{stored}} = 1 \]`)
 	out := b.String()
-	if !strings.Contains(out, `math-display`) {
-		t.Fatalf("expected math-display div, got %q", out)
+	if !strings.Contains(out, `math-line`) || !strings.Contains(out, `math-panel`) {
+		t.Fatalf("expected math-panel/math-line, got %q", out)
 	}
 }

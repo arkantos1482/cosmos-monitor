@@ -175,10 +175,16 @@ func (d *docWriter) MathLatex(parts ...string) {
 	d.closeList()
 	d.closeStatGrid()
 	for _, part := range parts {
-		for _, block := range splitLatexDisplayBlocks(part) {
-			b64 := base64.StdEncoding.EncodeToString([]byte(block))
-			fmt.Fprintf(d.w, `<div class="diagram-panel math-display" data-tex-b64="%s"></div>`+"\n", b64)
+		blocks := splitLatexDisplayBlocks(part)
+		if len(blocks) == 0 {
+			continue
 		}
+		fmt.Fprint(d.w, `<div class="math-panel">`+"\n")
+		for _, block := range blocks {
+			b64 := base64.StdEncoding.EncodeToString([]byte(block))
+			fmt.Fprintf(d.w, `<div class="math-line" data-tex-b64="%s"></div>`+"\n", b64)
+		}
+		fmt.Fprint(d.w, `</div>`+"\n")
 	}
 }
 

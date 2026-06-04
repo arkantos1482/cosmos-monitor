@@ -16,8 +16,8 @@ func TestRenderFragmentMathDisplay(t *testing.T) {
 		ParentBlockResultsOK: true,
 	}
 	out := RenderFragment(d)
-	if !strings.Contains(out, `math-display`) {
-		t.Fatal("fragment should include math-display nodes for KaTeX")
+	if !strings.Contains(out, `math-panel`) {
+		t.Fatal("fragment should include math-panel nodes for KaTeX")
 	}
 }
 

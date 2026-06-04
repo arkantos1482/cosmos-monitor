@@ -30,8 +30,8 @@ func TestBuildFeeMath(t *testing.T) {
 		ParentBlockResultsOK: true,
 	}
 	out := Build(d)
-	if !strings.Contains(out, `math-display`) {
-		t.Fatal("fee math should use math-display divs for KaTeX")
+	if !strings.Contains(out, `math-panel`) {
+		t.Fatal("fee math should use math-panel for KaTeX")
 	}
 }
 

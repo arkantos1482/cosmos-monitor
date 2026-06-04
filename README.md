@@ -15,7 +15,7 @@ fetch → report.Build → model.Report → panel.Build (HTML fragment)
 
 - `<section class="dash-section">` / stat grids / status badges
 - `<div class="mermaid">` diagrams (economics, feemarket)
-- `<div class="math-display">` LaTeX blocks (EIP-1559 fee math)
+- `<div class="math-panel">` with per-line `<div class="math-line">` KaTeX (EIP-1559 fee math)
 - Scrollable data tables and code blocks for RPC probe logs
 
 ### Web UI (default)

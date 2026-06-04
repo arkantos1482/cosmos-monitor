@@ -85,9 +85,15 @@ body::before{
 .code-block code{font-family:ui-monospace,"Cascadia Code","Fira Code",monospace;font-size:.78rem;color:var(--fg)}
 .diagram-panel.mermaid{text-align:center}
 .diagram-panel.mermaid svg{max-width:100%;height:auto}
-.math-display{overflow-x:auto}
-.math-display .katex{font-size:1.02em}
-.katex-display{margin:.45rem 0;overflow-x:auto}
+.math-panel{
+  background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+  padding:.55rem .85rem;margin:.4rem 0 .55rem;overflow-x:auto;
+}
+.math-line{margin:.3rem 0;text-align:center}
+.math-line:first-child{margin-top:0}
+.math-line:last-child{margin-bottom:0}
+.math-line .katex{font-size:1.02em}
+.math-line .katex-display{margin:0;overflow:visible}
 code{font-family:ui-monospace,"Cascadia Code","Fira Code",monospace;font-size:.82em;color:var(--accent)}
 `
 
@@ -121,7 +127,7 @@ function renderMermaid(){
 }
 function renderMathDisplays(){
   if(typeof katex==='undefined')return;
-  document.querySelectorAll('#data .math-display[data-tex-b64]').forEach(function(el){
+  document.querySelectorAll('#data .math-line[data-tex-b64]').forEach(function(el){
     if(el.dataset.rendered)return;
     var b64=el.getAttribute('data-tex-b64');
     if(!b64)return;
@@ -141,7 +147,7 @@ function renderMath(){
       {left:'\\[',right:'\\]',display:true}
     ],
     ignoredTags:['script','noscript','style','textarea','pre','code'],
-    ignoredClasses:['math-display'],
+    ignoredClasses:['math-line','math-panel'],
     throwOnError:false
   });
 }
