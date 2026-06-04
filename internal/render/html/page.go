@@ -180,20 +180,6 @@ body::before{
 code{font-family:ui-monospace,"Cascadia Code","Fira Code",monospace;font-size:.82em;color:var(--accent)}
 `
 
-func viewInput(v panel.View) string {
-	return fmt.Sprintf(`<input type="hidden" id="dash-view" name="view" value="%s">`, html.EscapeString(string(v)))
-}
-
-// WrapFragment appends HTMX out-of-band swaps so polling and nav stay on the rendered view.
-func WrapFragment(v panel.View, body string) string {
-	nav := navHTML(v)
-	nav = strings.Replace(nav, `<nav id="dash-nav"`, `<nav id="dash-nav" hx-swap-oob="true"`, 1)
-	return body + fmt.Sprintf(
-		`<input type="hidden" id="dash-view" name="view" value="%s" hx-swap-oob="true">`,
-		html.EscapeString(string(v)),
-	) + nav
-}
-
 func navHTML(active panel.View) string {
 	var b strings.Builder
 	fmt.Fprint(&b, `<nav id="dash-nav" class="dash-nav" aria-label="Sections">`)
@@ -203,9 +189,8 @@ func navHTML(active panel.View) string {
 		if item.View == active {
 			cls += " dash-nav__link--active"
 		}
-		fmt.Fprintf(&b, `<a class="%s" href="%s" hx-get="/fragment?view=%s" hx-target="#data" hx-swap="innerHTML scroll:none show:none settle:none" hx-push-url="%s">%s</a>`,
-			cls, html.EscapeString(item.Path), html.EscapeString(string(item.View)),
-			html.EscapeString(item.Path), html.EscapeString(item.Label))
+		fmt.Fprintf(&b, `<a class="%s" href="%s">%s</a>`,
+			cls, html.EscapeString(item.Path), html.EscapeString(item.Label))
 	}
 	fmt.Fprint(&b, `</nav>`)
 	return b.String()
@@ -226,7 +211,6 @@ func FullPage(moniker string, active panel.View, fragment string) string {
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>pmtop — %s · %s</title>
-<script src="https://unpkg.com/htmx.org@2.0.3/dist/htmx.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"/>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
@@ -240,11 +224,9 @@ func FullPage(moniker string, active panel.View, fragment string) string {
 </header>
 <div class="dash-shell">
 %s
-%s
 <main class="dash-main" id="data">
 %s
 </main>
-<div id="dash-refresh" hx-get="/fragment" hx-include="#dash-view" hx-trigger="every 5s" hx-target="#data" hx-swap="innerHTML scroll:none show:none settle:none" hidden></div>
 </div>
 <script>
 mermaid.initialize({startOnLoad:false,theme:'dark',securityLevel:'loose'});
@@ -278,41 +260,53 @@ function renderMath(){
   });
 }
 function renderDiagrams(){renderMermaid();renderMath();}
-var dashSwap={scrollY:0,openDetails:[]};
+var dashStateKey='pmtop-dash:'+location.pathname;
 function snapshotDashState(){
-  dashSwap.scrollY=window.scrollY;
-  dashSwap.openDetails=[];
+  var openDetails=[];
   document.querySelectorAll('#data details.dash-details[open]').forEach(function(el){
     var key=el.id||el.getAttribute('data-details-key');
-    if(key)dashSwap.openDetails.push(key);
+    if(key)openDetails.push(key);
   });
+  try{
+    sessionStorage.setItem(dashStateKey,JSON.stringify({scrollY:window.scrollY,openDetails:openDetails}));
+  }catch(e){}
 }
 function restoreDashState(){
-  dashSwap.openDetails.forEach(function(key){
+  var raw;
+  try{raw=sessionStorage.getItem(dashStateKey);}catch(e){return;}
+  if(!raw)return;
+  var state;
+  try{state=JSON.parse(raw);}catch(e){return;}
+  if(!state||!Array.isArray(state.openDetails))return;
+  state.openDetails.forEach(function(key){
     var el=document.getElementById(key);
-    if(!el&&typeof CSS!=='undefined'&&CSS.escape)el=document.querySelector('#data details[data-details-key="'+CSS.escape(key)+'"]');
+    if(!el&&typeof CSS!=='undefined'&&CSS.escape){
+      el=document.querySelector('#data details[data-details-key="'+CSS.escape(key)+'"]');
+    }
     if(el)el.setAttribute('open','');
   });
-  window.scrollTo(0,dashSwap.scrollY);
+  if(typeof state.scrollY==='number'){
+    window.scrollTo(0,state.scrollY);
+    requestAnimationFrame(function(){
+      window.scrollTo(0,state.scrollY);
+      setTimeout(function(){window.scrollTo(0,state.scrollY);},80);
+    });
+  }
 }
-function afterDataSwap(){
+function scheduleAutoRefresh(){
+  setInterval(function(){
+    snapshotDashState();
+    location.reload();
+  },5000);
+}
+document.addEventListener('DOMContentLoaded',function(){
   restoreDashState();
   renderDiagrams();
-  requestAnimationFrame(function(){
-    window.scrollTo(0,dashSwap.scrollY);
-    setTimeout(function(){window.scrollTo(0,dashSwap.scrollY);},80);
-  });
-}
-document.addEventListener('DOMContentLoaded',renderDiagrams);
-document.body.addEventListener('htmx:beforeSwap',function(e){
-  if(e.detail.target&&e.detail.target.id==='data')snapshotDashState();
-});
-document.body.addEventListener('htmx:afterSwap',function(e){
-  if(e.detail.target&&e.detail.target.id==='data')afterDataSwap();
+  scheduleAutoRefresh();
 });
 </script>
 </body>
 </html>`, html.EscapeString(moniker), pageTitle, pageCSS,
 		html.EscapeString(moniker), html.EscapeString(pageTitle),
-		viewInput(active), navHTML(active), fragment)
+		navHTML(active), fragment)
 }
