@@ -33,6 +33,13 @@ func TestInferParentBaseFeeRoundTrip(t *testing.T) {
 	}
 }
 
+func TestKatexTextLitScientificNotation(t *testing.T) {
+	got := katexTextLit("7.00e-18 PMT")
+	if !strings.Contains(got, `\text{7.00e-18 PMT}`) {
+		t.Fatalf("expected text literal wrapper, got %q", got)
+	}
+}
+
 func TestBuildFeemarketExplainKatexAndReceipt(t *testing.T) {
 	d := WebData{
 		BlockHeight:              "100",
@@ -53,8 +60,17 @@ func TestBuildFeemarketExplainKatexAndReceipt(t *testing.T) {
 	if !strings.Contains(ex.LatexGeneral, `W_{\text{stored}}`) {
 		t.Fatal("missing general latex")
 	}
-	if !strings.Contains(ex.LatexSubstituted, "21,000") && !strings.Contains(ex.LatexSubstituted, "21000") {
+	if !strings.Contains(ex.LatexSubstituted, `\[`) {
+		t.Fatal("substituted latex must use display math delimiters")
+	}
+	if !strings.Contains(ex.LatexSubstituted, "21{,}000") && !strings.Contains(ex.LatexSubstituted, "21000") {
 		t.Fatal("missing substituted values")
+	}
+	if !strings.Contains(ex.LatexSubstituted, `\text{`) {
+		t.Fatal("fee amounts must be in \\text{} for KaTeX")
+	}
+	if strings.Contains(ex.LatexSubstituted, "21,000") {
+		t.Fatal("commas in math mode should use {,} separator")
 	}
 	if !strings.Contains(ex.TextReceipt, "CalcGasBaseFee") {
 		t.Fatal("missing text receipt")
