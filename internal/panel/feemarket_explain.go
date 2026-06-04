@@ -2,12 +2,12 @@ package panel
 
 import (
 	"fmt"
-	"github.com/arkantos1482/cosmos-monitor/internal/model"
-	"github.com/arkantos1482/cosmos-monitor/internal/report"
 	"strings"
 
 	"cosmossdk.io/math"
 	"github.com/arkantos1482/cosmos-monitor/internal/fetch"
+	"github.com/arkantos1482/cosmos-monitor/internal/model"
+	"github.com/arkantos1482/cosmos-monitor/internal/report"
 )
 
 // FeemarketExplain holds rendered fee-market explanation (portable Markdown + KaTeX).
@@ -16,7 +16,7 @@ type FeemarketExplain struct {
 	LatexGeneral     string
 	LatexSubstituted string
 	TextReceipt      string // kept for unit tests / debugging
-	Verdict          string // "↑" "↓" "="
+	Verdict          string // plain English, e.g. "fee increases (↑)"
 	UtilizationPct   string
 	MatchOK          bool
 }
@@ -59,7 +59,6 @@ func inferParentBaseFee(current math.LegacyDec, gasUsed, gasTarget, denom uint64
 	if gasUsed == gasTarget {
 		return current, true
 	}
-	// Closed-form candidates, verified by forward CalcGasBaseFee.
 	var candidates []math.LegacyDec
 	if gasUsed < gasTarget && gasTarget > 0 && denom > 0 {
 		factor := math.LegacyOneDec().Sub(
@@ -117,7 +116,6 @@ func isUnlimitedBlockGas(n uint64) bool {
 	return n == ^uint64(0)
 }
 
-// latexUint formats a uint64 for KaTeX (avoids int64 overflow on unlimited max_gas).
 func latexUint(n uint64) string {
 	if isUnlimitedBlockGas(n) {
 		return `\text{unlimited}`
@@ -144,8 +142,6 @@ func latexInt(n int64) string {
 	return strings.ReplaceAll(report.FormatInt(n), ",", `{,}`)
 }
 
-// latexDisplayLines renders each line as its own \[...\] block. Avoids aligned
-// environments with & inside HTML (browsers treat & as entity starts).
 func latexDisplayLines(lines []string) string {
 	if len(lines) == 0 {
 		return ""
@@ -158,6 +154,34 @@ func latexDisplayLines(lines []string) string {
 		fmt.Fprintf(&b, `\[ %s \]`, line)
 	}
 	return b.String()
+}
+
+func feemarketVerdictPlain(wanted, target uint64, hasTarget bool) string {
+	if !hasTarget {
+		return "target unknown — cannot predict fee direction"
+	}
+	switch {
+	case wanted > target:
+		return "fee increases (↑) — last block was busier than target"
+	case wanted < target:
+		return "fee decreases (↓) — last block was quieter than target"
+	default:
+		return "unchanged (=) — last block matched target load"
+	}
+}
+
+func feemarketVerdictLatexPlain(wanted, target uint64, hasTarget bool) string {
+	if !hasTarget {
+		return `\text{Cannot compare load — block gas target unknown}`
+	}
+	switch {
+	case wanted > target:
+		return `\Rightarrow \textbf{\text{Minimum fee goes up next block}} \;(\uparrow)`
+	case wanted < target:
+		return `\Rightarrow \textbf{\text{Minimum fee goes down next block}} \;(\downarrow)`
+	default:
+		return `\Rightarrow \textbf{\text{Minimum fee stays about the same}} \;(=)`
+	}
 }
 
 func feemarketVerdictLatex(wanted, target uint64, hasTarget bool) string {
@@ -174,6 +198,16 @@ func feemarketVerdictLatex(wanted, target uint64, hasTarget bool) string {
 	}
 }
 
+func feemarketTechnicalFormulas() []string {
+	return []string{
+		`\textbf{\text{Chain formulas (x/feemarket — CalcGasBaseFee)}}`,
+		`W_{\text{stored}}=\max(W_{\text{sum}}\cdot\mu,\;G_{\text{used}})\quad\text{(EndBlock, stored for next block)}`,
+		`\Delta=\frac{\left|W_{\text{stored}}-T\right|\cdot B_{\text{parent}}}{T\cdot d}`,
+		`B_{\text{new}}=\begin{cases}B_{\text{parent}} & W_{\text{stored}}=T\\ B_{\text{parent}}+\max(\epsilon,\,\Delta) & W_{\text{stored}}>T\\ \max(B_{\min},\,B_{\text{parent}}-\Delta) & W_{\text{stored}}<T\end{cases}`,
+		`\text{Symbols: }G_{\text{used}}\text{ gas burned; }W_{\text{sum}}\text{ mempool sum; }\mu\text{ min\_gas\_multiplier; }T=\lfloor\text{max\_gas}/e\rfloor\text{; }d\text{ base\_fee\_change\_denominator; }B\text{ base fee; }\epsilon=1.`,
+	}
+}
+
 func formatDecAmount(d math.LegacyDec, denom string) string {
 	if d.IsNil() {
 		return "—"
@@ -181,14 +215,29 @@ func formatDecAmount(d math.LegacyDec, denom string) string {
 	return fetch.FormatFeeAmount(d.String(), denom)
 }
 
+func feemarketEducationalGeneral() string {
+	return latexDisplayLines([]string{
+		`\textbf{\text{How PMT adjusts transaction fees (EIP-1559 style)}}`,
+		`\text{Each block has a \textbf{minimum gas price} (base fee). It moves slowly—like a thermostat—based on how busy the \emph{previous} block was.}`,
+		`\text{\textbf{Step 1 — Measure last block:} count gas actually used by transactions.}`,
+		`\text{\textbf{Step 2 — Compare to a target:} the chain aims for blocks about half full (target = max block gas ÷ elasticity).}`,
+		`\text{\textbf{Step 3 — Nudge the minimum fee:} busier than target → raise; quieter → lower (never below the chain floor).}`,
+		`\text{\textbf{What you pay:}}\quad \underbrace{\text{gas used}}_{\text{computation units}} \times (\text{minimum gas price} + \text{optional priority tip})`,
+	})
+}
+
 func buildFeemarketExplain(d model.Report) FeemarketExplain {
 	ex := FeemarketExplain{}
 	denom := diagramDenom(d)
 
 	if d.NoBaseFee {
-		ex.SummaryLine = "EIP-1559 disabled (`no_base_fee`)"
+		ex.SummaryLine = "Fixed gas pricing — EIP-1559 auto-adjust is off (`no_base_fee`)"
 		ex.TextReceipt = ex.SummaryLine
-		ex.LatexGeneral = `\text{EIP-1559 disabled (no\_base\_fee)}`
+		ex.LatexGeneral = latexDisplayLines([]string{
+			`\textbf{\text{Fixed minimum gas price}}`,
+			`\text{The chain is \textbf{not} using EIP-1559 style auto-adjustment (\texttt{no\_base\_fee} is enabled).}`,
+			`\text{Fees do not rise or fall with block congestion; wallets use the configured minimum gas price instead.}`,
+		})
 		ex.LatexSubstituted = ex.LatexGeneral
 		return ex
 	}
@@ -202,48 +251,85 @@ func buildFeemarketExplain(d model.Report) FeemarketExplain {
 		ex.UtilizationPct = fmt.Sprintf("%.2f%%", pct)
 	}
 
-	switch {
-	case !hasTarget:
-		ex.Verdict = "?"
-	case wanted > target:
-		ex.Verdict = "fee increases (↑)"
-	case wanted < target:
-		ex.Verdict = "fee decreases (↓)"
-	default:
-		ex.Verdict = "unchanged (=)"
-	}
+	ex.Verdict = feemarketVerdictPlain(wanted, target, hasTarget)
 
-	ex.SummaryLine = fmt.Sprintf("Block %s — base fee %s", d.BlockHeight, d.BaseFee)
+	ex.SummaryLine = fmt.Sprintf("Block %s — minimum gas price (base fee) %s", d.BlockHeight, d.BaseFee)
 	if d.GasPrice != "" {
-		ex.SummaryLine += fmt.Sprintf(" · eth_gasPrice %s", fetch.FormatFeeAmount(d.GasPrice, denom))
+		ex.SummaryLine += fmt.Sprintf(" · wallet quote (eth_gasPrice) %s", fetch.FormatFeeAmount(d.GasPrice, denom))
 	}
 	if ex.UtilizationPct != "" {
-		ex.SummaryLine += fmt.Sprintf(" · parent block %s full", ex.UtilizationPct)
+		ex.SummaryLine += fmt.Sprintf(" · previous block load %s of target", ex.UtilizationPct)
 	}
 
-	ex.LatexGeneral = strings.TrimSpace(`
-\[
-W_{\text{stored}} = \max\left(W_{\text{sum}} \cdot \mu,\; G_{\text{used}}\right)
-\]
-\[
-\Delta = \frac{\left|W_{\text{stored}} - T\right| \cdot B_{\text{parent}}}{T \cdot d}
-\]
-\[
-B_{\text{new}} = \begin{cases}
-B_{\text{parent}} & W_{\text{stored}} = T \\
-B_{\text{parent}} + \max(\epsilon,\, \Delta) & W_{\text{stored}} > T \\
-\max(B_{\min},\; B_{\text{parent}} - \Delta) & W_{\text{stored}} < T
-\end{cases}
-\]
-\]`)
+	general := append([]string{}, splitLatexDisplayBlocks(feemarketEducationalGeneral())...)
+	general = append(general, feemarketTechnicalFormulas()...)
+	ex.LatexGeneral = latexDisplayLines(general)
 
 	var sub []string
-	sub = append(sub, fmt.Sprintf(`\textbf{\text{Block %s — live substitution}}`, d.BlockHeight))
+	sub = append(sub, fmt.Sprintf(`\textbf{\text{Block %s — live walkthrough}}`, d.BlockHeight))
+	if !d.ParentBlockResultsOK {
+		sub = append(sub, `\text{⚠ Previous-block gas usage may be incomplete (CometBFT block\_results unavailable).}`)
+	}
+
+	// Step 1 — how busy was the last block?
+	if gasUsed > 0 || wanted > 0 {
+		load := wanted
+		if load == 0 {
+			load = gasUsed
+		}
+		sub = append(sub, fmt.Sprintf(
+			`\text{\textbf{Step 1 — Previous block workload:}}\quad \text{gas used}=%s`,
+			latexInt(int64(gasUsed)),
+		))
+		if d.MinGasMultiplier != "" && d.MinGasMultiplier != "1" {
+			sub = append(sub, fmt.Sprintf(
+				`\text{Recorded demand for fee math}=\max(\text{mempool}\times %s,\,\text{gas used})=%s`,
+				d.MinGasMultiplier, latexInt(int64(wanted)),
+			))
+		} else if wanted > 0 && wanted != gasUsed {
+			sub = append(sub, fmt.Sprintf(
+				`\text{Recorded demand for fee math}=%s`,
+				latexInt(int64(wanted)),
+			))
+		}
+	} else {
+		sub = append(sub, `\text{\textbf{Step 1 — Previous block workload:}}\quad \text{no gas usage data yet}`)
+	}
+
+	// Step 2 — target & utilization
+	if hasTarget {
+		sub = append(sub, fmt.Sprintf(
+			`\text{\textbf{Step 2 — Target “half-full” capacity:}}\quad %s \text{ gas}\quad(\text{max block gas }%s \div \text{elasticity }%s)`,
+			latexUint(target), latexUint(d.BlockGasLimit), latexInt(d.Elasticity),
+		))
+		if ex.UtilizationPct != "" {
+			sub = append(sub, fmt.Sprintf(
+				`\text{Load vs target}=\frac{%s}{%s}\approx %s`,
+				latexInt(int64(wanted)), latexUint(target), latexTextLit(ex.UtilizationPct),
+			))
+		}
+		sub = append(sub, feemarketVerdictLatexPlain(wanted, target, true))
+		sub = append(sub, feemarketVerdictLatex(wanted, target, true))
+	} else {
+		sub = append(sub, `\text{\textbf{Step 2 — Target capacity:}}\quad \text{unknown (need max block gas from consensus)}`)
+	}
+
+	sub = append(sub, `\text{\textbf{Step 3 — Minimum gas price for this block:}}`)
+	if d.BaseFee != "" {
+		sub = append(sub, fmt.Sprintf(`\text{Base fee (chain minimum)}=%s`, latexTextLit(d.BaseFee)))
+	}
+	if d.GasPrice != "" {
+		sub = append(sub, fmt.Sprintf(
+			`\text{eth\_gasPrice (typical wallet quote)}=%s`,
+			latexTextLit(fetch.FormatFeeAmount(d.GasPrice, denom)),
+		))
+	}
+
+	sub = append(sub, `\textbf{\text{Live substitution into chain formulas}}`)
 	if !d.ParentBlockResultsOK {
 		sub = append(sub, `\text{⚠ parent block\_results unavailable — } G_{\text{used}} \text{ may be incomplete}`)
 	}
 
-	// Chain parameters (replaces symbolic legend with live values).
 	var params []string
 	if hasTarget && d.BlockGasLimit > 0 && d.Elasticity > 0 {
 		params = append(params, fmt.Sprintf(
@@ -267,7 +353,6 @@ B_{\text{parent}} + \max(\epsilon,\, \Delta) & W_{\text{stored}} > T \\
 		sub = append(sub, `\text{⚠ block gas limit unknown — } T \text{ not shown (need max\_gas from consensus)}`)
 	}
 
-	// EndBlock: W_stored = max(W_sum · μ, G_used).
 	mu := d.MinGasMultiplier
 	if mu == "" {
 		mu = `1`
@@ -276,10 +361,6 @@ B_{\text{parent}} + \max(\epsilon,\, \Delta) & W_{\text{stored}} > T \\
 		`G_{\text{used}} = %s,\quad W_{\text{stored}} = \max(W_{\text{sum}} \cdot %s,\, G_{\text{used}}) = %s`,
 		latexInt(int64(gasUsed)), mu, latexInt(int64(wanted)),
 	))
-
-	if hasTarget {
-		sub = append(sub, feemarketVerdictLatex(wanted, target, true))
-	}
 
 	current, okCurrent := parseLegacyDec(d.BaseFeeRaw)
 	if okCurrent && hasTarget && d.BaseFeeChangeDenominator > 0 {
@@ -335,7 +416,6 @@ B_{\text{parent}} + \max(\epsilon,\, \Delta) & W_{\text{stored}} > T \\
 
 	ex.LatexSubstituted = latexDisplayLines(sub)
 
-	// Text receipt in <pre> (HTML panel).
 	var lines []string
 	lines = append(lines, ex.SummaryLine)
 	lines = append(lines, "")
@@ -343,13 +423,14 @@ B_{\text{parent}} + \max(\epsilon,\, \Delta) & W_{\text{stored}} > T \\
 		lines = append(lines, "⚠ parent block_results unavailable — using REST block_gas only")
 	}
 	if d.ParentBlockGasUsed > 0 {
-		lines = append(lines, fmt.Sprintf("Parent block gas used (sum txs): %s", report.FormatInt(int64(d.ParentBlockGasUsed))))
+		lines = append(lines, fmt.Sprintf("Parent block gas used: %s", report.FormatInt(int64(d.ParentBlockGasUsed))))
 	}
 	if hasTarget {
-		lines = append(lines, fmt.Sprintf("W_stored = %s   T = %s   (%s)", report.FormatInt(int64(wanted)), report.FormatInt(int64(target)), ex.Verdict))
+		lines = append(lines, fmt.Sprintf("Recorded demand: %s   Target: %s   (%s)",
+			report.FormatInt(int64(wanted)), report.FormatInt(int64(target)), ex.Verdict))
 	}
 	if d.MinGasMultiplier != "" {
-		lines = append(lines, fmt.Sprintf("EndBlock: W_stored = max(W_sum × %s, gas_used)", d.MinGasMultiplier))
+		lines = append(lines, fmt.Sprintf("Recorded demand = max(mempool sum × %s, gas_used)", d.MinGasMultiplier))
 	}
 	lines = append(lines, "")
 	lines = append(lines, "CalcGasBaseFee (BeginBlock):")

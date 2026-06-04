@@ -32,11 +32,14 @@ func TestBuildFeemarketExplain(t *testing.T) {
 		ParentBlockResultsOK: true, MinGasPriceRaw: "0", EVMDenom: "apmt",
 	}
 	ex := buildFeemarketExplain(d)
-	if !strings.Contains(ex.LatexGeneral, `W_{\text{stored}}`) {
-		t.Fatal("missing general latex")
+	if !strings.Contains(ex.LatexGeneral, `Step 1`) {
+		t.Fatal("missing educational general latex")
 	}
-	if !strings.Contains(ex.LatexSubstituted, `\[`) {
-		t.Fatal("substituted latex must use display math delimiters")
+	if !strings.Contains(ex.LatexGeneral, `W_{\text{stored}}`) {
+		t.Fatal("missing technical formulas in general latex")
+	}
+	if !strings.Contains(ex.LatexSubstituted, `W_{\text{stored}}`) {
+		t.Fatal("missing live substitution latex")
 	}
 	if !strings.Contains(ex.TextReceipt, "CalcGasBaseFee") {
 		t.Fatal("missing text receipt")

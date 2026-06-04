@@ -27,6 +27,7 @@ func writeFeemarketSection(w Writer, d model.Report) {
 	ex := buildFeemarketExplain(d)
 
 	w.StrongLine(ex.SummaryLine)
+	w.Em("Plain-language steps first, then the full x/feemarket formulas and live substitution with your chain’s parameters. All numbers are from this node.")
 	w.MathLatex(ex.LatexGeneral, ex.LatexSubstituted)
 	writeFeemarketDiagram(w, d)
 }
