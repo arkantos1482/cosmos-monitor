@@ -6,11 +6,20 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-// Build renders the full operations dashboard as an HTML fragment.
+// Build renders all seven sections as one HTML fragment (used by --dump).
 func Build(d model.Report) string {
 	var b strings.Builder
 	w := newWriter(&b)
 	writeAll(w, d)
+	w.flush()
+	return b.String()
+}
+
+// BuildView renders the home overview or a single section fragment.
+func BuildView(v View, d model.Report) string {
+	var b strings.Builder
+	w := newWriter(&b)
+	writeView(w, v, d)
 	w.flush()
 	return b.String()
 }

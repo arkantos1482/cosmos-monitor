@@ -9,3 +9,8 @@ import (
 func RenderFragment(d model.Report) string {
 	return panel.Build(d)
 }
+
+// RenderView renders the home overview or one section.
+func RenderView(v panel.View, d model.Report) string {
+	return panel.BuildView(v, d)
+}

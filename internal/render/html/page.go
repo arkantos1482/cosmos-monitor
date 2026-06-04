@@ -3,6 +3,9 @@ package html
 import (
 	"fmt"
 	"html"
+	"strings"
+
+	"github.com/arkantos1482/cosmos-monitor/internal/panel"
 )
 
 const pageCSS = `
@@ -22,15 +25,57 @@ body::before{
   content:'';position:fixed;top:0;left:0;right:0;height:3px;
   background:linear-gradient(90deg,var(--accent),var(--accent-2));z-index:10;
 }
+.dash-shell{display:grid;grid-template-columns:200px 1fr;gap:1.25rem;align-items:start}
+@media(max-width:860px){
+  .dash-shell{grid-template-columns:1fr}
+  .dash-nav{position:static}
+}
+.dash-nav{
+  position:sticky;top:1rem;display:flex;flex-direction:column;gap:.2rem;
+  padding:.65rem;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);box-shadow:var(--shadow);
+}
+.dash-nav__title{
+  font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);margin:0 0 .45rem;padding:0 .35rem;
+}
+.dash-nav__link{
+  display:block;padding:.4rem .55rem;border-radius:6px;font-size:.84rem;
+  color:var(--muted);text-decoration:none;border:1px solid transparent;
+}
+.dash-nav__link:hover{color:var(--fg);background:var(--surface-2)}
+.dash-nav__link--active{
+  color:var(--fg);background:var(--surface-2);border-color:var(--border);
+  font-weight:600;
+}
 .dash-header{
   display:flex;align-items:baseline;gap:.75rem;flex-wrap:wrap;
-  margin:0 0 1.25rem;padding:.75rem 1rem;
+  margin:0 0 1rem;padding:.75rem 1rem;
   background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
   box-shadow:var(--shadow);
 }
 .dash-header h1{font-size:1.1rem;font-weight:600;letter-spacing:-.02em;color:var(--fg)}
 .dash-header .meta{font-size:.8rem;color:var(--muted)}
-.dash-main{display:flex;flex-direction:column;gap:1rem}
+.dash-main{display:flex;flex-direction:column;gap:1rem;min-width:0}
+.dash-home__lead{font-size:.88rem;color:var(--muted);margin:0 0 .85rem}
+.dash-cards{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+  gap:.75rem;
+}
+.dash-card{
+  display:block;padding:.85rem 1rem;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);
+  text-decoration:none;color:inherit;transition:border-color .15s,background .15s;
+}
+.dash-card:hover{border-color:var(--accent);background:var(--surface-2)}
+.dash-card__title{
+  font-size:.82rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--accent);margin:0 0 .45rem;
+}
+.dash-card__badges{margin:0 0 .4rem}
+.dash-card__lines{list-style:none;margin:0;padding:0;font-size:.82rem;color:var(--fg)}
+.dash-card__lines li{padding:.15rem 0;color:var(--muted)}
+.dash-card__lines li:first-child{color:var(--fg);font-weight:500}
 .dash-section{
   background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
   padding:1rem 1.1rem 1.15rem;box-shadow:var(--shadow);
@@ -135,14 +180,38 @@ body::before{
 code{font-family:ui-monospace,"Cascadia Code","Fira Code",monospace;font-size:.82em;color:var(--accent)}
 `
 
+func navHTML(active panel.View) string {
+	var b strings.Builder
+	fmt.Fprint(&b, `<nav class="dash-nav" aria-label="Sections">`)
+	fmt.Fprint(&b, `<p class="dash-nav__title">Sections</p>`)
+	for _, item := range panel.Nav {
+		cls := "dash-nav__link"
+		if item.View == active {
+			cls += " dash-nav__link--active"
+		}
+		fmt.Fprintf(&b, `<a class="%s" href="%s">%s</a>`,
+			cls, html.EscapeString(item.Path), html.EscapeString(item.Label))
+	}
+	fmt.Fprint(&b, `</nav>`)
+	return b.String()
+}
+
 // FullPage wraps an HTML fragment in the dashboard document shell.
-func FullPage(moniker, fragment string) string {
+func FullPage(moniker string, active panel.View, fragment string) string {
+	pageTitle := "Overview"
+	for _, item := range panel.Nav {
+		if item.View == active {
+			pageTitle = item.Label
+			break
+		}
+	}
+	fragURL := fmt.Sprintf("/fragment?view=%s", html.EscapeString(string(active)))
 	return fmt.Sprintf(`<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>pmtop — %s</title>
+<title>pmtop — %s · %s</title>
 <script src="https://unpkg.com/htmx.org@2.0.3/dist/htmx.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"/>
@@ -153,11 +222,14 @@ func FullPage(moniker, fragment string) string {
 <body>
 <header class="dash-header">
 <h1>PMT operations</h1>
-<span class="meta">%s · live · refreshes every 5s</span>
+<span class="meta">%s · %s · refreshes every 5s</span>
 </header>
-<main class="dash-main" id="data" hx-get="/fragment" hx-trigger="every 5s" hx-swap="innerHTML scroll:none show:none settle:none">
+<div class="dash-shell">
+%s
+<main class="dash-main" id="data" hx-get="%s" hx-trigger="every 5s" hx-swap="innerHTML scroll:none show:none settle:none">
 %s
 </main>
+</div>
 <script>
 mermaid.initialize({startOnLoad:false,theme:'dark',securityLevel:'loose'});
 function renderMermaid(){
@@ -224,5 +296,7 @@ document.body.addEventListener('htmx:afterSwap',function(e){
 });
 </script>
 </body>
-</html>`, html.EscapeString(moniker), pageCSS, html.EscapeString(moniker), fragment)
+</html>`, html.EscapeString(moniker), pageTitle, pageCSS,
+		html.EscapeString(moniker), html.EscapeString(pageTitle),
+		navHTML(active), fragURL, fragment)
 }
