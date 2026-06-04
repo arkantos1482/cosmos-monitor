@@ -16,7 +16,11 @@ func writeFeemarketSection(w Writer, d model.Report) {
 		w.Table([]string{"Field", "Value", "Source"}, ex.LastBlockRows)
 	}
 	if ex.FormulaLine != "" {
-		w.Subsection("Formula")
+		heading := ex.FormulaHeading
+		if heading == "" {
+			heading = "How fees adjust"
+		}
+		w.Subsection(heading)
 		w.Em(ex.FormulaLine)
 	}
 	if len(ex.ThisBlockRows) > 0 {
@@ -31,28 +35,35 @@ func writeFeemarketSection(w Writer, d model.Report) {
 }
 
 func writeFeemarketHero(w Writer, ex FeemarketExplain) {
-	barPct := ex.LoadBarPct
-	if barPct < 0 {
-		barPct = 0
-	}
-	meterLabel := ex.UtilizationPct
-	if meterLabel == "" {
-		meterLabel = "—"
+	var meterHTML string
+	if ex.HideLoadMeter {
+		meterHTML = `<p class="fee-meter-note">` + html.EscapeString(ex.UtilizationPct) + `</p>`
+	} else {
+		barPct := ex.LoadBarPct
+		if barPct < 0 {
+			barPct = 0
+		}
+		meterLabel := ex.UtilizationPct
+		if meterLabel == "" {
+			meterLabel = "—"
+		}
+		meterHTML = fmt.Sprintf(
+			`<div class="fee-meter" role="meter" aria-valuenow="%.0f" aria-valuemin="0" aria-valuemax="100" aria-label="Previous block load vs target">`+
+				`<div class="fee-meter__label"><span>W / target</span><span>%s</span></div>`+
+				`<div class="fee-meter__track"><div class="fee-meter__fill" style="width:%.1f%%"></div></div>`+
+				`</div>`,
+			barPct, html.EscapeString(meterLabel), barPct,
+		)
 	}
 	w.WriteHTML(fmt.Sprintf(
 		`<div class="fee-traffic">`+
 			`<div class="fee-badge fee-badge--%s">%s</div>`+
-			`<div class="fee-meter" role="meter" aria-valuenow="%.0f" aria-valuemin="0" aria-valuemax="100" aria-label="Previous block load vs target">`+
-			`<div class="fee-meter__label"><span>W / target</span><span>%s</span></div>`+
-			`<div class="fee-meter__track"><div class="fee-meter__fill" style="width:%.1f%%"></div></div>`+
-			`</div>`+
+			`%s`+
 			`<p class="fee-hero-line">%s</p>`+
 			`</div>`,
 		html.EscapeString(ex.TrafficClass),
 		html.EscapeString(ex.TrafficLabel),
-		barPct,
-		html.EscapeString(meterLabel),
-		barPct,
+		meterHTML,
 		inlineHTML(ex.HeroLine),
 	))
 }

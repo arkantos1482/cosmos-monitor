@@ -41,8 +41,8 @@ func TestBuildFeemarketExplain(t *testing.T) {
 	if !strings.Contains(ex.LastBlockRows[1][0], "gas_wanted") {
 		t.Fatalf("missing gas_wanted row: %v", ex.LastBlockRows[1])
 	}
-	if !strings.Contains(ex.FormulaLine, "target × 8") {
-		t.Fatalf("formula line: %q", ex.FormulaLine)
+	if !strings.Contains(ex.FormulaLine, "50,000,000") || strings.Contains(ex.FormulaLine, "MaxUint64") {
+		t.Fatalf("finite chain formula should use real target, not sentinel: %q", ex.FormulaLine)
 	}
 	if len(ex.ThisBlockRows) == 0 || ex.ThisBlockRows[0][0] != "base_fee" {
 		t.Fatalf("this-block rows: %v", ex.ThisBlockRows)
@@ -67,6 +67,37 @@ func TestBuildFeemarketExplain(t *testing.T) {
 	}
 	if !strings.Contains(ex.ChainLine, "50,000,000") {
 		t.Fatalf("chain line should include target: %q", ex.ChainLine)
+	}
+}
+
+func TestBuildFeemarketExplainUnlimitedMaxGas(t *testing.T) {
+	d := model.Report{
+		BlockHeight: "100", BaseFee: "0.001 PMT", BaseFeeRaw: "1000000000000",
+		BlockGas: "21000", BlockGasLimit: ^uint64(0), Elasticity: 2,
+		BaseFeeChangeDenominator: 8,
+		ParentBlockGasUsed: 21000, ParentBlockGasWanted: 21000,
+		ParentBlockResultsOK: true, EVMDenom: "apmt",
+	}
+	ex := buildFeemarketExplain(d)
+	if !ex.UnlimitedBlockGas || !ex.HideLoadMeter {
+		t.Fatalf("expected unlimited max_gas mode: Unlimited=%v HideMeter=%v", ex.UnlimitedBlockGas, ex.HideLoadMeter)
+	}
+	mystery := "9,223,372,036,854,775,807"
+	if strings.Contains(ex.HeroLine, mystery) {
+		t.Fatalf("hero should not show raw sentinel decimal: %q", ex.HeroLine)
+	}
+	combined := ex.HeroLine + ex.FormulaLine + ex.LastBlockRows[2][1]
+	for _, s := range []string{"MaxUint64", "unlimited", "sentinel"} {
+		if !strings.Contains(combined, s) {
+			t.Fatalf("expected %q in explain output", s)
+		}
+	}
+	for _, row := range ex.LastBlockRows {
+		for _, cell := range row {
+			if strings.Contains(cell, mystery) {
+				t.Fatalf("last block row should not show mystery number: %v", row)
+			}
+		}
 	}
 }
 

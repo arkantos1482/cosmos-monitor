@@ -103,6 +103,7 @@ body::before{
 .fee-badge--falling{background:rgba(110,231,168,.15);color:var(--ok);border:1px solid rgba(110,231,168,.35)}
 .fee-badge--stable{background:rgba(94,179,255,.12);color:var(--accent);border:1px solid rgba(94,179,255,.3)}
 .fee-meter{margin:.35rem 0 .55rem}
+.fee-meter-note{margin:.35rem 0 .55rem;font-size:.8rem;color:var(--muted);line-height:1.4}
 .fee-meter__label{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);margin-bottom:.3rem}
 .fee-meter__track{height:10px;background:var(--surface-2);border-radius:999px;border:1px solid var(--border);overflow:hidden}
 .fee-meter__fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .3s ease}

@@ -12,28 +12,35 @@ import (
 
 // FeemarketExplain holds structured fee-market dashboard data (no LaTeX / Mermaid).
 type FeemarketExplain struct {
-	HeroLine       string
-	TrafficLabel   string
-	TrafficClass   string
-	UtilizationPct string
-	LoadBarPct     float64
-	NextAdj        string
-	LastBlockRows  [][]string
-	FormulaLine    string
-	ThisBlockRows  [][]string
-	ParamRows      [][]string
-	WalletLine     string
-	ChainLine      string
-	NoBaseFee      bool
+	HeroLine           string
+	TrafficLabel       string
+	TrafficClass       string
+	UtilizationPct     string
+	LoadBarPct         float64
+	HideLoadMeter      bool
+	FormulaHeading     string
+	NextAdj            string
+	LastBlockRows      [][]string
+	FormulaLine        string
+	ThisBlockRows      [][]string
+	ParamRows          [][]string
+	WalletLine         string
+	ChainLine          string
+	NoBaseFee          bool
+	UnlimitedBlockGas  bool
 }
 
+// feemarketMaxUint64Label matches x/feemarket when consensus max_gas = -1.
+const feemarketMaxUint64Label = "MaxUint64"
+
 type feemarketLoad struct {
-	wanted     uint64
-	target     uint64
-	hasTarget  bool
-	gasUsed    uint64
-	utilPct    string
-	loadBarPct float64
+	wanted            uint64
+	target            uint64
+	hasTarget         bool
+	gasUsed           uint64
+	utilPct           string
+	loadBarPct        float64
+	unlimitedBlockGas bool
 }
 
 func calcGasBaseFee(gasUsed, gasTarget, baseFeeChangeDenom uint64, baseFee, minUnitGas, minGasPrice math.LegacyDec) math.LegacyDec {
@@ -127,19 +134,28 @@ func feemarketGasTarget(d model.Report) (uint64, bool) {
 	return 0, false
 }
 
+func feemarketUnlimitedBlockGas(d model.Report) bool {
+	return d.BlockGasLimit == ^uint64(0)
+}
+
 func formatUint(n uint64) string {
 	if n == ^uint64(0) {
-		return "unlimited"
+		return feemarketMaxUint64Label
 	}
 	return report.FormatInt(int64(n))
 }
 
 func feemarketLoadContext(d model.Report) feemarketLoad {
 	ld := feemarketLoad{
-		wanted:  feemarketStoredWanted(d),
-		gasUsed: d.ParentBlockGasUsed,
+		wanted:            feemarketStoredWanted(d),
+		gasUsed:           d.ParentBlockGasUsed,
+		unlimitedBlockGas: feemarketUnlimitedBlockGas(d),
 	}
 	ld.target, ld.hasTarget = feemarketGasTarget(d)
+	if ld.unlimitedBlockGas && ld.hasTarget {
+		ld.utilPct = "n/a — max_gas is unlimited (-1)"
+		return ld
+	}
 	if ld.hasTarget && ld.target > 0 {
 		pct := float64(ld.wanted) / float64(ld.target) * 100
 		ld.utilPct = fmt.Sprintf("%.2f%%", pct)
@@ -149,6 +165,36 @@ func feemarketLoadContext(d model.Report) feemarketLoad {
 		}
 	}
 	return ld
+}
+
+func feemarketTargetDisplay(d model.Report) (value, source string) {
+	if d.Elasticity <= 0 {
+		return "—", "need elasticity_multiplier from feemarket params"
+	}
+	if feemarketUnlimitedBlockGas(d) {
+		return fmt.Sprintf("%s ÷ %d (sentinel — not a real block gas budget)",
+				feemarketMaxUint64Label, d.Elasticity),
+			"`x/feemarket` CalculateBaseFee: gasLimit = MaxUint64 when consensus max_gas = -1"
+	}
+	if d.BlockGasLimit > 0 {
+		t := d.BlockGasLimit / uint64(d.Elasticity)
+		return fmt.Sprintf("%s (= %s ÷ %d)",
+				formatUint(t), formatUint(d.BlockGasLimit), d.Elasticity),
+			"max_block_gas ÷ elasticity_multiplier"
+	}
+	return "—", "need consensus max_block_gas + elasticity_multiplier"
+}
+
+func feemarketCompareDisplay(d model.Report, ld feemarketLoad) string {
+	arrow := feemarketCompareArrow(ld.wanted, ld.target, ld.hasTarget)
+	if !ld.hasTarget {
+		return "?"
+	}
+	if ld.unlimitedBlockGas {
+		return fmt.Sprintf("W %s ≪ %s ÷ %d → %s",
+			formatUint(ld.wanted), feemarketMaxUint64Label, d.Elasticity, arrow)
+	}
+	return fmt.Sprintf("%s vs %s → %s", formatUint(ld.wanted), formatUint(ld.target), arrow)
 }
 
 func feemarketVerdictShort(wanted, target uint64, hasTarget bool) string {
@@ -195,6 +241,12 @@ func feemarketTraffic(wanted, target uint64, hasTarget bool) (label, class, next
 
 func feemarketHeroLine(d model.Report, ld feemarketLoad) string {
 	line := fmt.Sprintf("Block %s", d.BlockHeight)
+	if ld.unlimitedBlockGas && ld.hasTarget {
+		line += fmt.Sprintf(" · W %s · consensus max_gas unlimited (-1) · keeper target %s ÷ %d · %s",
+			formatUint(ld.wanted), feemarketMaxUint64Label, d.Elasticity,
+			feemarketVerdictShort(ld.wanted, ld.target, true))
+		return line
+	}
 	if ld.hasTarget {
 		line += fmt.Sprintf(" · W %s / target %s (%s)",
 			formatUint(ld.wanted), formatUint(ld.target), ld.utilPct)
@@ -207,17 +259,27 @@ func feemarketHeroLine(d model.Report, ld feemarketLoad) string {
 func buildFeemarketParamRows(d model.Report) [][]string {
 	var rows [][]string
 	if d.Elasticity > 0 {
+		meaning := "Target gas = max_block_gas ÷ elasticity"
+		if feemarketUnlimitedBlockGas(d) {
+			meaning = "With max_gas = -1, target = MaxUint64 ÷ elasticity (sentinel in keeper)"
+		}
 		rows = append(rows, []string{
 			"elasticity_multiplier",
 			fmt.Sprintf("%d", d.Elasticity),
-			"Target gas = max_block_gas ÷ elasticity",
+			meaning,
 		})
 	}
 	if d.BlockGasLimit > 0 {
+		val := formatUint(d.BlockGasLimit)
+		meaning := "Consensus max_gas per block"
+		if feemarketUnlimitedBlockGas(d) {
+			val = "unlimited (max_gas = -1)"
+			meaning = "Keeper uses MaxUint64 as gasLimit in CalculateBaseFee (same as chain code)"
+		}
 		rows = append(rows, []string{
 			"max block gas (consensus)",
-			formatUint(d.BlockGasLimit),
-			"Hard cap per block (consensus max_gas)",
+			val,
+			meaning,
 		})
 	}
 	if d.BaseFeeChangeDenominator > 0 {
@@ -285,20 +347,16 @@ func buildFeemarketLastBlockRows(d model.Report, ld feemarketLoad) [][]string {
 	})
 
 	if ld.hasTarget {
-		targetVal := formatUint(ld.target)
-		if d.BlockGasLimit > 0 && d.Elasticity > 0 {
-			targetVal += fmt.Sprintf(" (= %s ÷ %d)", formatUint(d.BlockGasLimit), d.Elasticity)
-		}
+		targetVal, targetSrc := feemarketTargetDisplay(d)
 		rows = append(rows, []string{
 			"target",
 			targetVal,
-			"`GET /cosmos/evm/feemarket/v1/params`",
+			targetSrc,
 		})
-		arrow := feemarketCompareArrow(ld.wanted, ld.target, true)
 		rows = append(rows, []string{
 			"W vs target",
-			fmt.Sprintf("%s vs %s → %s", formatUint(ld.wanted), formatUint(ld.target), arrow),
-			"derived",
+			feemarketCompareDisplay(d, ld),
+			"derived from prior W and keeper target",
 		})
 	} else {
 		rows = append(rows, []string{
@@ -310,25 +368,38 @@ func buildFeemarketLastBlockRows(d model.Report, ld feemarketLoad) [][]string {
 	return rows
 }
 
-func buildFeemarketFormulaLine(d model.Report) string {
+func buildFeemarketFormulaLine(d model.Report, ld feemarketLoad) (heading, line string) {
 	if d.NoBaseFee || d.BaseFeeChangeDenominator == 0 {
-		return ""
+		return "", ""
 	}
-	line := fmt.Sprintf(
-		"Δbase ≤ base × |W − target| / (target × %d)",
-		d.BaseFeeChangeDenominator,
-	)
-	var extras []string
-	if d.MinGasPrice != "" {
-		extras = append(extras, "min_gas_price floor on decrease")
+	heading = "How fees adjust"
+	if ld.unlimitedBlockGas && d.Elasticity > 0 {
+		line = fmt.Sprintf(
+			"Consensus max_gas is -1 (unlimited). The keeper does not divide infinity: it uses gasLimit = %s, then target = %s ÷ elasticity %d. "+
+				"That target is a sentinel for the EIP-1559 formula — real blocks never approach it. Prior block W = %s is far below it, so base fee tends to decrease each block (until min_gas_price). "+
+				"Per-block change is capped by base_fee_change_denominator %d.",
+			feemarketMaxUint64Label, feemarketMaxUint64Label, d.Elasticity,
+			formatUint(ld.wanted), d.BaseFeeChangeDenominator,
+		)
+		return heading, line
+	}
+	if ld.hasTarget {
+		line = fmt.Sprintf(
+			"Target = max_block_gas ÷ elasticity = %s. Prior W = %s → %s next block. "+
+				"Change bounded by base × |W−target| / (target × %d); min_gas_price caps decreases.",
+			formatUint(ld.target), formatUint(ld.wanted),
+			feemarketCompareArrow(ld.wanted, ld.target, true), d.BaseFeeChangeDenominator,
+		)
+	} else {
+		line = fmt.Sprintf(
+			"Change bounded by base × |W−target| / (target × %d); need max_block_gas and elasticity to compute target.",
+			d.BaseFeeChangeDenominator,
+		)
 	}
 	if d.MinGasMultiplier != "" {
-		extras = append(extras, "W from min_gas_multiplier × mempool vs gas_used")
+		line += " W uses min_gas_multiplier × mempool vs gas_used."
 	}
-	if len(extras) > 0 {
-		line += "; " + strings.Join(extras, "; ")
-	}
-	return line
+	return heading, line
 }
 
 func formatGasPriceStat(d model.Report) string {
@@ -403,6 +474,11 @@ func feemarketChainLine(d model.Report, ld feemarketLoad) string {
 	if d.NoBaseFee {
 		return fmt.Sprintf("Chain enforces min gas %s; no_base_fee=true — prior block load does not adjust fees", d.BaseFee)
 	}
+	if ld.unlimitedBlockGas && ld.hasTarget {
+		return fmt.Sprintf("BeginBlock base fee %s: prior W %s vs keeper sentinel %s ÷ %d — W is far below → %s",
+			d.BaseFee, formatUint(ld.wanted), feemarketMaxUint64Label, d.Elasticity,
+			feemarketVerdictShort(ld.wanted, ld.target, true))
+	}
 	if ld.hasTarget {
 		return fmt.Sprintf("BeginBlock base fee %s from prior W %s vs target %s (%s, %s)",
 			d.BaseFee, formatUint(ld.wanted), formatUint(ld.target), ld.utilPct,
@@ -431,10 +507,12 @@ func buildFeemarketExplain(d model.Report) FeemarketExplain {
 		return ex
 	}
 
+	ex.UnlimitedBlockGas = ld.unlimitedBlockGas
+	ex.HideLoadMeter = ld.unlimitedBlockGas
 	ex.TrafficLabel, ex.TrafficClass, ex.NextAdj = feemarketTraffic(ld.wanted, ld.target, ld.hasTarget)
 	ex.UtilizationPct = ld.utilPct
 	ex.LoadBarPct = ld.loadBarPct
 	ex.HeroLine = feemarketHeroLine(d, ld)
-	ex.FormulaLine = buildFeemarketFormulaLine(d)
+	ex.FormulaHeading, ex.FormulaLine = buildFeemarketFormulaLine(d, ld)
 	return ex
 }

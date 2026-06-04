@@ -27,7 +27,7 @@ func TestWriteFeemarketSectionHTML(t *testing.T) {
 		`class="fee-hero-line"`,
 		`class="fee-cards"`,
 		`Last block (N−1)`,
-		`Formula`,
+		`How fees adjust`,
 		`This block (N)`,
 		`Params`,
 		`FEE FALLING`,
