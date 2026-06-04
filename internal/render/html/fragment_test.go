@@ -27,7 +27,10 @@ func TestRenderFragmentEconomicsTables(t *testing.T) {
 		ModuleAccounts: []model.ModuleAccountRow{{Name: "fee_collector", Balance: "1 PMT"}},
 	}
 	out := RenderFragment(d)
-	if !strings.Contains(out, "Money flow (live balances)") {
-		t.Fatal("rendered fragment should include economics balance tables")
+	if !strings.Contains(out, "Block reward ledger") {
+		t.Fatal("rendered fragment should include economics ledger")
+	}
+	if !strings.Contains(out, "Chain parameters (reference)") {
+		t.Fatal("rendered fragment should include collapsed economics reference")
 	}
 }

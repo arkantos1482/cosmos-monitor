@@ -8,15 +8,18 @@ import (
 
 func writeEconomics(w Writer, d model.Report) {
 	w.Section("5. ECONOMICS")
-	w.Em("How money moves on this chain — tx fees, PMT pool rewards, and (if active) inflation accumulate in `fee_collector`, then `x/distribution` pays validators each block.")
+	w.Em("Block rewards: PMT pool and inflation mint into `fee_collector`; tx fees join there; `x/distribution` splits each BeginBlock to the community pool and validators.")
 
 	writeEconomicsOverview(w, d)
-	if d.PMTEnabled {
-		w.Em("PMT pool funds per-block rewards via mint hook → `fee_collector` (see PMT Rewards below).")
-	}
 
-	w.Subsection("Staking Pool")
-	w.Hint("`bond denom`, `unbonding time`, `max validators` → `GET /cosmos/staking/v1beta1/params`; `total supply` → `x/bank` supply; `bonded` / `not bonded` → `GET /cosmos/staking/v1beta1/pool`.")
+	w.Details("Chain parameters (reference)", func(w Writer) {
+		writeEconomicsReference(w, d)
+	})
+}
+
+func writeEconomicsReference(w Writer, d model.Report) {
+	w.Subsection("Staking pool")
+	w.Hint("`bond denom`, `unbonding time`, `max validators` → `GET /cosmos/staking/v1beta1/params`; `total supply` → `x/bank` supply; `bonded` / `not bonded` → `…/pool`.")
 	if d.BondDenom != "" {
 		w.Row("bond denom", d.BondDenom)
 	}
@@ -30,7 +33,7 @@ func writeEconomics(w Writer, d model.Report) {
 		w.Row("max validators", fmt.Sprintf("%d", d.MaxValidators))
 	}
 
-	w.Subsection("Slashing Params")
+	w.Subsection("Slashing params")
 	w.Hint("`signed blocks window`, `min signed`, slash fractions → `GET /cosmos/slashing/v1beta1/params`.")
 	if d.SlashWindow != "" && d.SlashWindow != "0" {
 		w.Row("signed blocks window", d.SlashWindow+" blocks")
@@ -53,13 +56,8 @@ func writeEconomics(w Writer, d model.Report) {
 		w.Row("slash / double-sign", dsStr)
 	}
 
-	w.Subsection("Staking & Inflation  (x/mint + x/staking)")
-	w.Hint("`inflation rate` → `GET /cosmos/mint/v1beta1/inflation`; `annual provisions` → `…/annual-provisions`; `goal bonded`, `blocks / year` → `…/params`; `unbonding time` → `x/staking` params.")
-	inflationStr := fmt.Sprintf("%.2f%%", d.Inflation)
-	if d.Inflation == 0 {
-		inflationStr += "  ⚠ inactive"
-	}
-	w.Row("inflation rate", inflationStr+"  _(extra tokens minted when active — rewards stakers)_")
+	w.Subsection("Mint / inflation params")
+	w.Hint("`annual provisions` → `GET /cosmos/mint/v1beta1/annual-provisions`; `goal bonded`, `blocks / year` → `…/params`.")
 	if d.AnnualProvisions != "" {
 		w.Row("annual provisions", d.AnnualProvisions+"  _(absolute new tokens/year if inflation active)_")
 	}
@@ -67,44 +65,29 @@ func writeEconomics(w Writer, d model.Report) {
 	if d.BlocksPerYear != "" {
 		w.Row("blocks / year", d.BlocksPerYear)
 	}
-	if d.UnbondingTime != "" {
-		w.Row("unbonding time", d.UnbondingTime+"  _(tokens locked after you unstake)_")
-	}
 
-	w.Subsection("Distribution  (x/distribution)")
-	w.Hint("`community tax` → `GET /cosmos/distribution/v1beta1/params`; `community pool` → `…/community_pool`; unclaimed rewards → sum of `…/outstanding_rewards` (delegators) + `…/commission` (operators).")
-	w.Row("community tax", d.CommunityTax+"  _(%% of block rewards → community pool, not validators)_")
-	w.Row("community pool", d.CommunityPool+"  _(governance-controlled treasury)_")
-	if d.TotalOutstanding != "" {
-		w.Row("unclaimed staking rewards", d.TotalOutstanding+"  _(validators haven't withdrawn yet)_")
+	w.Subsection("Distribution params")
+	w.Hint("Live balances and per-block split are in the ledger above; these are static module params.")
+	if d.CommunityTax != "" {
+		w.Row("community tax", d.CommunityTax+"  _(%% of block rewards → community pool)_")
 	}
 
 	w.Subsection("Fee market (x/feemarket)")
 	writeFeemarketSection(w, d)
 
-	w.Subsection("PMT Rewards  (x/pmtrewards — custom)")
-	w.Hint("`status`, `reward rate`, pool address → `GET /cosmos/evm/pmtrewards/v1/params`; `pool balance` → `x/bank` balances for pool address; runway/emissions derived in pmtop.")
+	w.Subsection("PMT Rewards  (x/pmtrewards)")
+	w.Hint("`status`, pool address → `GET /cosmos/evm/pmtrewards/v1/params`; per-block rate and pool balance are in the ledger above.")
 	w.Row("status", pmtStatus(d))
-	if d.PMTRate != "" {
-		w.Row("reward rate", d.PMTRate+"  _(extra tokens per block from PMT pool)_")
-	}
 	if d.PMTAnnual != "" {
 		w.Row("annual emissions", d.PMTAnnual)
 	}
-	if d.PMTDailyEmit != "" {
-		w.Row("daily emissions", d.PMTDailyEmit)
-	}
-	if d.PMTPoolEmpty {
-		w.Row("pool balance", "0  — pool empty, no PMT rewards distributing")
-	} else if d.PMTBalance != "" {
-		bal := d.PMTBalance
-		if d.PMTRunway != "" {
-			bal += "  (" + d.PMTRunway + ")"
-		}
-		w.Row("pool balance", bal)
-	}
 	if d.PMTPoolAddress != "" {
 		w.Row("pool address", d.PMTPoolAddress)
+	}
+	for _, m := range d.ModuleAccounts {
+		if m.Address != "" {
+			w.Row(m.Name+" address", m.Address)
+		}
 	}
 }
 

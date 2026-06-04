@@ -24,8 +24,11 @@ func TestBuildEconomicsUsesTablesNotMermaid(t *testing.T) {
 	if strings.Contains(eco, `class="diagram-panel mermaid"`) || strings.Contains(eco, "graph LR") {
 		t.Fatal("economics section should not use mermaid")
 	}
-	if !strings.Contains(eco, "Money flow (live balances)") {
-		t.Fatal("economics should use live balance tables")
+	if !strings.Contains(eco, "Block reward ledger") {
+		t.Fatal("economics should use block reward ledger")
+	}
+	if !strings.Contains(eco, "At a glance") {
+		t.Fatal("economics should include at-a-glance stats")
 	}
 }
 
@@ -87,7 +90,9 @@ func TestContentInventory(t *testing.T) {
 		`class="dash-subheading">Probe health</h3>`,
 		`class="stat-grid"`,
 		`class="data-table"`,
-		"Money flow (live balances)",
+		"At a glance",
+		"Block reward ledger",
+		"Chain parameters (reference)",
 		"Fee market (x/feemarket)",
 	} {
 		if !strings.Contains(out, want) {

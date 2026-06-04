@@ -7,7 +7,7 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-func TestWriteEconomicsOverviewTables(t *testing.T) {
+func TestWriteEconomicsOverviewLedger(t *testing.T) {
 	d := model.Report{
 		Inflation:           0,
 		InflationPerBlock:   "",
@@ -24,7 +24,7 @@ func TestWriteEconomicsOverviewTables(t *testing.T) {
 		TotalOutstanding:    "0.006854 PMT  across 4 validators",
 		LastBlockFees:       "0.001 PMT  _(parent block gas × base fee)_",
 		ModuleAccounts: []model.ModuleAccountRow{
-			{Name: "fee_collector", Balance: "0.10 PMT", Role: "fees"},
+			{Name: "fee_collector", Balance: "0 PMT", Role: "fees"},
 			{Name: "distribution", Balance: "0 PMT", Role: "escrow"},
 		},
 		Validators: []model.Validator{{CommissionFloat: 10}},
@@ -38,28 +38,37 @@ func TestWriteEconomicsOverviewTables(t *testing.T) {
 		},
 	}
 	out := Build(d)
-	if strings.Contains(out, `class="diagram-panel mermaid"`) {
-		idx := strings.Index(out, "5. ECONOMICS")
-		end := strings.Index(out, "6. GOVERNANCE")
-		if end < 0 {
-			end = len(out)
+	idx := strings.Index(out, "5. ECONOMICS")
+	end := strings.Index(out, "6. GOVERNANCE")
+	if idx < 0 || end < 0 {
+		t.Fatal("expected economics and governance sections")
+	}
+	chunk := out[idx:end]
+	if strings.Contains(chunk, `class="diagram-panel mermaid"`) {
+		t.Fatal("economics section should not use mermaid")
+	}
+	for _, want := range []string{
+		"At a glance",
+		"Block reward ledger",
+		"fee_collector",
+		"this validator → commission",
+		`<details class="dash-details">`,
+		"Chain parameters (reference)",
+	} {
+		if !strings.Contains(chunk, want) {
+			t.Fatalf("economics chunk missing %q", want)
 		}
-		chunk := out[idx:end]
-		if strings.Contains(chunk, `class="diagram-panel mermaid"`) {
-			t.Fatal("economics section should not use mermaid")
+	}
+	for _, gone := range []string{
+		"Money flow (live balances)",
+		"This validator",
+		"Module account",
+		"Distribution split",
+		"Network total",
+	} {
+		if strings.Contains(chunk, gone) {
+			t.Fatalf("economics chunk should not contain old table %q", gone)
 		}
-	}
-	if !strings.Contains(out, "Money flow (live balances)") {
-		t.Fatal("expected economics overview subsection")
-	}
-	if !strings.Contains(out, "fee_collector") {
-		t.Fatal("expected module account table row")
-	}
-	if !strings.Contains(out, "unclaimed delegator rewards") {
-		t.Fatal("expected network totals table")
-	}
-	if !strings.Contains(out, "This validator") {
-		t.Fatal("expected local validator table")
 	}
 }
 
@@ -86,5 +95,38 @@ func TestEconomicsPerBlockSplit(t *testing.T) {
 	}
 	if del < 0.0220 || del > 0.0230 {
 		t.Fatalf("del want ~0.022 got %v", del)
+	}
+}
+
+func TestFeeCollectorBalanceAndChecks(t *testing.T) {
+	d := model.Report{
+		ModuleAccounts: []model.ModuleAccountRow{
+			{Name: "fee_collector", Balance: "0 PMT"},
+		},
+		UnclaimedDelegator:  "0.006 PMT",
+		UnclaimedCommission: "0.0006 PMT",
+		TotalOutstanding:    "0.0066 PMT  across 4 validators",
+	}
+	if got := FeeCollectorBalance(d); got != "0 PMT" {
+		t.Fatalf("FeeCollectorBalance = %q", got)
+	}
+	if economicsFeeCollectorCheck(d) != "cleared" {
+		t.Fatalf("expected cleared, got %q", economicsFeeCollectorCheck(d))
+	}
+	if economicsUnclaimedCheck(d) != "sums match" {
+		t.Fatalf("expected sums match, got %q", economicsUnclaimedCheck(d))
+	}
+}
+
+func TestRewardInPerBlockTotal(t *testing.T) {
+	d := model.Report{
+		PMTEnabled:        true,
+		PMTRate:           "0.1 PMT/block",
+		InflationPerBlock: "0.01 PMT/block",
+		LastBlockFees:     "0.001 PMT  _(parent block gas × base fee)_",
+	}
+	got := RewardInPerBlockTotal(d)
+	if !strings.Contains(got, "/block") {
+		t.Fatalf("RewardInPerBlockTotal = %q", got)
 	}
 }

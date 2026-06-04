@@ -40,6 +40,15 @@ body::before{
   color:var(--accent);margin:0 0 .85rem;padding-bottom:.5rem;border-bottom:1px solid var(--border);
 }
 .dash-block+.dash-block{margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)}
+.dash-details{margin:.65rem 0 .5rem;border:1px solid var(--border);border-radius:8px;background:var(--surface-2)}
+.dash-details__summary{
+  cursor:pointer;padding:.55rem .75rem;font-size:.88rem;font-weight:600;color:var(--muted);
+  list-style:none;user-select:none;
+}
+.dash-details__summary::-webkit-details-marker{display:none}
+.dash-details[open] .dash-details__summary{color:var(--fg);border-bottom:1px solid var(--border)}
+.dash-details__body{padding:.65rem .75rem .75rem}
+.dash-details__body .dash-block:first-child{margin-top:0;padding-top:0;border-top:none}
 .dash-subheading{font-size:.95rem;font-weight:600;color:var(--fg);margin:0 0 .55rem}
 .hint,.note{font-size:.8rem;color:var(--muted);margin:.35rem 0 .55rem}
 .hint code,.note code{font-size:.78rem}
