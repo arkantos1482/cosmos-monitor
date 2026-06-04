@@ -1,14 +1,14 @@
-package markdown
+package panel
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/arkantos1482/cosmos-monitor/internal/model"
-	"github.com/arkantos1482/cosmos-monitor/internal/report"
-	"io"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/arkantos1482/cosmos-monitor/internal/model"
+	"github.com/arkantos1482/cosmos-monitor/internal/report"
 )
 
 const maxProbeJSONBytes = 12_000
@@ -72,11 +72,7 @@ func jsonRPCCurl(endpoint, requestJSON string) string {
 	return fmt.Sprintf("curl -sS -X POST %s \\\n  -H 'Content-Type: application/json' \\\n  -d '%s'", endpoint, escaped)
 }
 
-func writeEVMRPCSection(w io.Writer, d model.Report) {
-	hint := func(text string) { fmt.Fprintf(w, "_%s_\n\n", text) }
-	subsection := func(name string) { fmt.Fprintf(w, "\n## %s\n\n", name) }
-	row := func(label, value string) { fmt.Fprintf(w, "- **%s**: %s\n", label, value) }
-
+func writeEVMRPCSection(w Writer, d model.Report) {
 	overall := evmRPCOverallStatus(d)
 
 	syncLabel := "synced"
@@ -100,11 +96,11 @@ func writeEVMRPCSection(w io.Writer, d model.Report) {
 		listenLabel = "listening"
 	}
 
-	fmt.Fprintf(w, "**RPC: %s** · block %s · %s · %s · %s\n\n",
-		overall, blockAge, syncLabel, probeSummary, listenLabel)
+	w.StrongLine(fmt.Sprintf("**RPC: %s** · block %s · %s · %s · %s",
+		overall, blockAge, syncLabel, probeSummary, listenLabel))
 
-	subsection("For operators")
-	hint("HTTP/WS bind addresses from node `app.toml` `[json-rpc]`; APIs list is the deployed default for PMT.")
+	w.Subsection("For operators")
+	w.Hint("HTTP/WS bind addresses from node `app.toml` `[json-rpc]`; APIs list is the deployed default for PMT.")
 	httpEP := d.EVMHTTPEndpoint
 	if httpEP == "" {
 		httpEP = "http://localhost:8545"
@@ -117,15 +113,15 @@ func writeEVMRPCSection(w io.Writer, d model.Report) {
 	if apis == "" {
 		apis = report.DefaultJSONRPCAPIs
 	}
-	row("HTTP JSON-RPC", "`"+httpEP+"`")
-	row("WebSocket", "`"+wsEP+"`")
-	row("enabled APIs", "`"+apis+"`")
-	row("chain ID", fmt.Sprintf("%d  _(eth_chainId · MetaMask custom network)_", d.EVMChainID))
+	w.Row("HTTP JSON-RPC", "`"+httpEP+"`")
+	w.Row("WebSocket", "`"+wsEP+"`")
+	w.Row("enabled APIs", "`"+apis+"`")
+	w.Row("chain ID", fmt.Sprintf("%d  _(eth_chainId · MetaMask custom network)_", d.EVMChainID))
 	if d.EVMDenom != "" {
-		row("native denom", "`"+d.EVMDenom+"`")
+		w.Row("native denom", "`"+d.EVMDenom+"`")
 	}
 	if d.EVMClient != "" {
-		row("client", d.EVMClient+"  _(web3_clientVersion)_")
+		w.Row("client", d.EVMClient+"  _(web3_clientVersion)_")
 	}
 
 	symbol := evmDisplaySymbol(d.EVMDenom)
@@ -135,11 +131,11 @@ func writeEVMRPCSection(w io.Writer, d model.Report) {
 	}
 	wallet := fmt.Sprintf("Network name: %s\nRPC URL: %s\nChain ID: %d\nCurrency symbol: %s",
 		networkName, httpEP, d.EVMChainID, symbol)
-	fmt.Fprintf(w, "\n```text\n%s\n```\n\n", wallet)
+	w.Pre(wallet)
 
-	subsection("Live (JSON-RPC)")
-	hint("`eth_*` / `txpool_*` probes on each refresh; gas price also feeds §4 fee market.")
-	row("block height", d.EVMBlock+"  _(eth_blockNumber)_")
+	w.Subsection("Live (JSON-RPC)")
+	w.Hint("`eth_*` / `txpool_*` probes on each refresh; gas price also feeds §4 fee market.")
+	w.Row("block height", d.EVMBlock+"  _(eth_blockNumber)_")
 	if d.EVMBlockAge != "" {
 		ageStr := d.EVMBlockAge + "  _(eth_getBlockByNumber timestamp)_"
 		if d.EVMBlockAgeErr {
@@ -147,20 +143,20 @@ func writeEVMRPCSection(w io.Writer, d model.Report) {
 		} else if d.EVMBlockAgeWarn {
 			ageStr += "  ⚠ slow"
 		}
-		row("last block age", ageStr)
+		w.Row("last block age", ageStr)
 	}
-	row("sync", syncLabel+"  _(eth_syncing)_")
+	w.Row("sync", syncLabel+"  _(eth_syncing)_")
 	if d.GasPrice != "" {
-		row("gas price", d.GasPrice+"  _(eth_gasPrice)_")
+		w.Row("gas price", d.GasPrice+"  _(eth_gasPrice)_")
 	}
 	txpool := fmt.Sprintf("pending %s · queued %s  _(txpool_status)_",
 		formatTxpoolCount(d.PendingTx, d.TxpoolGlobalSlots),
 		formatTxpoolCount(d.QueuedTx, d.TxpoolGlobalQueue))
-	row("txpool", txpool)
-	row("EVM peers", fmt.Sprintf("%d  _(net_peerCount — often 0 on validators)_", d.EVMPeerCount))
+	w.Row("txpool", txpool)
+	w.Row("EVM peers", fmt.Sprintf("%d  _(net_peerCount — often 0 on validators)_", d.EVMPeerCount))
 
-	subsection("Probe health")
-	hint("Client-side `POST` JSON-RPC 2.0; each method shows the request line and pretty-printed response body from the last refresh.")
+	w.Subsection("Probe health")
+	w.Hint("Client-side `POST` JSON-RPC 2.0; each method shows the request line and pretty-printed response body from the last refresh.")
 	writeEVMProbeLog(w, d, httpEP)
 }
 
@@ -171,7 +167,6 @@ func formatTxpoolCount(n, limit uint64) string {
 	return fmt.Sprintf("%d / %d", n, limit)
 }
 
-// renderProbeLog builds a fixed-width monospace probe table grouped by JSON-RPC namespace.
 func renderProbeLog(probes []model.RPCProbe) string {
 	const (
 		padMethod  = 24
@@ -238,7 +233,6 @@ func truncateJSON(s string, maxBytes int) string {
 	return s[:maxBytes] + "\n… (truncated)"
 }
 
-// formatProbeExchange renders one method's request/response as monospace text.
 func formatProbeExchange(p model.RPCProbe) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "── %s · %s · %s ──\n", p.Method, probeStatusLabel(p.OK), p.Latency)
@@ -262,15 +256,15 @@ func formatProbeExchange(p model.RPCProbe) string {
 	return strings.TrimRight(b.String(), "\n")
 }
 
-func writeEVMProbeLog(w io.Writer, d model.Report, endpoint string) {
+func writeEVMProbeLog(w Writer, d model.Report, endpoint string) {
 	log := renderProbeLog(d.RPCProbes)
-	fmt.Fprintf(w, "```text\n%s\n```\n\n", log)
+	w.Pre(log)
 
 	for _, p := range sortedRPCProbes(d.RPCProbes) {
 		body := formatProbeExchange(p)
-		fmt.Fprintf(w, "```text\n%s\n```\n\n", body)
+		w.Pre(body)
 		if !p.OK {
-			fmt.Fprintf(w, "```bash\n%s\n```\n\n", jsonRPCCurl(endpoint, p.Request))
+			w.PreBash(jsonRPCCurl(endpoint, p.Request))
 		}
 	}
 }

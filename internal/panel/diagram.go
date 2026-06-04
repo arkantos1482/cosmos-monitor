@@ -1,19 +1,14 @@
-package markdown
+package panel
 
 import (
 	"fmt"
-	"github.com/arkantos1482/cosmos-monitor/internal/model"
-	"github.com/arkantos1482/cosmos-monitor/internal/report"
-	"io"
 	"strconv"
 	"strings"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/fetch"
+	"github.com/arkantos1482/cosmos-monitor/internal/model"
+	"github.com/arkantos1482/cosmos-monitor/internal/report"
 )
-
-func writeMermaidFence(w io.Writer, src string) {
-	fmt.Fprintf(w, "```mermaid\n%s\n```\n\n", strings.TrimSpace(src))
-}
 
 func mermaidLabel(s string) string {
 	s = strings.ReplaceAll(s, `"`, `'`)
@@ -283,8 +278,8 @@ func economicsOverviewMermaid(d model.Report) string {
 	return b.String()
 }
 
-func writeEconomicsDiagram(w io.Writer, d model.Report) {
-	writeMermaidFence(w, economicsOverviewMermaid(d))
+func writeEconomicsDiagram(w Writer, d model.Report) {
+	w.Mermaid(economicsOverviewMermaid(d))
 }
 
 func parseDiagramUint(s string) uint64 {
@@ -384,6 +379,6 @@ func feemarketMechanicsMermaid(d model.Report) string {
 	return b.String()
 }
 
-func writeFeemarketDiagram(w io.Writer, d model.Report) {
-	writeMermaidFence(w, feemarketMechanicsMermaid(d))
+func writeFeemarketDiagram(w Writer, d model.Report) {
+	w.Mermaid(feemarketMechanicsMermaid(d))
 }

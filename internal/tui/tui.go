@@ -9,32 +9,23 @@ import (
 	"syscall"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/fetchall"
-	"github.com/arkantos1482/cosmos-monitor/internal/render"
 	"github.com/arkantos1482/cosmos-monitor/internal/render/terminal"
 	"github.com/arkantos1482/cosmos-monitor/internal/report"
 	"golang.org/x/term"
 )
 
-// Config holds endpoints and the terminal renderer mode (raw or glamour).
+// Config holds endpoints for the interactive TUI.
 type Config struct {
 	RPC, REST, EVM, Container string
-	TermRender                string // raw | glamour
 }
 
-// lfcrlfWriter translates bare \n to \r\n for raw terminal mode.
+// lfcrlfWriter translates bare \n to \r\n for terminal output.
 type lfcrlfWriter struct{ w io.Writer }
 
 func (t *lfcrlfWriter) Write(p []byte) (int, error) {
 	translated := bytes.ReplaceAll(p, []byte("\n"), []byte("\r\n"))
 	_, err := t.w.Write(translated)
 	return len(p), err
-}
-
-func rendererFor(w io.Writer, mode string) render.Renderer {
-	if mode == "glamour" {
-		return terminal.Glamour{W: w}
-	}
-	return terminal.Raw{W: w}
 }
 
 // Run starts the interactive refresh loop (r refresh, q quit).
@@ -61,13 +52,15 @@ func Run(cfg Config) error {
 		os.Exit(0)
 	}()
 
+	termOut := terminal.Text{W: out}
+
 	refresh := func() {
 		fmt.Fprint(out, "\033[H\033[2J")
 		fmt.Fprintln(out, "fetching…")
 		sn := fetchall.Load(cfg.RPC, cfg.REST, cfg.EVM, cfg.Container)
 		rep := report.Build(sn.Chain, sn.EVM, sn.System, sn.Docker, cfg.EVM)
 		fmt.Fprint(out, "\033[H\033[2J")
-		_ = rendererFor(out, cfg.TermRender).Render(rep)
+		_ = termOut.Render(rep)
 	}
 
 	refresh()

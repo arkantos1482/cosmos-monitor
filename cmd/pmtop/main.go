@@ -21,16 +21,11 @@ func main() {
 	container := flag.String("container", "evmd-node", "Docker container name")
 	webAddr := flag.String("web", "", "address to serve web UI (e.g. :7777); empty = disabled")
 	dump := flag.Bool("dump", false, "fetch once, print output, and exit")
-	format := flag.String("format", "md", "output format with --dump: md (canonical markdown) or html (fragment)")
-	termRender := flag.String("render", "raw", "terminal renderer: raw (canonical markdown) or glamour (styled GFM)")
+	format := flag.String("format", "plain", "output format with --dump: plain (text) or html (fragment)")
 	flag.Parse()
 
-	if *format != "md" && *format != "html" {
-		fmt.Fprintf(os.Stderr, "pmtop: unknown --format %q (use md or html)\n", *format)
-		os.Exit(2)
-	}
-	if *termRender != "raw" && *termRender != "glamour" {
-		fmt.Fprintf(os.Stderr, "pmtop: unknown --render %q (use raw or glamour)\n", *termRender)
+	if *format != "plain" && *format != "html" {
+		fmt.Fprintf(os.Stderr, "pmtop: unknown --format %q (use plain or html)\n", *format)
 		os.Exit(2)
 	}
 
@@ -46,11 +41,7 @@ func main() {
 		case "html":
 			err = (html.Dump{W: os.Stdout}).Render(rep)
 		default:
-			if *termRender == "glamour" {
-				err = terminal.Glamour{W: os.Stdout}.Render(rep)
-			} else {
-				err = terminal.Raw{W: os.Stdout}.Render(rep)
-			}
+			err = terminal.Text{W: os.Stdout}.Render(rep)
 		}
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "pmtop: %v\n", err)
@@ -68,7 +59,6 @@ func main() {
 
 	if err := tui.Run(tui.Config{
 		RPC: *rpc, REST: *rest, EVM: *evm, Container: *container,
-		TermRender: *termRender,
 	}); err != nil {
 		fmt.Fprintf(os.Stderr, "pmtop: %v\n", err)
 		os.Exit(1)

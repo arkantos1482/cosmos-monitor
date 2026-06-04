@@ -30,6 +30,9 @@ pre{background:var(--surface);border:1px solid var(--border);border-radius:4px;p
 code{font-family:inherit;font-size:12px;color:var(--cyan);background:transparent}
 pre code{color:var(--fg)}
 p{margin:.3rem 0;color:var(--dim);font-size:12px}
+p.rpc-banner{color:var(--bright);font-size:13px}
+p.intro,p.hint{color:var(--dim)}
+em.note{font-style:normal;color:var(--dim)}
 em{font-style:normal;color:var(--dim)}
 `
 

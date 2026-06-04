@@ -8,12 +8,12 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/panel"
 )
 
-// Raw prints the dashboard as plain text to w.
-type Raw struct {
+// Text prints the dashboard as plain text to w.
+type Text struct {
 	W io.Writer
 }
 
-func (r Raw) Render(d model.Report) error {
-	_, err := fmt.Fprint(r.W, panel.BuildText(d))
+func (t Text) Render(d model.Report) error {
+	_, err := fmt.Fprint(t.W, panel.BuildText(d))
 	return err
 }

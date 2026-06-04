@@ -1,8 +1,6 @@
-package markdown
+package panel
 
 import (
-	"fmt"
-	"io"
 	"strings"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
@@ -25,18 +23,10 @@ func splitLatexDisplayBlocks(s string) []string {
 	return blocks
 }
 
-func writeFeeMathMarkdown(w io.Writer, latexParts ...string) {
-	for _, part := range latexParts {
-		for _, block := range splitLatexDisplayBlocks(part) {
-			fmt.Fprintf(w, "\n$$\n%s\n$$\n\n", block)
-		}
-	}
-}
-
-func writeFeemarketSection(w io.Writer, d model.Report) {
+func writeFeemarketSection(w Writer, d model.Report) {
 	ex := buildFeemarketExplain(d)
 
-	fmt.Fprintf(w, "**%s**\n\n", ex.SummaryLine)
-	writeFeeMathMarkdown(w, ex.LatexGeneral, ex.LatexSubstituted)
+	w.StrongLine(ex.SummaryLine)
+	w.MathLatex(ex.LatexGeneral, ex.LatexSubstituted)
 	writeFeemarketDiagram(w, d)
 }

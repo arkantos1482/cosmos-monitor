@@ -1,4 +1,4 @@
-package markdown
+package panel
 
 import (
 	"strings"

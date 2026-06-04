@@ -5,29 +5,28 @@ Live operations dashboard for PMT / Cosmos EVM nodes.
 ## Architecture
 
 ```
-fetch → report.Build → model.Report → markdown.Build (canonical MD)
-                                              ├─ terminal: raw | glamour
-                                              └─ html: goldmark + KaTeX + Mermaid
+fetch → report.Build → model.Report → panel.Build (HTML fragment)
+                                              ├─ terminal: plain text (htmlToPlain)
+                                              └─ web: HTMX shell + panel HTML
 ```
 
 ## Output
 
-`pmtop` emits a single **portable Markdown** document:
+`pmtop` renders a structured **HTML panel** (sections, tables, Mermaid diagrams, KaTeX math):
 
-- ` ```mermaid ` diagrams (economics, feemarket)
-- `$$` LaTeX blocks (EIP-1559 fee math)
-- GFM tables, lists, and fenced `text` / `bash` for RPC probe logs
+- `<div class="mermaid">` diagrams (economics, feemarket)
+- `<div class="math-display">` LaTeX blocks (EIP-1559 fee math)
+- HTML tables, lists, and `<pre>` blocks for RPC probe logs
 
 ### Terminal (default)
 
-Interactive TUI prints Markdown (`--render raw`, default) or styled GFM (`--render glamour`). Keys: `r` refresh, `q` quit.
+Interactive TUI prints plain text derived from the same panel (all sections preserved). Keys: `r` refresh, `q` quit.
 
 ### Dump (CI / agents)
 
 ```bash
-pmtop --dump                          # canonical markdown once, exit
+pmtop --dump                          # plain text once, exit
 pmtop --dump --format html            # HTML fragment (same as web body)
-pmtop --dump --render glamour         # styled terminal GFM
 ```
 
 ### Web UI
@@ -37,10 +36,6 @@ pmtop --web :7777
 ```
 
 Open `http://localhost:7777`. HTMX refresh every 5s; Mermaid.js + KaTeX in the browser.
-
-### VS Code / Obsidian
-
-`pmtop --dump > /tmp/pmt.md` and preview with Mermaid + math extensions.
 
 ## Flags
 
@@ -52,8 +47,7 @@ Open `http://localhost:7777`. HTMX refresh every 5s; Mermaid.js + KaTeX in the b
 | `-container` | `evmd-node` | Docker container name |
 | `-web` | _(empty)_ | Web listen address (e.g. `:7777`) |
 | `-dump` | `false` | Fetch once, print, exit |
-| `-format` | `md` | With `-dump`: `md` or `html` |
-| `-render` | `raw` | Terminal: `raw` or `glamour` |
+| `-format` | `plain` | With `-dump`: `plain` or `html` |
 
 ## Build
 

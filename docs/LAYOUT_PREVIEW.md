@@ -13,7 +13,7 @@
 
 ## Proposed output (example — node4)
 
-Below is what the terminal / web markdown would look like after the change.  
+Below is what the terminal (plain text) / web (HTML panel) output looks like after the change.  
 Values in _italics_ are illustrative; bonded table rows would come from live REST/RPC.
 
 ---

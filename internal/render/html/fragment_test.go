@@ -7,17 +7,6 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-func TestStripDisplayMathForGoldmark(t *testing.T) {
-	md := "intro\n\n$$\na+b\n$$\n\nafter"
-	stripped, blocks := stripDisplayMathForGoldmark(md)
-	if len(blocks) != 1 || blocks[0] != "a+b" {
-		t.Fatalf("blocks=%#v", blocks)
-	}
-	if !strings.Contains(stripped, "PMTOP_MATH_BLOCK_0") {
-		t.Fatalf("stripped=%q", stripped)
-	}
-}
-
 func TestRenderFragmentMathDisplay(t *testing.T) {
 	d := model.Report{
 		BlockHeight: "100", BaseFee: "1", BaseFeeRaw: "1000",
@@ -28,7 +17,7 @@ func TestRenderFragmentMathDisplay(t *testing.T) {
 	}
 	out := RenderFragment(d)
 	if !strings.Contains(out, `class="math-display"`) {
-		t.Fatal("fragment should inject math-display nodes for KaTeX")
+		t.Fatal("fragment should include math-display nodes for KaTeX")
 	}
 }
 

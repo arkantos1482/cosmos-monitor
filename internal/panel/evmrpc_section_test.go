@@ -1,4 +1,4 @@
-package markdown
+package panel
 
 import (
 	"strings"
@@ -19,13 +19,11 @@ func TestBuildEVMRPCSection(t *testing.T) {
 		},
 		GasPrice: "1 apmt", PendingTx: 2, QueuedTx: 1,
 	}
-	var b strings.Builder
-	writeEVMRPCSection(&b, d)
-	md := b.String()
-	if !strings.Contains(md, "**RPC: OK**") {
-		t.Fatal("markdown should include RPC status line")
+	out := BuildText(d)
+	if !strings.Contains(out, "**RPC: OK**") {
+		t.Fatal("output should include RPC status line")
 	}
-	if !strings.Contains(md, "## Probe health") {
+	if !strings.Contains(out, "## Probe health") {
 		t.Fatal("expected Probe health subsection")
 	}
 }
