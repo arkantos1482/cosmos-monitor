@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/arkantos1482/cosmos-monitor/internal/fetch"
 	"github.com/arkantos1482/cosmos-monitor/internal/fetchall"
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
+	"github.com/arkantos1482/cosmos-monitor/internal/panel"
 	"github.com/arkantos1482/cosmos-monitor/internal/render/html"
 	"github.com/arkantos1482/cosmos-monitor/internal/report"
 )
@@ -21,13 +21,13 @@ func main() {
 	dump := flag.Bool("dump", false, "fetch once, print HTML fragment to stdout, and exit")
 	flag.Parse()
 
-	load := func() model.Report {
-		sn := fetchall.Load(*rpc, *rest, *evm, *container)
+	load := func(v panel.View) model.Report {
+		sn := fetchall.LoadFor(v, *rpc, *rest, *evm, *container)
 		return report.Build(sn.Chain, sn.EVM, sn.System, sn.Docker, *evm)
 	}
 
 	if *dump {
-		rep := load()
+		rep := load(panel.ViewHome)
 		if err := (html.Dump{W: os.Stdout}).Render(rep); err != nil {
 			fmt.Fprintf(os.Stderr, "pmtop: %v\n", err)
 			os.Exit(1)
@@ -40,8 +40,5 @@ func main() {
 		os.Exit(2)
 	}
 
-	html.Start(*webAddr, *evm, func() (fetch.ChainSnapshot, fetch.EVMSnapshot, fetch.SystemSnapshot, fetch.DockerSnapshot) {
-		sn := fetchall.Load(*rpc, *rest, *evm, *container)
-		return sn.Chain, sn.EVM, sn.System, sn.Docker
-	})
+	html.Start(*webAddr, *evm, load)
 }

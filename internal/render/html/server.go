@@ -6,31 +6,24 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/arkantos1482/cosmos-monitor/internal/fetch"
+	"github.com/arkantos1482/cosmos-monitor/internal/fetchall"
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 	"github.com/arkantos1482/cosmos-monitor/internal/panel"
-	"github.com/arkantos1482/cosmos-monitor/internal/report"
 )
 
-// FetchFunc loads live snapshots from the node.
-type FetchFunc func() (fetch.ChainSnapshot, fetch.EVMSnapshot, fetch.SystemSnapshot, fetch.DockerSnapshot)
+// RenderFunc builds a Report for the given dashboard view.
+type RenderFunc func(v panel.View) model.Report
 
 // Start serves the HTMX dashboard on addr (e.g. ":7777").
-func Start(addr string, evmEndpoint string, doFetch FetchFunc) {
-	render := func() model.Report {
-		chain, ev, sys, docker := doFetch()
-		return report.Build(chain, ev, sys, docker, evmEndpoint)
-	}
-
+func Start(addr string, evmEndpoint string, render RenderFunc) {
 	http.HandleFunc("/fragment", func(w http.ResponseWriter, r *http.Request) {
-		d := render()
 		v := panel.ParseView(r.URL.Query().Get("view"))
+		d := render(v)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		fmt.Fprint(w, RenderView(v, d))
 	})
 
 	http.HandleFunc("/s/", func(w http.ResponseWriter, r *http.Request) {
-		d := render()
 		slug := strings.TrimPrefix(r.URL.Path, "/s/")
 		slug = strings.TrimSuffix(slug, "/")
 		v := panel.ParseView(slug)
@@ -39,7 +32,8 @@ func Start(addr string, evmEndpoint string, doFetch FetchFunc) {
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprint(w, FullPage(d.Moniker, v, RenderView(v, d)))
+		d := render(v)
+		fmt.Fprint(w, FullPage(pageMoniker(d), v, RenderView(v, d)))
 	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -47,13 +41,24 @@ func Start(addr string, evmEndpoint string, doFetch FetchFunc) {
 			http.NotFound(w, r)
 			return
 		}
-		d := render()
+		v := panel.ViewHome
+		d := render(v)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprint(w, FullPage(d.Moniker, panel.ViewHome, RenderView(panel.ViewHome, d)))
+		fmt.Fprint(w, FullPage(pageMoniker(d), v, RenderView(v, d)))
 	})
 
 	log.Printf("web UI → http://localhost%s", addr)
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Fatalf("web server: %v", err)
 	}
+}
+
+func pageMoniker(d model.Report) string {
+	if d.Moniker != "" {
+		return d.Moniker
+	}
+	if m := fetchall.Moniker(); m != "" {
+		return m
+	}
+	return "pmtop"
 }

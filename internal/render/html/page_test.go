@@ -11,6 +11,7 @@ func TestFullPageNavAndFragmentURL(t *testing.T) {
 	out := FullPage("node1", panel.ViewEconomics, "<p>body</p>")
 	for _, want := range []string{
 		`hx-get="/fragment?view=economics"`,
+		`hx-push-url="/s/economics"`,
 		`dash-nav__link--active`,
 		`href="/s/economics"`,
 		`Economics`,

@@ -7,6 +7,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -164,13 +165,22 @@ func FetchEVM(endpoint string) EVMSnapshot {
 		{"eth_getBlockByNumber", []any{"latest", false}},
 	}
 
-	for _, m := range methods {
-		params := m.params
-		if params == nil {
-			params = []any{}
-		}
-		snap.Probes = append(snap.Probes, evmProbe(endpoint, m.method, params))
+	probes := make([]RPCProbe, len(methods))
+	var probeWG sync.WaitGroup
+	for i, m := range methods {
+		i, m := i, m
+		probeWG.Add(1)
+		go func() {
+			defer probeWG.Done()
+			params := m.params
+			if params == nil {
+				params = []any{}
+			}
+			probes[i] = evmProbe(endpoint, m.method, params)
+		}()
 	}
+	probeWG.Wait()
+	snap.Probes = probes
 
 	byMethod := map[string]RPCProbe{}
 	for _, p := range snap.Probes {

@@ -653,8 +653,8 @@ func applyValidatorP2P(v *ValidatorInfo, localMoniker, localNodeID, localListen 
 	}
 }
 
-// FetchChain fetches all chain data from CometBFT RPC and Cosmos REST.
-func FetchChain(rpc, rest string) ChainSnapshot {
+// FetchChain fetches chain data from CometBFT RPC and Cosmos REST.
+func FetchChain(rpc, rest string, opts ChainOpts) ChainSnapshot {
 	snap := ChainSnapshot{}
 
 	// --- CometBFT RPC ---
@@ -779,120 +779,119 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 		}
 	}
 
-	// total supply
-	var supply supplyResp
-	if err := doJSON(rest+"/cosmos/bank/v1beta1/supply", &supply); err == nil && len(supply.Supply) > 0 {
-		snap.TotalSupply = supply.Supply[0].Amount
-		snap.TotalSupplyDenom = supply.Supply[0].Denom
-	}
-
-	// inflation
-	var inf inflationResp
-	if err := doJSON(rest+"/cosmos/mint/v1beta1/inflation", &inf); err == nil {
-		snap.Inflation = parseFloat(inf.Inflation)
-	}
-
-	// annual provisions
-	var ap annualProvisionsResp
-	if err := doJSON(rest+"/cosmos/mint/v1beta1/annual-provisions", &ap); err == nil {
-		snap.AnnualProvisions = ap.AnnualProvisions
-	}
-
-	// community pool
-	var cp communityPoolResp
-	if err := doJSON(rest+"/cosmos/distribution/v1beta1/community_pool", &cp); err == nil {
-		snap.CommunityPool = formatCoins(cp.Pool, "")
-	}
-
-	preferDenom := snap.Params.BondDenom
-	if preferDenom == "" {
-		preferDenom = snap.TotalSupplyDenom
-	}
-	snap.ModuleBalances = FetchModuleBalances(rest, preferDenom)
-
-	// base fee
-	var bf baseFeeResp
-	if err := doJSON(rest+"/cosmos/evm/feemarket/v1/base_fee", &bf); err == nil {
-		snap.BaseFee = bf.BaseFee
-	}
-
-	// block gas
-	var bg blockGasResp
-	if err := doJSON(rest+"/cosmos/evm/feemarket/v1/block_gas", &bg); err == nil {
-		snap.BlockGas, _ = strconv.ParseUint(bg.Gas, 10, 64)
-	}
-
-	// Parent block gas (block_results) + current block feemarket begin event
-	if snap.BlockHeight > 0 {
-		parent := FetchBlockResults(rpc, snap.BlockHeight-1)
-		if parent.OK {
-			snap.ParentBlockResultsOK = true
-			snap.ParentBlockGasUsed = parent.GasUsedSum
-			snap.ParentBlockGasWanted = parent.BlockGasWanted
+	if !opts.SkipEconomics {
+		// total supply
+		var supply supplyResp
+		if err := doJSON(rest+"/cosmos/bank/v1beta1/supply", &supply); err == nil && len(supply.Supply) > 0 {
+			snap.TotalSupply = supply.Supply[0].Amount
+			snap.TotalSupplyDenom = supply.Supply[0].Denom
 		}
+
+		// inflation
+		var inf inflationResp
+		if err := doJSON(rest+"/cosmos/mint/v1beta1/inflation", &inf); err == nil {
+			snap.Inflation = parseFloat(inf.Inflation)
+		}
+
+		// annual provisions
+		var ap annualProvisionsResp
+		if err := doJSON(rest+"/cosmos/mint/v1beta1/annual-provisions", &ap); err == nil {
+			snap.AnnualProvisions = ap.AnnualProvisions
+		}
+
+		// community pool
+		var cp communityPoolResp
+		if err := doJSON(rest+"/cosmos/distribution/v1beta1/community_pool", &cp); err == nil {
+			snap.CommunityPool = formatCoins(cp.Pool, "")
+		}
+
+		preferDenom := snap.Params.BondDenom
+		if preferDenom == "" {
+			preferDenom = snap.TotalSupplyDenom
+		}
+		snap.ModuleBalances = FetchModuleBalances(rest, preferDenom)
+
+		// base fee
+		var bf baseFeeResp
+		if err := doJSON(rest+"/cosmos/evm/feemarket/v1/base_fee", &bf); err == nil {
+			snap.BaseFee = bf.BaseFee
+		}
+
+		// block gas
+		var bg blockGasResp
+		if err := doJSON(rest+"/cosmos/evm/feemarket/v1/block_gas", &bg); err == nil {
+			snap.BlockGas, _ = strconv.ParseUint(bg.Gas, 10, 64)
+		}
+
+		// Parent block gas (block_results) + current block feemarket begin event
 		if snap.BlockHeight > 0 {
+			parent := FetchBlockResults(rpc, snap.BlockHeight-1)
+			if parent.OK {
+				snap.ParentBlockResultsOK = true
+				snap.ParentBlockGasUsed = parent.GasUsedSum
+				snap.ParentBlockGasWanted = parent.BlockGasWanted
+			}
 			cur := FetchBlockResults(rpc, snap.BlockHeight)
 			if cur.OK && cur.BaseFeeEvent != "" {
 				snap.ParentBaseFeeEvent = cur.BaseFeeEvent
 			}
 		}
-	}
-	if snap.ParentBlockGasWanted == 0 && snap.BlockGas > 0 {
-		snap.ParentBlockGasWanted = snap.BlockGas
-	}
-	if snap.ParentBlockGasUsed > 0 && snap.BaseFee != "" {
-		baseFeeF := parseFloat(snap.BaseFee)
-		if baseFeeF > 0 {
-			fee := baseFeeF * float64(snap.ParentBlockGasUsed)
-			snap.LastBlockFeeRaw = fmt.Sprintf("%.0f", fee)
+		if snap.ParentBlockGasWanted == 0 && snap.BlockGas > 0 {
+			snap.ParentBlockGasWanted = snap.BlockGas
+		}
+		if snap.ParentBlockGasUsed > 0 && snap.BaseFee != "" {
+			baseFeeF := parseFloat(snap.BaseFee)
+			if baseFeeF > 0 {
+				fee := baseFeeF * float64(snap.ParentBlockGasUsed)
+				snap.LastBlockFeeRaw = fmt.Sprintf("%.0f", fee)
+			}
 		}
 	}
 
-	// governance proposals — try v1beta1 first, fall back to v1
-	var votingProps, depositProps proposalsResp
-	doJSON(fmt.Sprintf("%s/cosmos/gov/v1beta1/proposals?proposal_status=2", rest), &votingProps)
-	doJSON(fmt.Sprintf("%s/cosmos/gov/v1beta1/proposals?proposal_status=1", rest), &depositProps)
-	if len(votingProps.Proposals)+len(depositProps.Proposals) == 0 {
-		doJSON(fmt.Sprintf("%s/cosmos/gov/v1/proposals?proposal_status=2", rest), &votingProps)
-		doJSON(fmt.Sprintf("%s/cosmos/gov/v1/proposals?proposal_status=1", rest), &depositProps)
-	}
+	if !opts.SkipGovernance {
+		// governance proposals — try v1beta1 first, fall back to v1
+		var votingProps, depositProps proposalsResp
+		doJSON(fmt.Sprintf("%s/cosmos/gov/v1beta1/proposals?proposal_status=2", rest), &votingProps)
+		doJSON(fmt.Sprintf("%s/cosmos/gov/v1beta1/proposals?proposal_status=1", rest), &depositProps)
+		if len(votingProps.Proposals)+len(depositProps.Proposals) == 0 {
+			doJSON(fmt.Sprintf("%s/cosmos/gov/v1/proposals?proposal_status=2", rest), &votingProps)
+			doJSON(fmt.Sprintf("%s/cosmos/gov/v1/proposals?proposal_status=1", rest), &depositProps)
+		}
 
-	// parse voting proposals
-	for _, p := range votingProps.Proposals {
-		snap.VotingProposals = append(snap.VotingProposals, parseProposal(p))
-	}
-	// parse deposit proposals
-	for _, p := range depositProps.Proposals {
-		snap.DepositProposals = append(snap.DepositProposals, parseProposal(p))
-	}
+		for _, p := range votingProps.Proposals {
+			snap.VotingProposals = append(snap.VotingProposals, parseProposal(p))
+		}
+		for _, p := range depositProps.Proposals {
+			snap.DepositProposals = append(snap.DepositProposals, parseProposal(p))
+		}
 
-	// fetch tallies for voting-period proposals concurrently
-	if len(snap.VotingProposals) > 0 {
-		tallies := make([]ProposalTally, len(snap.VotingProposals))
-		var twg sync.WaitGroup
-		for i, vp := range snap.VotingProposals {
-			twg.Add(1)
-			go func(idx int, id uint64) {
-				defer twg.Done()
-				var tr proposalTallyResp
-				tallyURL := fmt.Sprintf("%s/cosmos/gov/v1beta1/proposals/%d/tally", rest, id)
-				if err := doJSON(tallyURL, &tr); err != nil {
-					tallyURL = fmt.Sprintf("%s/cosmos/gov/v1/proposals/%d/tally", rest, id)
-					_ = doJSON(tallyURL, &tr)
-				}
-				if tr.Tally.Yes != "" || tr.Tally.No != "" || tr.Tally.Abstain != "" || tr.Tally.NoWithVeto != "" {
-					tallies[idx] = ProposalTally{
-						Yes:        tr.Tally.Yes,
-						No:         tr.Tally.No,
-						Abstain:    tr.Tally.Abstain,
-						NoWithVeto: tr.Tally.NoWithVeto,
+		if len(snap.VotingProposals) > 0 {
+			tallies := make([]ProposalTally, len(snap.VotingProposals))
+			var twg sync.WaitGroup
+			for i, vp := range snap.VotingProposals {
+				twg.Add(1)
+				go func(idx int, id uint64) {
+					defer twg.Done()
+					var tr proposalTallyResp
+					tallyURL := fmt.Sprintf("%s/cosmos/gov/v1beta1/proposals/%d/tally", rest, id)
+					if err := doJSON(tallyURL, &tr); err != nil {
+						tallyURL = fmt.Sprintf("%s/cosmos/gov/v1/proposals/%d/tally", rest, id)
+						_ = doJSON(tallyURL, &tr)
 					}
-				}
-			}(i, vp.ID)
-		}
-		twg.Wait()
-		for i := range snap.VotingProposals {
-			snap.VotingProposals[i].Tally = tallies[i]
+					if tr.Tally.Yes != "" || tr.Tally.No != "" || tr.Tally.Abstain != "" || tr.Tally.NoWithVeto != "" {
+						tallies[idx] = ProposalTally{
+							Yes:        tr.Tally.Yes,
+							No:         tr.Tally.No,
+							Abstain:    tr.Tally.Abstain,
+							NoWithVeto: tr.Tally.NoWithVeto,
+						}
+					}
+				}(i, vp.ID)
+			}
+			twg.Wait()
+			for i := range snap.VotingProposals {
+				snap.VotingProposals[i].Tally = tallies[i]
+			}
 		}
 	}
 
@@ -921,73 +920,75 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 		snap.IBCClientCount = len(ibcClients.ClientStates)
 	}
 
-	// per-validator rewards and commission (concurrent, max 10 workers)
-	type valResult struct {
-		valoper       string
-		rewards       string
-		rewardsAmt    string
-		rewardsDenom  string
-		commEarned    string
-		commEarnedAmt string
-		commEarnedDen string
-	}
 	valList := make([]ValidatorInfo, 0, len(allVals))
 	for _, v := range allVals {
 		valList = append(valList, v)
 	}
 
-	results := make([]valResult, len(valList))
-	sem := make(chan struct{}, 10)
-	var wg sync.WaitGroup
-	for i, v := range valList {
-		wg.Add(1)
-		go func(idx int, val ValidatorInfo) {
-			defer wg.Done()
-			sem <- struct{}{}
-			defer func() { <-sem }()
+	if !opts.SkipValidatorRewards {
+		type valResult struct {
+			valoper       string
+			rewards       string
+			rewardsAmt    string
+			rewardsDenom  string
+			commEarned    string
+			commEarnedAmt string
+			commEarnedDen string
+		}
+		results := make([]valResult, len(valList))
+		sem := make(chan struct{}, 10)
+		var rwg sync.WaitGroup
+		for i, v := range valList {
+			rwg.Add(1)
+			go func(idx int, val ValidatorInfo) {
+				defer rwg.Done()
+				sem <- struct{}{}
+				defer func() { <-sem }()
 
-			res := valResult{valoper: val.OperatorAddr}
+				res := valResult{valoper: val.OperatorAddr}
 
-			var rewards validatorRewardsResp
-			if err := doJSON(fmt.Sprintf("%s/cosmos/distribution/v1beta1/validators/%s/outstanding_rewards", rest, val.OperatorAddr), &rewards); err == nil {
-				res.rewards = formatCoins(rewards.Rewards.Rewards, "")
-				if len(rewards.Rewards.Rewards) > 0 {
-					res.rewardsAmt = rewards.Rewards.Rewards[0].Amount
-					res.rewardsDenom = rewards.Rewards.Rewards[0].Denom
+				var rewards validatorRewardsResp
+				if err := doJSON(fmt.Sprintf("%s/cosmos/distribution/v1beta1/validators/%s/outstanding_rewards", rest, val.OperatorAddr), &rewards); err == nil {
+					res.rewards = formatCoins(rewards.Rewards.Rewards, "")
+					if len(rewards.Rewards.Rewards) > 0 {
+						res.rewardsAmt = rewards.Rewards.Rewards[0].Amount
+						res.rewardsDenom = rewards.Rewards.Rewards[0].Denom
+					}
 				}
-			}
 
-			var comm validatorCommissionResp
-			if err := doJSON(fmt.Sprintf("%s/cosmos/distribution/v1beta1/validators/%s/commission", rest, val.OperatorAddr), &comm); err == nil {
-				res.commEarned = formatCoins(comm.Commission.Commission, "")
-				if len(comm.Commission.Commission) > 0 {
-					res.commEarnedAmt = comm.Commission.Commission[0].Amount
-					res.commEarnedDen = comm.Commission.Commission[0].Denom
+				var comm validatorCommissionResp
+				if err := doJSON(fmt.Sprintf("%s/cosmos/distribution/v1beta1/validators/%s/commission", rest, val.OperatorAddr), &comm); err == nil {
+					res.commEarned = formatCoins(comm.Commission.Commission, "")
+					if len(comm.Commission.Commission) > 0 {
+						res.commEarnedAmt = comm.Commission.Commission[0].Amount
+						res.commEarnedDen = comm.Commission.Commission[0].Denom
+					}
 				}
+
+				results[idx] = res
+			}(i, v)
+		}
+		rwg.Wait()
+
+		rewardMap := map[string]valResult{}
+		for _, r := range results {
+			rewardMap[r.valoper] = r
+		}
+		for i, v := range valList {
+			if r, ok := rewardMap[v.OperatorAddr]; ok {
+				valList[i].OutstandingRewards = r.rewards
+				valList[i].OutstandingRewardsAmt = r.rewardsAmt
+				valList[i].OutstandingRewardsDenom = r.rewardsDenom
+				valList[i].CommissionEarned = r.commEarned
+				valList[i].CommissionEarnedAmt = r.commEarnedAmt
+				valList[i].CommissionEarnedDenom = r.commEarnedDen
 			}
-
-			results[idx] = res
-		}(i, v)
-	}
-	wg.Wait()
-
-	rewardMap := map[string]valResult{}
-	for _, r := range results {
-		rewardMap[r.valoper] = r
+		}
 	}
 
-	// compute total bonded for VP%
 	totalBonded := parseFloat(snap.BondedTokens)
 
 	for i, v := range valList {
-		if r, ok := rewardMap[v.OperatorAddr]; ok {
-			valList[i].OutstandingRewards = r.rewards
-			valList[i].OutstandingRewardsAmt = r.rewardsAmt
-			valList[i].OutstandingRewardsDenom = r.rewardsDenom
-			valList[i].CommissionEarned = r.commEarned
-			valList[i].CommissionEarnedAmt = r.commEarnedAmt
-			valList[i].CommissionEarnedDenom = r.commEarnedDen
-		}
 		// VP%
 		tokens := parseFloat(v.VotingPowerTokens)
 		if totalBonded > 0 {
