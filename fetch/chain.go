@@ -48,6 +48,12 @@ type ChainSnapshot struct {
 	// BlockGasLimit is consensus block.max_gas (-1 = unlimited, 0 = unknown).
 	BlockGasLimit int64
 
+	// Parent block (H-1) from CometBFT block_results.
+	ParentBlockGasUsed    uint64
+	ParentBlockGasWanted  uint64 // stored wanted (block_gas event or REST fallback)
+	ParentBlockResultsOK  bool
+	ParentBaseFeeEvent    string // fee_market base_fee from begin_block at H (optional)
+
 	VotingProposals []ProposalInfo
 	DepositProposals []ProposalInfo
 
@@ -131,6 +137,8 @@ type ChainParams struct {
 	Elasticity         int64
 	NoBaseFee                bool
 	BaseFeeChangeDenominator int64
+	MinGasMultiplier         float64
+	MinGasPriceRaw           string
 	ERC20Enabled       bool
 	ActiveStaticPrecompiles []string
 	HistoryServeWindow      int64
@@ -396,6 +404,7 @@ type feemarketParamsResp struct {
 		NoBaseFee                bool   `json:"no_base_fee"`
 		BaseFeeChangeDenominator int64  `json:"base_fee_change_denominator"`
 		MinGasPrice              string `json:"min_gas_price"`
+		MinGasMultiplier         string `json:"min_gas_multiplier"`
 		ElasticityMultiplier     int64  `json:"elasticity_multiplier"`
 	} `json:"params"`
 }
@@ -801,6 +810,25 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 		snap.BlockGas, _ = strconv.ParseUint(bg.Gas, 10, 64)
 	}
 
+	// Parent block gas (block_results) + current block feemarket begin event
+	if snap.BlockHeight > 0 {
+		parent := FetchBlockResults(rpc, snap.BlockHeight-1)
+		if parent.OK {
+			snap.ParentBlockResultsOK = true
+			snap.ParentBlockGasUsed = parent.GasUsedSum
+			snap.ParentBlockGasWanted = parent.BlockGasWanted
+		}
+		if snap.BlockHeight > 0 {
+			cur := FetchBlockResults(rpc, snap.BlockHeight)
+			if cur.OK && cur.BaseFeeEvent != "" {
+				snap.ParentBaseFeeEvent = cur.BaseFeeEvent
+			}
+		}
+	}
+	if snap.ParentBlockGasWanted == 0 && snap.BlockGas > 0 {
+		snap.ParentBlockGasWanted = snap.BlockGas
+	}
+
 	// governance proposals — try v1beta1 first, fall back to v1
 	var votingProps, depositProps proposalsResp
 	doJSON(fmt.Sprintf("%s/cosmos/gov/v1beta1/proposals?proposal_status=2", rest), &votingProps)
@@ -1005,7 +1033,9 @@ func FetchParams(rest string) ChainParams {
 
 	var fmp feemarketParamsResp
 	if err := doJSON(rest+"/cosmos/evm/feemarket/v1/params", &fmp); err == nil {
+		p.MinGasPriceRaw = fmp.Params.MinGasPrice
 		p.MinGasPrice = parseFloat(fmp.Params.MinGasPrice)
+		p.MinGasMultiplier = parseFloat(fmp.Params.MinGasMultiplier)
 		p.Elasticity = fmp.Params.ElasticityMultiplier
 		p.NoBaseFee = fmp.Params.NoBaseFee
 		p.BaseFeeChangeDenominator = fmp.Params.BaseFeeChangeDenominator

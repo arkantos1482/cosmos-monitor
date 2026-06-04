@@ -36,6 +36,9 @@ func fullPage(moniker, fragment string) string {
 <title>pmtop — %s</title>
 <script src="https://unpkg.com/htmx.org@2.0.3/dist/htmx.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"/>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
 <style>%s</style>
 </head>
 <body>
@@ -45,8 +48,20 @@ func fullPage(moniker, fragment string) string {
 <script>
 mermaid.initialize({startOnLoad:false,theme:'dark',securityLevel:'loose'});
 function renderMermaid(){mermaid.run({querySelector:'#data .mermaid'});}
-document.addEventListener('DOMContentLoaded',renderMermaid);
-document.body.addEventListener('htmx:afterSwap',function(e){if(e.detail.target.id==='data')renderMermaid();});
+function renderMath(){
+  if(typeof renderMathInElement!=='function')return;
+  renderMathInElement(document.getElementById('data'),{
+    delimiters:[
+      {left:'$$',right:'$$',display:true},
+      {left:'\\(',right:'\\)',display:false},
+      {left:'\\[',right:'\\]',display:true}
+    ],
+    throwOnError:false
+  });
+}
+function renderDiagrams(){renderMermaid();renderMath();}
+document.addEventListener('DOMContentLoaded',renderDiagrams);
+document.body.addEventListener('htmx:afterSwap',function(e){if(e.detail.target.id==='data')renderDiagrams();});
 </script>
 </body>
 </html>`, html.EscapeString(moniker), pageCSS, fragment)
@@ -71,6 +86,8 @@ tbody tr:hover td{background:#1c2128}
 pre{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:.6rem 1rem;margin:.4rem 0 .6rem;overflow-x:auto}
 .mermaid{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:.6rem;margin:.4rem 0 .6rem;overflow-x:auto;text-align:center}
 .mermaid svg{max-width:100%;height:auto}
+.fee-math{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:.8rem 1rem;margin:.4rem 0 .6rem;overflow-x:auto}
+.fee-math .katex{font-size:1.05em}
 code{font-family:inherit;font-size:12px;color:var(--cyan);background:transparent}
 pre code{color:var(--fg)}
 p{margin:.3rem 0;color:var(--dim);font-size:12px}

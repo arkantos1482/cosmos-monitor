@@ -19,6 +19,23 @@ func TestBuildMarkdownWebMermaid(t *testing.T) {
 	}
 }
 
+func TestBuildMarkdownWebFeeMath(t *testing.T) {
+	d := WebData{
+		BlockHeight: "100", BaseFee: "1", BaseFeeRaw: "1000",
+		BlockGas: "21000", ParentBlockGasWanted: 21000,
+		BlockGasLimit: 100_000_000, Elasticity: 2,
+		BaseFeeChangeDenominator: 8, MinGasMultiplier: "0.5",
+		ParentBlockResultsOK: true,
+	}
+	md := buildMarkdown(d, true)
+	if !strings.Contains(md, `class="fee-math"`) {
+		t.Fatal("web markdown should include fee-math div")
+	}
+	if !strings.Contains(md, `W_{\text{stored}}`) {
+		t.Fatal("web markdown should include katex formula")
+	}
+}
+
 func TestBuildMarkdownTerminalASCII(t *testing.T) {
 	d := WebData{Inflation: 3.5, PMTEnabled: true, PMTRate: "0.1 PMT/block"}
 	md := buildMarkdown(d, false)

@@ -104,47 +104,26 @@ func TestFeemarketMechanicsTopology(t *testing.T) {
 	d := WebData{
 		BlockHeight:              "482,160",
 		BlockGas:                 "21000",
+		ParentBlockGasWanted:     21000,
 		BlockGasLimit:            100_000_000,
 		Elasticity:               2,
 		BaseFee:                  "1000",
 		BaseFeeChangeDenominator: 8,
-		MinGasPrice:              "0.001 PMT",
-		AdjCap:                   "±0.01/block",
 		GasPrice:                 "1100",
 		MempoolTxs:               1,
-		PendingTx:                2,
-		QueuedTx:                 3,
 	}
 	src := feemarketMechanicsMermaid(d)
 	for _, want := range []string{
-		"gasWanted --> compare",
-		"gasTarget --> compare",
-		"compare --> calc",
-		"parentBF --> calc",
-		"params --> calc",
-		"endBlk -->|prior block| gasWanted",
+		"endBlk -->|prior block| stored",
+		"stored --> calc",
+		"calc -->|↓| baseFee",
+		"baseFee --> ante",
 		"ante --> endBlk",
 		"CalculateBaseFee",
-		"wanted 21,000",
-		"target 50,000,000",
-		"fee ↓",
-		"21,000 < 50,000,000 ↓",
-		"limit 100,000,000 ÷ 2",
-		"height 482,160",
-		"mempool 1 · evm 2+3",
-		"elasticity 2",
-		"change denom 8",
-		"min_gas 0.001 PMT",
-		"max Δ",
-		"eth_gasPrice",
+		"stored W",
 	} {
 		if !strings.Contains(src, want) {
 			t.Fatalf("expected %q in feemarket mermaid:\n%s", want, src)
-		}
-	}
-	for _, forbidden := range []string{"gasUsed --> gasTarget", "paramsTune", "paramsFloor", "gasUsed[", "drives fee"} {
-		if strings.Contains(src, forbidden) {
-			t.Fatalf("obsolete feemarket layout fragment %q", forbidden)
 		}
 	}
 	out, err := renderMermaid(src)
@@ -158,11 +137,13 @@ func TestFeemarketMechanicsTopology(t *testing.T) {
 }
 
 func TestFeemarketMechanicsWebSubgraphs(t *testing.T) {
-	src := feemarketMechanicsMermaidWeb(WebData{BlockGas: "21000", Elasticity: 2})
+	src := feemarketMechanicsMermaidWeb(WebData{
+		BlockGas: "21000", Elasticity: 2, ParentBlockGasWanted: 21000,
+	})
 	if !strings.Contains(src, "subgraph beginBlock") {
-		t.Fatal("web feemarket diagram should group BeginBlock inputs")
+		t.Fatal("web feemarket diagram should group BeginBlock")
 	}
-	if !strings.Contains(src, "gasWanted --> compare") {
-		t.Fatal("web diagram should keep compare fan-in")
+	if !strings.Contains(src, "stored --> calc") {
+		t.Fatal("web diagram should link stored to calc")
 	}
 }

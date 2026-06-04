@@ -384,184 +384,103 @@ func parseDiagramUint(s string) uint64 {
 }
 
 func feemarketGasNumbers(d WebData) (wanted, target uint64, ok bool) {
-	if d.BlockGas != "" {
-		wanted = parseDiagramUint(d.BlockGas)
-	}
+	wanted = feemarketStoredWanted(d)
 	if d.BlockGasLimit > 0 && d.Elasticity > 0 {
 		return wanted, d.BlockGasLimit / uint64(d.Elasticity), true
 	}
 	return wanted, 0, false
 }
 
-func feemarketGasWantedLabel(d WebData) string {
-	lines := []string{"parent block gas wanted", "GetBlockGasWanted store"}
-	if d.BlockGas != "" {
-		lines = append(lines, d.BlockGas)
-	}
-	return stackLabelText(lines...)
-}
-
-func feemarketGasTargetLabel(d WebData) string {
-	_, target, ok := feemarketGasNumbers(d)
-	lines := []string{"gas target"}
-	if ok {
-		lines = append(lines, fmt.Sprintf("limit %s ÷ %d", fmtInt(int64(d.BlockGasLimit)), d.Elasticity))
-		lines = append(lines, "= "+fmtInt(int64(target)))
-	} else if d.Elasticity > 0 {
-		lines = append(lines, fmt.Sprintf("÷ elasticity %d", d.Elasticity))
-	}
-	return stackLabelText(lines...)
-}
-
-func feemarketParentBFLabel(d WebData) string {
-	denom := diagramDenom(d)
-	lines := []string{"parent base fee", "params.BaseFee input"}
-	if d.NoBaseFee {
-		return stackLabelText("no_base_fee", "EIP-1559 off")
-	}
-	if d.BaseFee != "" {
-		lines = append(lines, fetch.FormatFeeAmount(d.BaseFee, denom))
-	}
-	return stackLabelText(lines...)
-}
-
-func feemarketParamsLabel(d WebData) string {
-	lines := []string{"x/feemarket params"}
-	if d.BaseFeeChangeDenominator > 0 {
-		lines = append(lines, fmt.Sprintf("change denom %d", d.BaseFeeChangeDenominator))
-	}
-	if d.Elasticity > 0 {
-		lines = append(lines, fmt.Sprintf("elasticity %d", d.Elasticity))
-	}
-	if d.MinGasPrice != "" {
-		lines = append(lines, "min_gas "+d.MinGasPrice)
-	}
-	if d.AdjCap != "" {
-		lines = append(lines, "max Δ "+d.AdjCap)
-	}
-	return stackLabelText(lines...)
-}
-
-func feemarketCalcLabel(d WebData) string {
-	return stackLabelText("BeginBlock", "CalculateBaseFee", "CalcGasBaseFee")
-}
-
-func feemarketCompareLabel(d WebData) string {
-	wanted, target, ok := feemarketGasNumbers(d)
-	lines := []string{"used vs target"}
-	if ok {
-		lines = append(lines, fmt.Sprintf("wanted %s", fmtInt(int64(wanted))))
-		lines = append(lines, fmt.Sprintf("target %s", fmtInt(int64(target))))
-		verdict := "="
-		switch {
-		case wanted > target:
-			verdict = "fee ↑"
-		case wanted < target:
-			verdict = "fee ↓"
-		}
-		lines = append(lines, verdict)
-	} else if d.BlockGas != "" {
-		lines = append(lines, "wanted "+d.BlockGas)
-	}
-	return stackLabelText(lines...)
-}
-
 func feemarketCalcEdge(d WebData) string {
 	wanted, target, ok := feemarketGasNumbers(d)
 	if !ok {
-		return "wanted vs target"
+		return "vs target"
 	}
 	if wanted > target {
-		return fmt.Sprintf("%s > %s ↑", fmtInt(int64(wanted)), fmtInt(int64(target)))
+		return "↑"
 	}
 	if wanted < target {
-		return fmt.Sprintf("%s < %s ↓", fmtInt(int64(wanted)), fmtInt(int64(target)))
+		return "↓"
 	}
-	return fmt.Sprintf("%s = %s", fmtInt(int64(wanted)), fmtInt(int64(target)))
+	return "="
 }
 
-func feemarketBaseFeeLabel(d WebData) string {
-	denom := diagramDenom(d)
+func feemarketSlimEndBlockLabel(d WebData) string {
+	lines := []string{"EndBlock N-1", "max(wanted×μ, gasUsed)"}
+	if d.ParentBlockGasUsed > 0 {
+		lines = append(lines, "used "+fmtInt(int64(d.ParentBlockGasUsed)))
+	}
+	return stackLabelText(lines...)
+}
+
+func feemarketSlimStoredLabel(d WebData) string {
+	wanted := feemarketStoredWanted(d)
+	lines := []string{"stored W", "GetBlockGasWanted"}
+	if wanted > 0 {
+		lines = append(lines, fmtInt(int64(wanted)))
+	}
+	return stackLabelText(lines...)
+}
+
+func feemarketSlimCalcLabel(d WebData) string {
+	return stackLabelText("BeginBlock N", "CalculateBaseFee")
+}
+
+func feemarketSlimBaseFeeLabel(d WebData) string {
 	if d.NoBaseFee {
-		return stackLabelText("base fee disabled", "no_base_fee")
+		return stackLabelText("no_base_fee")
 	}
-	lines := []string{"base fee this block", "SetBaseFee + event"}
+	lines := []string{"base fee @ N"}
 	if d.BaseFee != "" {
-		lines = append(lines, fetch.FormatFeeAmount(d.BaseFee, denom))
+		lines = append(lines, d.BaseFee)
 	}
 	return stackLabelText(lines...)
 }
 
-func feemarketAnteLabel(d WebData) string {
-	lines := []string{"ante VerifyFee + DeductFees"}
-	lines = append(lines, fmt.Sprintf("mempool %d · evm %d+%d", d.MempoolTxs, d.PendingTx, d.QueuedTx))
-	return stackLabelText(lines...)
-}
-
-func feemarketGasRPCLabel(d WebData) string {
+func feemarketSlimAnteLabel(d WebData) string {
 	denom := diagramDenom(d)
-	lines := []string{"eth_gasPrice", "JSON-RPC hint"}
+	lines := []string{"ante · eth_gasPrice"}
 	if d.GasPrice != "" {
 		lines = append(lines, fetch.FormatFeeAmount(d.GasPrice, denom))
 	}
+	lines = append(lines, fmt.Sprintf("mempool %d", d.MempoolTxs))
 	return stackLabelText(lines...)
 }
 
-func feemarketEndBlockLabel(d WebData) string {
-	lines := []string{"EndBlock", "stores block_gas_wanted"}
-	if d.BlockGas != "" {
-		lines = append(lines, "last: "+d.BlockGas)
-	}
-	if d.BlockHeight != "" {
-		lines = append(lines, "height "+d.BlockHeight)
-	}
-	return stackLabelText(lines...)
+func writeFeemarketSlimNodes(b *strings.Builder, d WebData, web bool) {
+	writeStackNode(b, "endBlk", feemarketSlimEndBlockLabel(d), web)
+	writeStackNode(b, "stored", feemarketSlimStoredLabel(d), web)
+	writeStackNode(b, "calc", feemarketSlimCalcLabel(d), web)
+	writeStackNode(b, "baseFee", feemarketSlimBaseFeeLabel(d), web)
+	writeStackNode(b, "ante", feemarketSlimAnteLabel(d), web)
 }
 
-func writeFeemarketNodes(b *strings.Builder, d WebData, web bool) {
-	writeStackNode(b, "endBlk", feemarketEndBlockLabel(d), web)
-	writeStackNode(b, "gasWanted", feemarketGasWantedLabel(d), web)
-	writeStackNode(b, "gasTarget", feemarketGasTargetLabel(d), web)
-	writeStackNode(b, "compare", feemarketCompareLabel(d), web)
-	writeStackNode(b, "parentBF", feemarketParentBFLabel(d), web)
-	writeStackNode(b, "params", feemarketParamsLabel(d), web)
-	writeStackNode(b, "calc", feemarketCalcLabel(d), web)
-	writeStackNode(b, "baseFee", feemarketBaseFeeLabel(d), web)
-	writeStackNode(b, "ante", feemarketAnteLabel(d), web)
-	writeStackNode(b, "gasRPC", feemarketGasRPCLabel(d), web)
-}
-
-func writeFeemarketEdges(b *strings.Builder, d WebData, web bool) {
-	fmt.Fprintf(b, "  endBlk -->|%s| gasWanted\n", mermaidEdgeText("prior block", web))
-	fmt.Fprintf(b, "  gasWanted --> compare\n")
-	fmt.Fprintf(b, "  gasTarget --> compare\n")
-	fmt.Fprintf(b, "  parentBF --> calc\n")
-	fmt.Fprintf(b, "  params --> calc\n")
-	fmt.Fprintf(b, "  compare --> calc\n")
+func writeFeemarketSlimEdges(b *strings.Builder, d WebData, web bool) {
+	fmt.Fprintf(b, "  endBlk -->|%s| stored\n", mermaidEdgeText("prior block", web))
+	fmt.Fprintf(b, "  stored --> calc\n")
 	fmt.Fprintf(b, "  calc -->|%s| baseFee\n", mermaidEdgeText(feemarketCalcEdge(d), web))
 	fmt.Fprintf(b, "  baseFee --> ante\n")
-	fmt.Fprintf(b, "  baseFee --> gasRPC\n")
 	fmt.Fprintf(b, "  ante --> endBlk\n")
 }
 
-// feemarketMechanicsMermaid is TD fan-in for mermaid-ascii (terminal).
+// feemarketMechanicsMermaid is TD spine for mermaid-ascii (terminal).
 func feemarketMechanicsMermaid(d WebData) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "graph TD\n")
-	writeFeemarketNodes(&b, d, false)
-	writeFeemarketEdges(&b, d, false)
+	writeFeemarketSlimNodes(&b, d, false)
+	writeFeemarketSlimEdges(&b, d, false)
 	return b.String()
 }
 
-// feemarketMechanicsMermaidWeb is LR with block-phase grouping for mermaid.js.
+// feemarketMechanicsMermaidWeb is LR with BeginBlock grouping for mermaid.js.
 func feemarketMechanicsMermaidWeb(d WebData) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "graph LR\n")
-	writeFeemarketNodes(&b, d, true)
-	fmt.Fprintf(&b, "  subgraph endBlock[\"EndBlock N-1\"]\n    endBlk\n  end\n")
-	fmt.Fprintf(&b, "  subgraph beginBlock[\"BeginBlock N\"]\n    gasWanted\n    gasTarget\n    compare\n    parentBF\n    params\n    calc\n    baseFee\n  end\n")
-	fmt.Fprintf(&b, "  subgraph execution[\"Block N txs\"]\n    ante\n    gasRPC\n  end\n")
-	writeFeemarketEdges(&b, d, true)
+	writeFeemarketSlimNodes(&b, d, true)
+	fmt.Fprintf(&b, "  subgraph endBlock[\"EndBlock N-1\"]\n    endBlk\n    stored\n  end\n")
+	fmt.Fprintf(&b, "  subgraph beginBlock[\"BeginBlock N\"]\n    calc\n    baseFee\n  end\n")
+	fmt.Fprintf(&b, "  subgraph execution[\"Block N\"]\n    ante\n  end\n")
+	writeFeemarketSlimEdges(&b, d, true)
 	return b.String()
 }
 

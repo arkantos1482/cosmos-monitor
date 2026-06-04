@@ -89,14 +89,20 @@ type WebData struct {
 
 	// fee market (shown in economics)
 	BaseFee         string
+	BaseFeeRaw      string
 	BlockGas        string
 	BlockGasLimit   uint64 // consensus max_gas; 0 when unknown or unlimited
 	GasPrice        string
 	MinGasPrice     string
+	MinGasPriceRaw  string
+	MinGasMultiplier string
 	AdjCap          string
 	NoBaseFee       bool
 	Elasticity      int64
 	BaseFeeChangeDenominator int64
+	ParentBlockGasUsed       uint64
+	ParentBlockGasWanted     uint64
+	ParentBlockResultsOK     bool
 
 	// slashing (validator set section)
 	SlashWindow     string
@@ -422,6 +428,7 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 		feeDenom = denom
 	}
 	if chain.BaseFee != "" {
+		d.BaseFeeRaw = chain.BaseFee
 		d.BaseFee = fetch.FormatFeeAmount(chain.BaseFee, feeDenom)
 	}
 	if chain.BlockGas > 0 {
@@ -430,10 +437,22 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	if chain.BlockGasLimit > 0 {
 		d.BlockGasLimit = uint64(chain.BlockGasLimit)
 	}
+	d.ParentBlockGasUsed = chain.ParentBlockGasUsed
+	d.ParentBlockGasWanted = chain.ParentBlockGasWanted
+	d.ParentBlockResultsOK = chain.ParentBlockResultsOK
+	if d.ParentBlockGasWanted == 0 && chain.BlockGas > 0 {
+		d.ParentBlockGasWanted = chain.BlockGas
+	}
 	d.GasPrice = ev.GasPrice
 	d.BaseFeeChangeDenominator = p.BaseFeeChangeDenominator
+	if p.MinGasPriceRaw != "" {
+		d.MinGasPriceRaw = p.MinGasPriceRaw
+	}
 	if p.MinGasPrice > 0 {
 		d.MinGasPrice = fetch.FormatAmountUnit(p.MinGasPrice, denom)
+	}
+	if p.MinGasMultiplier > 0 {
+		d.MinGasMultiplier = fmt.Sprintf("%.4g", p.MinGasMultiplier)
 	}
 	d.NoBaseFee = p.NoBaseFee
 	d.Elasticity = p.Elasticity

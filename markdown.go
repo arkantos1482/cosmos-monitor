@@ -323,12 +323,11 @@ func buildMarkdown(d WebData, web bool) string {
 
 	subsection("Fee market (x/feemarket)")
 	if web {
-		hint("Interactive Mermaid diagram (below). EndBlock stores parent gas wanted → BeginBlock compares it to the gas target and runs `CalculateBaseFee` → ante enforces base fee on EVM txs → EndBlock again. Live values from `/cosmos/evm/feemarket/v1/...` and `eth_gasPrice`. Payout path is in Overview above.")
+		hint("KaTeX formulas (below) show live EIP-1559 math from chain REST, CometBFT `block_results`, and `eth_gasPrice`. Slim Mermaid diagram shows ABCI order only. Payout path is in Overview above.")
 	} else {
-		hint("ASCII diagram via mermaid-ascii. EndBlock → parent gas wanted → compare vs target → `CalculateBaseFee` → ante on EVM txs → EndBlock. Live values from feemarket REST and `eth_gasPrice`. Payout path is in Overview above.")
+		hint("Text receipt + ASCII diagram. Live values from feemarket REST, CometBFT `block_results`, and `eth_gasPrice`. Payout path is in Overview above.")
 	}
-	fmt.Fprintf(w, "_EIP-1559 loop: prior block gas wanted and target set the next base fee; ante rejects txs below it._\n\n")
-	writeFeemarketDiagram(w, d, web)
+	writeFeemarketSection(w, d, web)
 
 	row("model", "EIP-1559  _(base fee rises when blocks are full, falls when empty)_")
 	if d.BaseFee != "" {
