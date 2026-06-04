@@ -72,39 +72,27 @@ func TestBuildGoldenMinimal(t *testing.T) {
 	}
 }
 
-func TestBuildPlainPreservesSections(t *testing.T) {
-	d := model.Report{Moniker: "n", Synced: true, BlockHeight: "1", BondDenom: "apmt"}
-	plain := BuildText(d)
-	if !strings.Contains(plain, "# 1. INFRASTRUCTURE") {
-		t.Fatal("plain output should include infrastructure section")
-	}
-	if !strings.Contains(plain, "# 7. EVM JSON-RPC") {
-		t.Fatal("plain output should include EVM section")
-	}
-}
-
-func TestContentInventoryVsMarkdown(t *testing.T) {
-	// Golden strings that must survive the HTML migration (sample from former markdown output).
+func TestContentInventory(t *testing.T) {
 	d := model.Report{
 		Moniker: "node1", Synced: true, BlockHeight: "482,160",
 		PMTEnabled: true, PMTRate: "0.1 PMT/block",
 		EVMHTTPEndpoint: "http://localhost:8545", EVMChainID: 290290,
 	}
-	out := BuildText(d)
+	out := Build(d)
 	for _, want := range []string{
-		"1. INFRASTRUCTURE",
-		"2. NODE",
-		"3. VALIDATOR SET",
-		"4. THIS VALIDATOR",
-		"5. ECONOMICS",
-		"6. GOVERNANCE",
-		"7. EVM JSON-RPC",
-		"For operators",
-		"Probe health",
+		"<h1>1. INFRASTRUCTURE</h1>",
+		"<h1>2. NODE</h1>",
+		"<h1>3. VALIDATOR SET</h1>",
+		"<h1>4. THIS VALIDATOR</h1>",
+		"<h1>5. ECONOMICS</h1>",
+		"<h1>6. GOVERNANCE</h1>",
+		"<h1>7. EVM JSON-RPC</h1>",
+		"<h2>For operators</h2>",
+		"<h2>Probe health</h2>",
 		"Fee market (x/feemarket)",
 	} {
 		if !strings.Contains(out, want) {
-			t.Fatalf("plain inventory missing %q", want)
+			t.Fatalf("HTML inventory missing %q", want)
 		}
 	}
 }

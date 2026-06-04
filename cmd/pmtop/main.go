@@ -9,9 +9,7 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/fetchall"
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 	"github.com/arkantos1482/cosmos-monitor/internal/render/html"
-	"github.com/arkantos1482/cosmos-monitor/internal/render/terminal"
 	"github.com/arkantos1482/cosmos-monitor/internal/report"
-	"github.com/arkantos1482/cosmos-monitor/internal/tui"
 )
 
 func main() {
@@ -19,15 +17,9 @@ func main() {
 	rest := flag.String("rest", "http://localhost:1317", "Cosmos REST/LCD endpoint")
 	evm := flag.String("evm", "http://localhost:8545", "EVM JSON-RPC endpoint")
 	container := flag.String("container", "evmd-node", "Docker container name")
-	webAddr := flag.String("web", "", "address to serve web UI (e.g. :7777); empty = disabled")
-	dump := flag.Bool("dump", false, "fetch once, print output, and exit")
-	format := flag.String("format", "plain", "output format with --dump: plain (text) or html (fragment)")
+	webAddr := flag.String("web", ":7777", "address to serve web UI (e.g. :7777); empty disables")
+	dump := flag.Bool("dump", false, "fetch once, print HTML fragment to stdout, and exit")
 	flag.Parse()
-
-	if *format != "plain" && *format != "html" {
-		fmt.Fprintf(os.Stderr, "pmtop: unknown --format %q (use plain or html)\n", *format)
-		os.Exit(2)
-	}
 
 	load := func() model.Report {
 		sn := fetchall.Load(*rpc, *rest, *evm, *container)
@@ -36,31 +28,20 @@ func main() {
 
 	if *dump {
 		rep := load()
-		var err error
-		switch *format {
-		case "html":
-			err = (html.Dump{W: os.Stdout}).Render(rep)
-		default:
-			err = terminal.Text{W: os.Stdout}.Render(rep)
-		}
-		if err != nil {
+		if err := (html.Dump{W: os.Stdout}).Render(rep); err != nil {
 			fmt.Fprintf(os.Stderr, "pmtop: %v\n", err)
 			os.Exit(1)
 		}
 		return
 	}
 
-	if *webAddr != "" {
-		html.Start(*webAddr, *evm, func() (fetch.ChainSnapshot, fetch.EVMSnapshot, fetch.SystemSnapshot, fetch.DockerSnapshot) {
-			sn := fetchall.Load(*rpc, *rest, *evm, *container)
-			return sn.Chain, sn.EVM, sn.System, sn.Docker
-		})
+	if *webAddr == "" {
+		fmt.Fprintln(os.Stderr, "pmtop: set -web address or use -dump")
+		os.Exit(2)
 	}
 
-	if err := tui.Run(tui.Config{
-		RPC: *rpc, REST: *rest, EVM: *evm, Container: *container,
-	}); err != nil {
-		fmt.Fprintf(os.Stderr, "pmtop: %v\n", err)
-		os.Exit(1)
-	}
+	html.Start(*webAddr, *evm, func() (fetch.ChainSnapshot, fetch.EVMSnapshot, fetch.SystemSnapshot, fetch.DockerSnapshot) {
+		sn := fetchall.Load(*rpc, *rest, *evm, *container)
+		return sn.Chain, sn.EVM, sn.System, sn.Docker
+	})
 }

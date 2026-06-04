@@ -335,7 +335,7 @@ B_{\text{parent}} + \max(\epsilon,\, \Delta) & W_{\text{stored}} > T \\
 
 	ex.LatexSubstituted = latexDisplayLines(sub)
 
-	// Plain-text receipt (terminal).
+	// Text receipt in <pre> (HTML panel).
 	var lines []string
 	lines = append(lines, ex.SummaryLine)
 	lines = append(lines, "")

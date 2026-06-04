@@ -33,10 +33,8 @@ func Start(addr string, evmEndpoint string, doFetch FetchFunc) {
 		fmt.Fprint(w, fragment)
 	})
 
-	go func() {
-		log.Printf("web UI → http://localhost%s", addr)
-		if err := http.ListenAndServe(addr, nil); err != nil {
-			log.Printf("web server: %v", err)
-		}
-	}()
+	log.Printf("web UI → http://localhost%s", addr)
+	if err := http.ListenAndServe(addr, nil); err != nil {
+		log.Fatalf("web server: %v", err)
+	}
 }

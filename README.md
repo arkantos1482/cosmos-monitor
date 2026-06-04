@@ -6,7 +6,6 @@ Live operations dashboard for PMT / Cosmos EVM nodes.
 
 ```
 fetch → report.Build → model.Report → panel.Build (HTML fragment)
-                                              ├─ terminal: plain text (htmlToPlain)
                                               └─ web: HTMX shell + panel HTML
 ```
 
@@ -18,24 +17,20 @@ fetch → report.Build → model.Report → panel.Build (HTML fragment)
 - `<div class="math-display">` LaTeX blocks (EIP-1559 fee math)
 - HTML tables, lists, and `<pre>` blocks for RPC probe logs
 
-### Terminal (default)
+### Web UI (default)
 
-Interactive TUI prints plain text derived from the same panel (all sections preserved). Keys: `r` refresh, `q` quit.
+```bash
+pmtop                 # serves http://localhost:7777
+pmtop -web :8080      # custom listen address
+```
+
+Open the URL in a browser. HTMX refresh every 5s; Mermaid.js + KaTeX in the browser.
 
 ### Dump (CI / agents)
 
 ```bash
-pmtop --dump                          # plain text once, exit
-pmtop --dump --format html            # HTML fragment (same as web body)
+pmtop --dump          # HTML fragment to stdout, then exit
 ```
-
-### Web UI
-
-```bash
-pmtop --web :7777
-```
-
-Open `http://localhost:7777`. HTMX refresh every 5s; Mermaid.js + KaTeX in the browser.
 
 ## Flags
 
@@ -45,9 +40,8 @@ Open `http://localhost:7777`. HTMX refresh every 5s; Mermaid.js + KaTeX in the b
 | `-rest` | `http://localhost:1317` | Cosmos REST |
 | `-evm` | `http://localhost:8545` | EVM JSON-RPC |
 | `-container` | `evmd-node` | Docker container name |
-| `-web` | _(empty)_ | Web listen address (e.g. `:7777`) |
-| `-dump` | `false` | Fetch once, print, exit |
-| `-format` | `plain` | With `-dump`: `plain` or `html` |
+| `-web` | `:7777` | Web listen address; empty disables (requires `-dump`) |
+| `-dump` | `false` | Fetch once, print HTML fragment, exit |
 
 ## Build
 
@@ -55,3 +49,24 @@ Open `http://localhost:7777`. HTMX refresh every 5s; Mermaid.js + KaTeX in the b
 go build -o pmtop ./cmd/pmtop
 go test ./...
 ```
+
+Or from this directory:
+
+```bash
+make build    # ./pmtop
+make test
+make serve    # web UI on http://localhost:7777
+make dump     # HTML fragment to stdout (one shot)
+```
+
+## Makefile (node4 ops)
+
+Remote targets SSH to node4 (`tools/ops/pmtop/Makefile`). Typical flow: `make push-deploy`, then `make start` and `make tunnel` to open http://localhost:7777.
+
+| Target | Description |
+|--------|-------------|
+| `run` | Foreground web UI on node4 (`~/pmtop`, port 7777) |
+| `start` / `stop` | Background tmux session on node4 |
+| `tunnel` | Forward node4 :7777 to localhost |
+| `deploy` | Pull, build, smoke-test `--dump` on node4 |
+| `logs` / `status` / `evmd` / `shell` | Validator logs, RPC status, `evmd` CLI, container shell |

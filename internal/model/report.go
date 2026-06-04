@@ -1,6 +1,6 @@
 package model
 
-// Report holds pre-formatted dashboard data (terminal, web, and dump output).
+// Report holds pre-formatted dashboard data for HTML panel output.
 type Report struct {
 	Moniker      string
 	Synced       bool

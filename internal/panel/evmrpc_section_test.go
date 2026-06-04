@@ -19,11 +19,11 @@ func TestBuildEVMRPCSection(t *testing.T) {
 		},
 		GasPrice: "1 apmt", PendingTx: 2, QueuedTx: 1,
 	}
-	out := BuildText(d)
-	if !strings.Contains(out, "**RPC: OK**") {
+	out := Build(d)
+	if !strings.Contains(out, "<strong>RPC: OK</strong>") {
 		t.Fatal("output should include RPC status line")
 	}
-	if !strings.Contains(out, "## Probe health") {
+	if !strings.Contains(out, "<h2>Probe health</h2>") {
 		t.Fatal("expected Probe health subsection")
 	}
 }

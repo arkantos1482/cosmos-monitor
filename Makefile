@@ -1,65 +1,67 @@
 NODE4_HOST := ec2-34-203-36-91.compute-1.amazonaws.com
 KEY        := ~/.ssh/pmt-nodes.pem
+BINARY     := pmtop
 
-# ── data sources ──────────────────────────────────────────────────────────────
-# All endpoints are reachable from the node4 host (not inside Docker).
-# pmtop connects to these directly; evmd CLI runs inside the evmd-node container.
-#
+# ── data sources (on node4) ───────────────────────────────────────────────────
+# pmtop connects directly on the host (not inside Docker):
 #   CometBFT RPC   localhost:26657
 #   Cosmos REST    localhost:1317
 #   EVM JSON-RPC   localhost:8545
 #   Docker socket  /var/run/docker.sock
 #
 # Source repo: https://github.com/arkantos1482/cosmos-monitor
-# Node4 source: ~/cosmos-monitor/
 
-# ── dev ──────────────────────────────────────────────────────────────────────
+.DEFAULT_GOAL := help
 
-# [dev] Commit and push local changes to GitHub.
-# Run from tools/ops/pmtop/ after editing source files.
-# Prerequisite: changes staged or tracked.
-# Usage: make push
-.PHONY: push
+# ── local dev ─────────────────────────────────────────────────────────────────
+
+.PHONY: build test dump serve
+build: ## build ./pmtop from ./cmd/pmtop
+	go build -o $(BINARY) ./cmd/pmtop
+
+test: ## run unit tests
+	go test ./...
+
+dump: build ## print one-shot HTML fragment to stdout
+	./$(BINARY) --dump
+
+serve: build ## run web UI locally on http://localhost:7777
+	./$(BINARY)
+
+# ── remote dev (node4) ────────────────────────────────────────────────────────
+
+.PHONY: push deploy push-deploy
 push: ## git push after committing
 	git push
 
-# [dev] Pull latest from GitHub on node4, rebuild pmtop, and smoke-test it.
-# Runs the binary in a detached tmux session, captures output, then kills the session.
-# Prerequisite: make push (or git push) must have been run first.
-# Usage: make deploy
-.PHONY: deploy
-deploy: ## pull, build, and smoke-test pmtop on node4
+deploy: ## pull, build, and smoke-test HTML dump on node4
 	ssh -i $(KEY) ubuntu@$(NODE4_HOST) \
 		'cd ~/cosmos-monitor && git pull && /usr/local/go/bin/go build -o ~/pmtop ./cmd/pmtop \
-		&& tmux new-session -d -s pmtop -x 220 -y 60 "~/pmtop"; sleep 6; \
-		tmux capture-pane -t pmtop -p -S -60; tmux kill-session -t pmtop'
+		&& ~/pmtop --dump | head -20'
 
-# [dev] Push local changes then redeploy to node4 in one step.
-# This is the standard iteration loop: edit → commit → make push-deploy.
-# Usage: make push-deploy
-.PHONY: push-deploy
 push-deploy: push deploy ## push then deploy to node4
 
-# ── ops ───────────────────────────────────────────────────────────────────────
+# ── remote ops (node4) ──────────────────────────────────────────────────────────
 
-# [ops] SSH into node4 and run pmtop interactively (full-screen, press q to quit).
-# Use this to inspect live chain state after a deploy or for ad-hoc monitoring.
-# Usage: make run
-.PHONY: run
-run: ## run pmtop interactively on node4
+.PHONY: run start stop tunnel logs status evmd shell
+run: ## run pmtop web UI on node4 (default :7777)
 	ssh -t -i $(KEY) ubuntu@$(NODE4_HOST) '~/pmtop'
 
-# [ops] Tail the validator container logs on node4 (Ctrl-C to stop).
-# Use this to watch evmd output, catch panics, or monitor block production.
-# Usage: make logs
-.PHONY: logs
+start: ## start pmtop web UI in background tmux on node4
+	ssh -i $(KEY) ubuntu@$(NODE4_HOST) \
+		'tmux kill-session -t pmtop 2>/dev/null; \
+		 tmux new-session -d -s pmtop "~/pmtop"; \
+		 sleep 1 && tmux capture-pane -t pmtop -p | head -3'
+
+stop: ## kill background pmtop tmux session on node4
+	ssh -i $(KEY) ubuntu@$(NODE4_HOST) 'tmux kill-session -t pmtop 2>/dev/null && echo stopped || echo not running'
+
+tunnel: ## SSH tunnel node4 :7777 → localhost:7777 (open http://localhost:7777)
+	ssh -i $(KEY) -N -L 7777:localhost:7777 ubuntu@$(NODE4_HOST)
+
 logs: ## tail evmd-node container logs on node4
 	ssh -t -i $(KEY) ubuntu@$(NODE4_HOST) 'docker logs -f evmd-node'
 
-# [ops] Quick chain status check — hits CometBFT RPC and Cosmos REST on node4.
-# Prints latest height, sync info, and bonded validators without launching pmtop.
-# Usage: make status
-.PHONY: status
 status: ## print chain status (RPC + REST) from node4
 	@echo "=== CometBFT RPC ==="
 	ssh -i $(KEY) ubuntu@$(NODE4_HOST) 'curl -s localhost:26657/status | python3 -m json.tool 2>/dev/null || curl -s localhost:26657/status'
@@ -68,60 +70,16 @@ status: ## print chain status (RPC + REST) from node4
 	ssh -i $(KEY) ubuntu@$(NODE4_HOST) \
 		'curl -s "localhost:1317/cosmos/staking/v1beta1/validators?status=BOND_STATUS_BONDED" | python3 -c "import sys,json; vs=json.load(sys.stdin)[\"validators\"]; [print(v[\"description\"][\"moniker\"],v[\"tokens\"]) for v in vs]" 2>/dev/null'
 
-# [ops] Run pmtop on node4 with web UI enabled on port 7777.
-# Terminal view runs in the foreground (q to quit).
-# Open a second terminal and run `make web-tunnel` to reach the browser dashboard.
-# Usage: make run-web
-.PHONY: run-web
-run-web: ## run pmtop + web UI on node4 (port 7777), interactive
-	ssh -t -i $(KEY) ubuntu@$(NODE4_HOST) '~/pmtop --web :7777'
-
-# [ops] Start pmtop web UI in a detached tmux session on node4 (port 7777).
-# Use this when you want the web UI running in the background without occupying
-# a terminal. Then run `make web-tunnel` in a separate terminal to access it.
-# Use `make stop-web` to kill the background session.
-# Usage: make start-web
-.PHONY: start-web
-start-web: ## start pmtop web UI in background tmux session on node4
-	ssh -i $(KEY) ubuntu@$(NODE4_HOST) \
-		'tmux kill-session -t pmtop-web 2>/dev/null; \
-		 tmux new-session -d -s pmtop-web "~/pmtop --web :7777"; \
-		 sleep 1 && tmux capture-pane -t pmtop-web -p | head -3'
-
-# [ops] Stop the background pmtop-web tmux session on node4.
-# Usage: make stop-web
-.PHONY: stop-web
-stop-web: ## kill the background pmtop-web session on node4
-	ssh -i $(KEY) ubuntu@$(NODE4_HOST) 'tmux kill-session -t pmtop-web 2>/dev/null && echo stopped || echo not running'
-
-# [ops] SSH tunnel to the pmtop web UI running on node4 (port 7777).
-# Prerequisite: pmtop must be running on node4 with --web :7777 (see start-web or run-web).
-# Opens http://localhost:7777 in your browser.
-# Usage: make web-tunnel
-.PHONY: web-tunnel
-web-tunnel: ## tunnel pmtop web UI from node4 to localhost:7777
-	ssh -i $(KEY) -N -L 7777:localhost:7777 ubuntu@$(NODE4_HOST)
-
-# [ops] Run an evmd CLI command inside the validator container on node4.
-# The container home is /data; chain ID is pmt.
-# Prerequisite: CMD must be set.
-# Usage: CMD="query staking validators --output json" make evmd
-#        CMD="query bank balances <address>" make evmd
-.PHONY: evmd
-evmd: ## run evmd CLI inside the validator container (CMD= required)
+evmd: ## run evmd CLI in validator container (CMD= required)
 	@test -n "$(CMD)" || (echo "Usage: CMD=\"query staking validators\" make evmd" && exit 1)
 	ssh -t -i $(KEY) ubuntu@$(NODE4_HOST) 'docker exec -it evmd-node evmd $(CMD) --home /data'
 
-# [ops] Open an interactive shell inside the validator container on node4.
-# Use for one-off CLI exploration when you need multiple evmd commands.
-# Usage: make shell
-.PHONY: shell
-shell: ## open a shell inside the evmd-node container on node4
+shell: ## open shell in evmd-node container on node4
 	ssh -t -i $(KEY) ubuntu@$(NODE4_HOST) 'docker exec -it evmd-node /bin/sh'
 
 # ─────────────────────────────────────────────────────────────────────────────
 
 .PHONY: help
-help:
+help: ## list targets
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'

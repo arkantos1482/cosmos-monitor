@@ -57,18 +57,7 @@ func FullPage(moniker, fragment string) string {
 </div>
 <script>
 mermaid.initialize({startOnLoad:false,theme:'dark',securityLevel:'loose'});
-function promoteMermaidFences(){
-  document.querySelectorAll('#data pre > code.language-mermaid').forEach(function(code){
-    if(code.dataset.promoted)return;
-    var div=document.createElement('div');
-    div.className='mermaid';
-    div.textContent=code.textContent;
-    code.parentElement.replaceWith(div);
-    code.dataset.promoted='1';
-  });
-}
 function renderMermaid(){
-  promoteMermaidFences();
   mermaid.run({querySelector:'#data .mermaid'});
 }
 function renderMathDisplays(){
