@@ -12,6 +12,8 @@ func TestFullPageNavAndFragmentURL(t *testing.T) {
 	for _, want := range []string{
 		`hx-get="/fragment?view=economics"`,
 		`hx-push-url="/s/economics"`,
+		`function syncDashView`,
+		`function viewFromPath`,
 		`dash-nav__link--active`,
 		`href="/s/economics"`,
 		`Economics`,
