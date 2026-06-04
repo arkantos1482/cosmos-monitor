@@ -1,4 +1,4 @@
-package main
+package html
 
 import (
 	"encoding/base64"
@@ -13,7 +13,7 @@ var displayMathBlockRE = regexp.MustCompile(`(?s)\n\$\$\n(.*?)\n\$\$\n`)
 const mathPlaceholderPrefix = "PMTOP_MATH_BLOCK_"
 
 // stripDisplayMathForGoldmark replaces $$ blocks with placeholders so goldmark
-// does not split LaTeX across <p> tags. Terminal markdown is unchanged.
+// does not split LaTeX across <p> tags. Canonical Markdown is unchanged.
 func stripDisplayMathForGoldmark(md string) (string, []string) {
 	var blocks []string
 	out := displayMathBlockRE.ReplaceAllStringFunc(md, func(match string) string {

@@ -1,4 +1,4 @@
-package main
+package report
 
 import (
 	"fmt"
@@ -7,225 +7,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/arkantos1482/cosmos-monitor/fetch"
+	"github.com/arkantos1482/cosmos-monitor/internal/fetch"
+	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-// WebData holds all pre-formatted data for dashboard rendering.
-type WebData struct {
-	Moniker      string
-	Synced       bool
-	BlockHeight  string
-	TimeUTC      string
-	PeerCount    int
-	EVMPeerCount uint64
-
-	// node
-	NodeID          string
-	AppVersion      string
-	BlockInterval   string
-	TimeSinceBlock  string
-	LatestBlockTime string
-	ListenAddr           string
-	RpcListenAddr        string
-	Network              string
-	LocalConsensusAddr   string
-	LocalVotingPower     string
-	PeerMonikers         []string
-	MempoolTxs      int
-	NextProposer    string
-
-	// system — OS
-	Load1, Load5, Load15 float64
-	MemUsed, MemTotal    string
-	MemPct               int
-	DiskUsed, DiskTotal  string
-	DiskPct              int
-
-	// system — container
-	NodeRunning  bool
-	NodeCPU      string
-	NodeMemUsed  string
-	NodeMemTotal string
-	NodeUptime   string
-	Restarts     int
-
-	// validator set (network)
-	Validators      []WebValidator
-	BondedCount     int
-	JailedCount     int
-	TombstonedCount int
-	BelowThreshold  int
-
-	// local validator (this node)
-	Local WebLocalValidator
-
-	// economics
-	BondDenom         string
-	TotalSupply       string
-	BondedAmt         string
-	BondedPct         float64
-	GoalBonded        float64
-	NotBonded         string
-	UnbondingTime     string
-	MaxValidators     int64
-	Inflation         float64
-	AnnualProvisions  string
-	CommunityPool     string
-	CommunityTax      string
-	CommunityTaxZero  bool
-	CommunityTaxPct   float64
-	BlocksPerYear     string
-	TotalOutstanding  string
-
-	// PMT rewards
-	PMTEnabled     bool
-	PMTPoolEmpty   bool
-	PMTRate        string
-	PMTBalance     string
-	PMTRunway      string
-	PMTAnnual      string
-	PMTPoolAddress string
-	PMTDailyEmit   string
-
-	// fee market (shown in economics)
-	BaseFee         string
-	BaseFeeRaw      string
-	BlockGas        string
-	BlockGasLimit   uint64 // consensus max_gas; 0 when unknown or unlimited
-	GasPrice        string
-	MinGasPrice     string
-	MinGasPriceRaw  string
-	MinGasMultiplier string
-	AdjCap          string
-	NoBaseFee       bool
-	Elasticity      int64
-	BaseFeeChangeDenominator int64
-	ParentBlockGasUsed       uint64
-	ParentBlockGasWanted     uint64
-	ParentBlockResultsOK     bool
-
-	// slashing (validator set section)
-	SlashWindow     string
-	MinSigned       float64
-	SlashDowntime   string
-	SlashDTInactive bool
-	SlashDS         string
-	SlashDSInactive bool
-
-	// EVM JSON-RPC
-	EVMHTTPEndpoint string
-	EVMWSEndpoint   string
-	JSONRPCAPIs     string
-	TxpoolGlobalSlots uint64
-	TxpoolGlobalQueue uint64
-	EVMChainID      uint64
-	EVMDenom        string
-	EVMClient       string
-	EVMRPCOk        bool
-	EVMListening    bool
-	EVMBlockAge     string
-	EVMBlockAgeWarn bool
-	EVMBlockAgeErr  bool
-	EVMSynced       bool
-	EVMBlock        string
-	PendingTx       uint64
-	QueuedTx        uint64
-	RPCProbes       []WebRPCProbe
-	RPCProbeOK      int
-	RPCProbeTotal   int
-	Precompiles     []string
-	HistoryWindow   string
-	HardforkLondon  string
-	HardforkShanghai string
-	HardforkCancun  string
-	ERC20Enabled    bool
-
-	// governance
-	VotingPeriod     string
-	Quorum           float64
-	Threshold        float64
-	VetoThreshold    float64
-	Proposals        []WebProposal
-	DepositProposals []WebProposal
-	UpgradeName      string
-	UpgradeHeight    string
-	BlocksLeft       string
-	IBCClients       int
-	TokenPairs       []WebTokenPair
-}
-
-type WebValidator struct {
-	Moniker         string
-	Operator        string
-	NodeID          string
-	ConsensusAddr   string
-	P2PDial         string
-	P2PConnected    bool
-	VPFloat         float64
-	CommissionFloat float64
-	Missed          int64
-	MissedHigh      bool
-	Status          string
-	Jailed          bool
-	Tombstoned      bool
-	IsLocal         bool
-}
-
-type WebLocalValidator struct {
-	IsValidator      bool
-	Moniker          string
-	NodeID           string
-	ConsensusAddr    string
-	OperatorAddr     string
-	VotingPower      string
-	VPPercent        float64
-	Commission       float64
-	Status           string
-	Jailed           bool
-	Tombstoned       bool
-	Missed           int64
-	MaxMissed        int64
-	MissedHigh       bool
-	SigningStatus    string
-	IsNextProposer   bool
-	ProposerPriority int64
-	Outstanding      string
-	CommissionEarned string
-}
-
-type WebRPCProbe struct {
-	Method   string
-	OK       bool
-	Latency  string
-	Error    string
-	Request  string
-	Response string
-}
-
-type WebProposal struct {
-	ID           uint64
-	Title        string
-	End          string
-	TallyYes     string
-	TallyNo      string
-	TallyAbstain string
-	TallyVeto    string
-	HasTally     bool
-}
-
-type WebTokenPair struct {
-	Denom   string
-	ERC20   string
-	Enabled bool
-}
-
-func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, docker fetch.DockerSnapshot, evmHTTPEndpoint string) WebData {
+func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, docker fetch.DockerSnapshot, evmHTTPEndpoint string) model.Report {
 	p := chain.Params
-	d := WebData{}
+	d := model.Report{}
 
 	d.Moniker = chain.Moniker
 	d.Synced = !chain.CatchingUp
-	d.BlockHeight = fmtInt(chain.BlockHeight)
+	d.BlockHeight = FormatInt(chain.BlockHeight)
 	d.TimeUTC = time.Now().UTC().Format("15:04:05") + " UTC"
 	d.PeerCount = chain.PeerCount
 	d.EVMPeerCount = ev.PeerCount
@@ -237,16 +29,16 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	d.Network = chain.Network
 	d.LocalConsensusAddr = chain.LocalConsensusAddr
 	if chain.LocalVotingPower > 0 {
-		d.LocalVotingPower = fmtInt(chain.LocalVotingPower)
+		d.LocalVotingPower = FormatInt(chain.LocalVotingPower)
 	}
 	d.PeerMonikers = chain.PeerMonikers
 	d.MempoolTxs = chain.MempoolTxs
 	d.NextProposer = chain.NextProposerMoniker
 	if chain.BlockInterval > 0 {
-		d.BlockInterval = fmtDur(chain.BlockInterval)
+		d.BlockInterval = FormatDur(chain.BlockInterval)
 	}
 	if !chain.LatestBlockTime.IsZero() {
-		d.TimeSinceBlock = fmtDur(time.Since(chain.LatestBlockTime))
+		d.TimeSinceBlock = FormatDur(time.Since(chain.LatestBlockTime))
 		d.LatestBlockTime = chain.LatestBlockTime.UTC().Format("2006-01-02 15:04:05 UTC")
 	}
 
@@ -255,20 +47,20 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	if sys.MemTotal > sys.MemAvail {
 		memUsed = sys.MemTotal - sys.MemAvail
 	}
-	d.MemUsed = fmtBytes(memUsed)
-	d.MemTotal = fmtBytes(sys.MemTotal)
+	d.MemUsed = FormatBytes(memUsed)
+	d.MemTotal = FormatBytes(sys.MemTotal)
 	d.MemPct = int(float64(memUsed) / float64(max(sys.MemTotal, uint64(1))) * 100)
-	d.DiskUsed = fmtBytes(sys.DiskUsed)
-	d.DiskTotal = fmtBytes(sys.DiskTotal)
+	d.DiskUsed = FormatBytes(sys.DiskUsed)
+	d.DiskTotal = FormatBytes(sys.DiskTotal)
 	d.DiskPct = int(float64(sys.DiskUsed) / float64(max(sys.DiskTotal, uint64(1))) * 100)
 
 	d.NodeRunning = docker.Running
 	d.NodeCPU = fmt.Sprintf("%.1f%%", docker.CPUPercent)
-	d.NodeMemUsed = fmtBytes(docker.MemUsage)
-	d.NodeMemTotal = fmtBytes(docker.MemLimit)
+	d.NodeMemUsed = FormatBytes(docker.MemUsage)
+	d.NodeMemTotal = FormatBytes(docker.MemLimit)
 	d.Restarts = docker.RestartCount
 	if !docker.StartedAt.IsZero() {
-		d.NodeUptime = fmtDurFull(time.Since(docker.StartedAt))
+		d.NodeUptime = FormatDurFull(time.Since(docker.StartedAt))
 	}
 
 	maxMissed := int64(0)
@@ -324,7 +116,7 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 		if p2p == "" {
 			p2p = "—"
 		}
-		d.Validators = append(d.Validators, WebValidator{
+		d.Validators = append(d.Validators, model.Validator{
 			Moniker:         v.Moniker,
 			Operator:        v.OperatorAddr,
 			NodeID:          v.NodeID,
@@ -358,7 +150,7 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	d.BondedAmt = fetch.FormatCoin(chain.BondedTokens, denom)
 	d.GoalBonded = p.GoalBonded * 100
 	d.NotBonded = fetch.FormatCoin(chain.NotBondedTokens, denom)
-	d.UnbondingTime = fmtDurFull(p.UnbondingTime)
+	d.UnbondingTime = FormatDurFull(p.UnbondingTime)
 	if p.MaxValidators > 0 {
 		d.MaxValidators = int64(p.MaxValidators)
 	}
@@ -368,7 +160,7 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	}
 	d.CommunityPool = chain.CommunityPool
 	if p.BlocksPerYear > 0 {
-		d.BlocksPerYear = fmtInt(p.BlocksPerYear)
+		d.BlocksPerYear = FormatInt(p.BlocksPerYear)
 	}
 
 	d.CommunityTaxPct = p.CommunityTax * 100
@@ -422,7 +214,7 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 			fmt.Sprintf("  across %d validators", len(chain.Validators))
 	}
 
-	d.SlashWindow = fmtInt(p.SignedBlocksWindow)
+	d.SlashWindow = FormatInt(p.SignedBlocksWindow)
 	d.MinSigned = p.MinSignedPerWindow * 100
 	d.SlashDowntime, d.SlashDTInactive = slashFraction(p.SlashFractionDowntime)
 	d.SlashDS, d.SlashDSInactive = slashFraction(p.SlashFractionDoubleSign)
@@ -436,7 +228,7 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 		d.BaseFee = fetch.FormatFeeAmount(chain.BaseFee, feeDenom)
 	}
 	if chain.BlockGas > 0 {
-		d.BlockGas = fmtInt(int64(chain.BlockGas))
+		d.BlockGas = FormatInt(int64(chain.BlockGas))
 	}
 	switch {
 	case chain.BlockGasLimit < 0:
@@ -475,10 +267,10 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	}
 
 	d.EVMHTTPEndpoint = evmHTTPEndpoint
-	d.EVMWSEndpoint = evmWSEndpoint(evmHTTPEndpoint)
-	d.JSONRPCAPIs = defaultJSONRPCAPIs
-	d.TxpoolGlobalSlots = defaultTxpoolGlobalSlots
-	d.TxpoolGlobalQueue = defaultTxpoolGlobalQueue
+	d.EVMWSEndpoint = EVMWSEndpoint(evmHTTPEndpoint)
+	d.JSONRPCAPIs = DefaultJSONRPCAPIs
+	d.TxpoolGlobalSlots = DefaultTxpoolGlobalSlots
+	d.TxpoolGlobalQueue = DefaultTxpoolGlobalQueue
 	d.EVMChainID = ev.ChainID
 	if p.EVMDenom != "" {
 		d.EVMDenom = p.EVMDenom
@@ -487,7 +279,7 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	d.EVMRPCOk = ev.Err == nil
 	d.EVMListening = ev.NetListening
 	d.EVMSynced = !ev.Syncing
-	d.EVMBlock = fmtInt(int64(ev.BlockNumber))
+	d.EVMBlock = FormatInt(int64(ev.BlockNumber))
 	d.PendingTx = ev.PendingTx
 	d.QueuedTx = ev.QueuedTx
 	if ev.EVMBlockTimestamp > 0 {
@@ -498,7 +290,7 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	}
 	d.Precompiles = p.ActiveStaticPrecompiles
 	if p.HistoryServeWindow > 0 {
-		d.HistoryWindow = fmtInt(p.HistoryServeWindow)
+		d.HistoryWindow = FormatInt(p.HistoryServeWindow)
 	}
 	d.HardforkLondon = p.HardforkLondon
 	d.HardforkShanghai = p.HardforkShanghai
@@ -510,7 +302,7 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 		if probe.OK {
 			d.RPCProbeOK++
 		}
-		d.RPCProbes = append(d.RPCProbes, WebRPCProbe{
+		d.RPCProbes = append(d.RPCProbes, model.RPCProbe{
 			Method:   probe.Method,
 			OK:       probe.OK,
 			Latency:  fmt.Sprintf("%.0fms", float64(probe.Latency)/float64(time.Millisecond)),
@@ -520,12 +312,12 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 		})
 	}
 
-	d.VotingPeriod = fmtDurFull(p.VotingPeriod)
+	d.VotingPeriod = FormatDurFull(p.VotingPeriod)
 	d.Quorum = p.Quorum * 100
 	d.Threshold = p.Threshold * 100
 	d.VetoThreshold = p.VetoThreshold * 100
 	for _, pr := range chain.VotingProposals {
-		d.Proposals = append(d.Proposals, WebProposal{
+		d.Proposals = append(d.Proposals, model.Proposal{
 			ID:           uint64(pr.ID),
 			Title:        pr.Title,
 			End:          pr.VotingEnd.Format("2006-01-02"),
@@ -537,7 +329,7 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 		})
 	}
 	for _, pr := range chain.DepositProposals {
-		d.DepositProposals = append(d.DepositProposals, WebProposal{
+		d.DepositProposals = append(d.DepositProposals, model.Proposal{
 			ID:    uint64(pr.ID),
 			Title: pr.Title,
 			End:   pr.DepositEnd.Format("2006-01-02"),
@@ -546,15 +338,15 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 
 	d.UpgradeName = chain.UpgradeName
 	if chain.UpgradeHeight > 0 {
-		d.UpgradeHeight = fmtInt(chain.UpgradeHeight)
+		d.UpgradeHeight = FormatInt(chain.UpgradeHeight)
 		if chain.BlockHeight > 0 && chain.UpgradeHeight > chain.BlockHeight {
-			d.BlocksLeft = fmtInt(chain.UpgradeHeight - chain.BlockHeight)
+			d.BlocksLeft = FormatInt(chain.UpgradeHeight - chain.BlockHeight)
 		}
 	}
 
 	d.IBCClients = chain.IBCClientCount
 	for _, tp := range chain.TokenPairs {
-		d.TokenPairs = append(d.TokenPairs, WebTokenPair{
+		d.TokenPairs = append(d.TokenPairs, model.TokenPair{
 			Denom:   tp.Denom,
 			ERC20:   tp.ERC20Addr,
 			Enabled: tp.Enabled,
@@ -564,8 +356,8 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	return d
 }
 
-func buildLocalValidator(chain fetch.ChainSnapshot, v *fetch.ValidatorInfo, maxMissed int64) WebLocalValidator {
-	lv := WebLocalValidator{
+func buildLocalValidator(chain fetch.ChainSnapshot, v *fetch.ValidatorInfo, maxMissed int64) model.LocalValidator {
+	lv := model.LocalValidator{
 		Moniker:       chain.Moniker,
 		NodeID:        chain.NodeID,
 		ConsensusAddr: chain.LocalConsensusAddr,
@@ -573,7 +365,7 @@ func buildLocalValidator(chain fetch.ChainSnapshot, v *fetch.ValidatorInfo, maxM
 	if v == nil {
 		if chain.LocalVotingPower > 0 || chain.LocalConsensusAddr != "" {
 			lv.IsValidator = true
-			lv.VotingPower = fmtInt(chain.LocalVotingPower)
+			lv.VotingPower = FormatInt(chain.LocalVotingPower)
 			lv.SigningStatus = "validator key present — not matched to staking API"
 		} else {
 			lv.SigningStatus = "this node is not a validator (full node / observer)"
@@ -621,5 +413,5 @@ func slashFraction(raw string) (string, bool) {
 	}
 	v := 0.0
 	fmt.Sscanf(raw, "%f", &v)
-	return fmtFraction(raw), v == 0
+	return FormatFraction(raw), v == 0
 }

@@ -1,12 +1,14 @@
-package main
+package markdown
 
 import (
 	"fmt"
+	"github.com/arkantos1482/cosmos-monitor/internal/model"
+	"github.com/arkantos1482/cosmos-monitor/internal/report"
 	"io"
 	"strconv"
 	"strings"
 
-	"github.com/arkantos1482/cosmos-monitor/fetch"
+	"github.com/arkantos1482/cosmos-monitor/internal/fetch"
 )
 
 func writeMermaidFence(w io.Writer, src string) {
@@ -32,7 +34,7 @@ func stackLabelText(parts ...string) string {
 	return s
 }
 
-func diagramDenom(d WebData) string {
+func diagramDenom(d model.Report) string {
 	if d.EVMDenom != "" {
 		return d.EVMDenom
 	}
@@ -49,7 +51,7 @@ func splitOutstandingSuffix(s string) (amount, suffix string) {
 	return strings.TrimSpace(s), ""
 }
 
-func economicsFeesLabel(d WebData) string {
+func economicsFeesLabel(d model.Report) string {
 	lines := []string{"Tx fees (ante / EVM)"}
 	lines = append(lines, fmt.Sprintf("mempool %d · evm %d+%d", d.MempoolTxs, d.PendingTx, d.QueuedTx))
 	if d.GasPrice != "" {
@@ -58,7 +60,7 @@ func economicsFeesLabel(d WebData) string {
 	return stackLabelText(lines...)
 }
 
-func economicsFCLabel(d WebData) string {
+func economicsFCLabel(d model.Report) string {
 	lines := []string{"fee_collector", "cleared BeginBlock"}
 	if d.BlockHeight != "" {
 		lines = append(lines, "height "+d.BlockHeight)
@@ -66,7 +68,7 @@ func economicsFCLabel(d WebData) string {
 	return stackLabelText(lines...)
 }
 
-func economicsStakeLabel(d WebData) string {
+func economicsStakeLabel(d model.Report) string {
 	lines := []string{"x/staking"}
 	if d.BondedCount > 0 {
 		lines = append(lines, fmt.Sprintf("%d validators", d.BondedCount))
@@ -80,7 +82,7 @@ func economicsStakeLabel(d WebData) string {
 	return stackLabelText(lines...)
 }
 
-func economicsValLabel(d WebData) string {
+func economicsValLabel(d model.Report) string {
 	lines := []string{"validator rewards", "per block allocation"}
 	if d.TotalOutstanding != "" {
 		amt, suffix := splitOutstandingSuffix(d.TotalOutstanding)
@@ -92,7 +94,7 @@ func economicsValLabel(d WebData) string {
 	return stackLabelText(lines...)
 }
 
-func economicsCommLabel(d WebData) string {
+func economicsCommLabel(d model.Report) string {
 	comm := fmt.Sprintf("community tax %s", d.CommunityTax)
 	if d.CommunityTaxZero {
 		comm = "community tax 0%"
@@ -103,7 +105,7 @@ func economicsCommLabel(d WebData) string {
 	return stackLabelText(comm)
 }
 
-func economicsCommissionPct(d WebData) (pct float64, ok bool) {
+func economicsCommissionPct(d model.Report) (pct float64, ok bool) {
 	if d.Local.IsValidator && d.Local.Commission > 0 {
 		return d.Local.Commission, true
 	}
@@ -117,14 +119,14 @@ func economicsCommissionPct(d WebData) (pct float64, ok bool) {
 	return 0, false
 }
 
-func economicsOpLabel(d WebData) string {
+func economicsOpLabel(d model.Report) string {
 	if pct, ok := economicsCommissionPct(d); ok {
 		return stackLabelText(fmt.Sprintf("operator %.1f%%", pct), "commission slice")
 	}
 	return stackLabelText("validator operator", "commission slice")
 }
 
-func economicsDelLabel(d WebData) string {
+func economicsDelLabel(d model.Report) string {
 	lines := []string{"delegators", "remainder share"}
 	if pct, ok := economicsCommissionPct(d); ok && pct < 100 {
 		lines = append(lines, fmt.Sprintf("(1 − %.1f%%)", pct))
@@ -132,7 +134,7 @@ func economicsDelLabel(d WebData) string {
 	return stackLabelText(lines...)
 }
 
-func economicsPMTPoolLabel(d WebData) string {
+func economicsPMTPoolLabel(d model.Report) string {
 	lines := []string{"PMT pool (x/pmtrewards)"}
 	if d.PMTRate != "" {
 		lines = append(lines, d.PMTRate)
@@ -148,7 +150,7 @@ func economicsPMTPoolLabel(d WebData) string {
 	return stackLabelText(lines...)
 }
 
-func economicsDistLabel(d WebData) string {
+func economicsDistLabel(d model.Report) string {
 	lines := []string{"x/distribution BeginBlock"}
 	if d.CommunityTax != "" {
 		lines = append(lines, "community tax "+d.CommunityTax)
@@ -163,28 +165,28 @@ func economicsDistLabel(d WebData) string {
 	return stackLabelText(lines...)
 }
 
-func economicsInflEdge(d WebData) string {
+func economicsInflEdge(d model.Report) string {
 	if d.Inflation > 0 {
 		return fmt.Sprintf("mint +%.2f%%", d.Inflation)
 	}
 	return "mint off (0%)"
 }
 
-func economicsPMTEdge(d WebData) string {
+func economicsPMTEdge(d model.Report) string {
 	if d.PMTRate != "" {
 		return d.PMTRate
 	}
 	return "mint hook"
 }
 
-func economicsDistCommEdge(d WebData) string {
+func economicsDistCommEdge(d model.Report) string {
 	if d.CommunityTaxZero {
 		return "tax 0%"
 	}
 	return "tax " + d.CommunityTax
 }
 
-func economicsDistValEdge(d WebData) string {
+func economicsDistValEdge(d model.Report) string {
 	pct := 100.0 - d.CommunityTaxPct
 	if pct <= 0 {
 		return "to validators"
@@ -192,7 +194,7 @@ func economicsDistValEdge(d WebData) string {
 	return fmt.Sprintf("%.0f%% to validators", pct)
 }
 
-func economicsInflLabel(d WebData) string {
+func economicsInflLabel(d model.Report) string {
 	var lines []string
 	lines = append(lines, "x/mint BeginBlock")
 	if d.Inflation > 0 {
@@ -209,7 +211,7 @@ func economicsInflLabel(d WebData) string {
 	return stackLabelText(lines...)
 }
 
-func economicsSplitEdgeLabels(d WebData) (comm, del string) {
+func economicsSplitEdgeLabels(d model.Report) (comm, del string) {
 	if pct, ok := economicsCommissionPct(d); ok {
 		return fmt.Sprintf("commission %.0f%%", pct), fmt.Sprintf("remainder %.0f%%", 100-pct)
 	}
@@ -234,7 +236,7 @@ func writeStackNode(b *strings.Builder, id, label string) {
 	fmt.Fprintf(b, "  %s[%s]\n", id, stackMermaidQuoted(label))
 }
 
-func writeEconomicsNodes(b *strings.Builder, d WebData) {
+func writeEconomicsNodes(b *strings.Builder, d model.Report) {
 	writeStackNode(b, "fees", economicsFeesLabel(d))
 	writeStackNode(b, "infl", economicsInflLabel(d))
 	if d.PMTEnabled {
@@ -249,7 +251,7 @@ func writeEconomicsNodes(b *strings.Builder, d WebData) {
 	writeStackNode(b, "del", economicsDelLabel(d))
 }
 
-func writeEconomicsEdges(b *strings.Builder, d WebData) {
+func writeEconomicsEdges(b *strings.Builder, d model.Report) {
 	fmt.Fprintf(b, "  fees --> fc\n")
 	fmt.Fprintf(b, "  infl -->|%s| fc\n", mermaidEdgeText(economicsInflEdge(d)))
 	if d.PMTEnabled {
@@ -268,7 +270,7 @@ func writeEconomicsEdges(b *strings.Builder, d WebData) {
 	fmt.Fprintf(b, "  val -->|%s| del\n", mermaidEdgeText(delEdge))
 }
 
-func economicsOverviewMermaid(d WebData) string {
+func economicsOverviewMermaid(d model.Report) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "graph LR\n")
 	writeEconomicsNodes(&b, d)
@@ -281,7 +283,7 @@ func economicsOverviewMermaid(d WebData) string {
 	return b.String()
 }
 
-func writeEconomicsDiagram(w io.Writer, d WebData) {
+func writeEconomicsDiagram(w io.Writer, d model.Report) {
 	writeMermaidFence(w, economicsOverviewMermaid(d))
 }
 
@@ -291,7 +293,7 @@ func parseDiagramUint(s string) uint64 {
 	return n
 }
 
-func feemarketGasNumbers(d WebData) (wanted, target uint64, ok bool) {
+func feemarketGasNumbers(d model.Report) (wanted, target uint64, ok bool) {
 	wanted = feemarketStoredWanted(d)
 	if d.BlockGasLimit > 0 && d.Elasticity > 0 {
 		return wanted, d.BlockGasLimit / uint64(d.Elasticity), true
@@ -299,7 +301,7 @@ func feemarketGasNumbers(d WebData) (wanted, target uint64, ok bool) {
 	return wanted, 0, false
 }
 
-func feemarketCalcEdge(d WebData) string {
+func feemarketCalcEdge(d model.Report) string {
 	wanted, target, ok := feemarketGasNumbers(d)
 	if !ok {
 		return "vs target"
@@ -313,28 +315,28 @@ func feemarketCalcEdge(d WebData) string {
 	return "="
 }
 
-func feemarketSlimEndBlockLabel(d WebData) string {
+func feemarketSlimEndBlockLabel(d model.Report) string {
 	lines := []string{"EndBlock N-1", "max(wanted×μ, gasUsed)"}
 	if d.ParentBlockGasUsed > 0 {
-		lines = append(lines, "used "+fmtInt(int64(d.ParentBlockGasUsed)))
+		lines = append(lines, "used "+report.FormatInt(int64(d.ParentBlockGasUsed)))
 	}
 	return stackLabelText(lines...)
 }
 
-func feemarketSlimStoredLabel(d WebData) string {
+func feemarketSlimStoredLabel(d model.Report) string {
 	wanted := feemarketStoredWanted(d)
 	lines := []string{"stored W", "GetBlockGasWanted"}
 	if wanted > 0 {
-		lines = append(lines, fmtInt(int64(wanted)))
+		lines = append(lines, report.FormatInt(int64(wanted)))
 	}
 	return stackLabelText(lines...)
 }
 
-func feemarketSlimCalcLabel(d WebData) string {
+func feemarketSlimCalcLabel(d model.Report) string {
 	return stackLabelText("BeginBlock N", "CalculateBaseFee")
 }
 
-func feemarketSlimBaseFeeLabel(d WebData) string {
+func feemarketSlimBaseFeeLabel(d model.Report) string {
 	if d.NoBaseFee {
 		return stackLabelText("no_base_fee")
 	}
@@ -345,7 +347,7 @@ func feemarketSlimBaseFeeLabel(d WebData) string {
 	return stackLabelText(lines...)
 }
 
-func feemarketSlimAnteLabel(d WebData) string {
+func feemarketSlimAnteLabel(d model.Report) string {
 	denom := diagramDenom(d)
 	lines := []string{"ante · eth_gasPrice"}
 	if d.GasPrice != "" {
@@ -355,7 +357,7 @@ func feemarketSlimAnteLabel(d WebData) string {
 	return stackLabelText(lines...)
 }
 
-func writeFeemarketSlimNodes(b *strings.Builder, d WebData) {
+func writeFeemarketSlimNodes(b *strings.Builder, d model.Report) {
 	writeStackNode(b, "endBlk", feemarketSlimEndBlockLabel(d))
 	writeStackNode(b, "stored", feemarketSlimStoredLabel(d))
 	writeStackNode(b, "calc", feemarketSlimCalcLabel(d))
@@ -363,7 +365,7 @@ func writeFeemarketSlimNodes(b *strings.Builder, d WebData) {
 	writeStackNode(b, "ante", feemarketSlimAnteLabel(d))
 }
 
-func writeFeemarketSlimEdges(b *strings.Builder, d WebData) {
+func writeFeemarketSlimEdges(b *strings.Builder, d model.Report) {
 	fmt.Fprintf(b, "  endBlk -->|%s| stored\n", mermaidEdgeText("prior block"))
 	fmt.Fprintf(b, "  stored --> calc\n")
 	fmt.Fprintf(b, "  calc -->|%s| baseFee\n", mermaidEdgeText(feemarketCalcEdge(d)))
@@ -371,7 +373,7 @@ func writeFeemarketSlimEdges(b *strings.Builder, d WebData) {
 	fmt.Fprintf(b, "  ante --> endBlk\n")
 }
 
-func feemarketMechanicsMermaid(d WebData) string {
+func feemarketMechanicsMermaid(d model.Report) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "graph LR\n")
 	writeFeemarketSlimNodes(&b, d)
@@ -382,6 +384,6 @@ func feemarketMechanicsMermaid(d WebData) string {
 	return b.String()
 }
 
-func writeFeemarketDiagram(w io.Writer, d WebData) {
+func writeFeemarketDiagram(w io.Writer, d model.Report) {
 	writeMermaidFence(w, feemarketMechanicsMermaid(d))
 }

@@ -1,11 +1,13 @@
-package main
+package markdown
 
 import (
 	"fmt"
+	"github.com/arkantos1482/cosmos-monitor/internal/model"
+	"github.com/arkantos1482/cosmos-monitor/internal/report"
 	"strings"
 
 	"cosmossdk.io/math"
-	"github.com/arkantos1482/cosmos-monitor/fetch"
+	"github.com/arkantos1482/cosmos-monitor/internal/fetch"
 )
 
 // FeemarketExplain holds rendered fee-market explanation (portable Markdown + KaTeX).
@@ -97,14 +99,14 @@ func inferParentBaseFee(current math.LegacyDec, gasUsed, gasTarget, denom uint64
 	return math.LegacyDec{}, false
 }
 
-func feemarketStoredWanted(d WebData) uint64 {
+func feemarketStoredWanted(d model.Report) uint64 {
 	if d.ParentBlockGasWanted > 0 {
 		return d.ParentBlockGasWanted
 	}
 	return parseDiagramUint(d.BlockGas)
 }
 
-func feemarketGasTarget(d WebData) (uint64, bool) {
+func feemarketGasTarget(d model.Report) (uint64, bool) {
 	if d.BlockGasLimit > 0 && d.Elasticity > 0 {
 		return d.BlockGasLimit / uint64(d.Elasticity), true
 	}
@@ -115,18 +117,18 @@ func isUnlimitedBlockGas(n uint64) bool {
 	return n == ^uint64(0)
 }
 
-// katexUint formats a uint64 for KaTeX (avoids int64 overflow on unlimited max_gas).
-func katexUint(n uint64) string {
+// latexUint formats a uint64 for KaTeX (avoids int64 overflow on unlimited max_gas).
+func latexUint(n uint64) string {
 	if isUnlimitedBlockGas(n) {
 		return `\text{unlimited}`
 	}
 	if n > uint64(1<<63-1) {
 		return fmt.Sprintf(`%d`, n)
 	}
-	return katexInt(int64(n))
+	return latexInt(int64(n))
 }
 
-func katexTextLit(s string) string {
+func latexTextLit(s string) string {
 	r := strings.NewReplacer(
 		`\`, `\textbackslash{}`,
 		"{", `\{`,
@@ -138,13 +140,13 @@ func katexTextLit(s string) string {
 	return `\text{` + r.Replace(s) + `}`
 }
 
-func katexInt(n int64) string {
-	return strings.ReplaceAll(fmtInt(n), ",", `{,}`)
+func latexInt(n int64) string {
+	return strings.ReplaceAll(report.FormatInt(n), ",", `{,}`)
 }
 
-// katexDisplayLines renders each line as its own \[...\] block. Avoids aligned
+// latexDisplayLines renders each line as its own \[...\] block. Avoids aligned
 // environments with & inside HTML (browsers treat & as entity starts).
-func katexDisplayLines(lines []string) string {
+func latexDisplayLines(lines []string) string {
 	if len(lines) == 0 {
 		return ""
 	}
@@ -179,7 +181,7 @@ func formatDecAmount(d math.LegacyDec, denom string) string {
 	return fetch.FormatFeeAmount(d.String(), denom)
 }
 
-func buildFeemarketExplain(d WebData) FeemarketExplain {
+func buildFeemarketExplain(d model.Report) FeemarketExplain {
 	ex := FeemarketExplain{}
 	denom := diagramDenom(d)
 
@@ -246,18 +248,18 @@ B_{\text{parent}} + \max(\epsilon,\, \Delta) & W_{\text{stored}} > T \\
 	if hasTarget && d.BlockGasLimit > 0 && d.Elasticity > 0 {
 		params = append(params, fmt.Sprintf(
 			`T = \left\lfloor\frac{%s}{%s}\right\rfloor = %s`,
-			katexUint(d.BlockGasLimit), katexInt(d.Elasticity), katexUint(target),
+			latexUint(d.BlockGasLimit), latexInt(d.Elasticity), latexUint(target),
 		))
 	}
 	if d.BaseFeeChangeDenominator > 0 {
-		params = append(params, fmt.Sprintf(`d = %s`, katexInt(d.BaseFeeChangeDenominator)))
+		params = append(params, fmt.Sprintf(`d = %s`, latexInt(d.BaseFeeChangeDenominator)))
 	}
 	if d.MinGasMultiplier != "" {
 		params = append(params, fmt.Sprintf(`\mu = %s`, d.MinGasMultiplier))
 	}
 	params = append(params, `\epsilon = 1`)
 	if d.MinGasPrice != "" {
-		params = append(params, fmt.Sprintf(`B_{\min} = %s`, katexTextLit(d.MinGasPrice)))
+		params = append(params, fmt.Sprintf(`B_{\min} = %s`, latexTextLit(d.MinGasPrice)))
 	}
 	if len(params) > 0 {
 		sub = append(sub, strings.Join(params, `,\quad `))
@@ -272,7 +274,7 @@ B_{\text{parent}} + \max(\epsilon,\, \Delta) & W_{\text{stored}} > T \\
 	}
 	sub = append(sub, fmt.Sprintf(
 		`G_{\text{used}} = %s,\quad W_{\text{stored}} = \max(W_{\text{sum}} \cdot %s,\, G_{\text{used}}) = %s`,
-		katexInt(int64(gasUsed)), mu, katexInt(int64(wanted)),
+		latexInt(int64(gasUsed)), mu, latexInt(int64(wanted)),
 	))
 
 	if hasTarget {
@@ -291,13 +293,13 @@ B_{\text{parent}} + \max(\epsilon,\, \Delta) & W_{\text{stored}} > T \\
 		if okParent {
 			delta := math.LegacyNewDecFromInt(math.NewIntFromUint64(wanted).Sub(math.NewIntFromUint64(target)).Abs())
 			delta = delta.Mul(parent).QuoInt(math.NewIntFromUint64(target)).QuoInt(math.NewIntFromUint64(denomU))
-			parentLit := katexTextLit(formatDecAmount(parent, denom))
-			deltaLit := katexTextLit(formatDecAmount(delta, denom))
-			currentLit := katexTextLit(formatDecAmount(current, denom))
+			parentLit := latexTextLit(formatDecAmount(parent, denom))
+			deltaLit := latexTextLit(formatDecAmount(delta, denom))
+			currentLit := latexTextLit(formatDecAmount(current, denom))
 			sub = append(sub, fmt.Sprintf(
 				`\Delta = \frac{\left|%s - %s\right| \cdot %s}{%s \cdot %s} = %s`,
-				katexUint(wanted), katexUint(target), parentLit,
-				katexUint(target), katexUint(denomU), deltaLit,
+				latexUint(wanted), latexUint(target), parentLit,
+				latexUint(target), latexUint(denomU), deltaLit,
 			))
 			sub = append(sub, fmt.Sprintf(`B_{\text{parent}} = %s`, parentLit))
 			switch {
@@ -309,7 +311,7 @@ B_{\text{parent}} + \max(\epsilon,\, \Delta) & W_{\text{stored}} > T \\
 					parentLit, deltaLit, currentLit,
 				))
 			default:
-				bMin := katexTextLit(formatDecAmount(minGasPrice, denom))
+				bMin := latexTextLit(formatDecAmount(minGasPrice, denom))
 				sub = append(sub, fmt.Sprintf(
 					`B_{\text{new}} = \max(B_{\min},\, B_{\text{parent}} - \Delta) = \max(%s,\, %s - %s) = %s`,
 					bMin, parentLit, deltaLit, currentLit,
@@ -324,14 +326,14 @@ B_{\text{parent}} + \max(\epsilon,\, \Delta) & W_{\text{stored}} > T \\
 		} else {
 			sub = append(sub, fmt.Sprintf(
 				`B_{\text{new}} = %s \quad\text{(could not infer } B_{\text{parent}}\text{ from current fee)}`,
-				katexTextLit(d.BaseFee),
+				latexTextLit(d.BaseFee),
 			))
 		}
 	} else if d.BaseFee != "" {
-		sub = append(sub, fmt.Sprintf(`B_{\text{new}} = %s`, katexTextLit(d.BaseFee)))
+		sub = append(sub, fmt.Sprintf(`B_{\text{new}} = %s`, latexTextLit(d.BaseFee)))
 	}
 
-	ex.LatexSubstituted = katexDisplayLines(sub)
+	ex.LatexSubstituted = latexDisplayLines(sub)
 
 	// Plain-text receipt (terminal).
 	var lines []string
@@ -341,10 +343,10 @@ B_{\text{parent}} + \max(\epsilon,\, \Delta) & W_{\text{stored}} > T \\
 		lines = append(lines, "⚠ parent block_results unavailable — using REST block_gas only")
 	}
 	if d.ParentBlockGasUsed > 0 {
-		lines = append(lines, fmt.Sprintf("Parent block gas used (sum txs): %s", fmtInt(int64(d.ParentBlockGasUsed))))
+		lines = append(lines, fmt.Sprintf("Parent block gas used (sum txs): %s", report.FormatInt(int64(d.ParentBlockGasUsed))))
 	}
 	if hasTarget {
-		lines = append(lines, fmt.Sprintf("W_stored = %s   T = %s   (%s)", fmtInt(int64(wanted)), fmtInt(int64(target)), ex.Verdict))
+		lines = append(lines, fmt.Sprintf("W_stored = %s   T = %s   (%s)", report.FormatInt(int64(wanted)), report.FormatInt(int64(target)), ex.Verdict))
 	}
 	if d.MinGasMultiplier != "" {
 		lines = append(lines, fmt.Sprintf("EndBlock: W_stored = max(W_sum × %s, gas_used)", d.MinGasMultiplier))

@@ -1,21 +1,11 @@
-package main
+package report
 
 import (
 	"fmt"
-	"io"
 	"time"
-
-	"github.com/arkantos1482/cosmos-monitor/fetch"
 )
 
-func printDashboard(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, docker fetch.DockerSnapshot, evmEndpoint string) {
-	d := buildWebData(chain, ev, sys, docker, evmEndpoint)
-	fmt.Fprint(w, buildMarkdown(d))
-}
-
-// ── helpers ──────────────────────────────────────────────────────────────────
-
-func fmtInt(n int64) string {
+func FormatInt(n int64) string {
 	if n <= 0 {
 		return fmt.Sprintf("%d", n)
 	}
@@ -30,8 +20,12 @@ func fmtInt(n int64) string {
 	return string(out)
 }
 
-func fmtBytes(b uint64) string {
-	const (KB = 1024; MB = 1024 * KB; GB = 1024 * MB)
+func FormatBytes(b uint64) string {
+	const (
+		KB = 1024
+		MB = 1024 * KB
+		GB = 1024 * MB
+	)
 	switch {
 	case b >= GB:
 		return fmt.Sprintf("%.1f GB", float64(b)/GB)
@@ -44,14 +38,14 @@ func fmtBytes(b uint64) string {
 	}
 }
 
-func fmtDur(d time.Duration) string {
+func FormatDur(d time.Duration) string {
 	if d < time.Second {
 		return fmt.Sprintf("%dms", d.Milliseconds())
 	}
 	return fmt.Sprintf("%.2fs", d.Seconds())
 }
 
-func fmtDurFull(d time.Duration) string {
+func FormatDurFull(d time.Duration) string {
 	if d == 0 {
 		return "0"
 	}
@@ -67,22 +61,22 @@ func fmtDurFull(d time.Duration) string {
 	return fmt.Sprintf("%dm", mins)
 }
 
-func boolStr(b bool) string {
+func BoolStr(b bool) string {
 	if b {
 		return "yes"
 	}
 	return "no"
 }
 
-func truncate(s string, n int) string {
+func FormatFraction(s string) string {
+	v := 0.0
+	fmt.Sscanf(s, "%f", &v)
+	return fmt.Sprintf("%.4f%%", v*100)
+}
+
+func Truncate(s string, n int) string {
 	if len(s) <= n {
 		return s
 	}
 	return s[:n-1] + "…"
-}
-
-func fmtFraction(s string) string {
-	v := 0.0
-	fmt.Sscanf(s, "%f", &v)
-	return fmt.Sprintf("%.4f%%", v*100)
 }

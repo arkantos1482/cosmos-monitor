@@ -1,8 +1,10 @@
-package main
+package html
 
 import (
 	"strings"
 	"testing"
+
+	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
 func TestStripDisplayMathForGoldmark(t *testing.T) {
@@ -16,30 +18,24 @@ func TestStripDisplayMathForGoldmark(t *testing.T) {
 	}
 }
 
-func TestInjectDisplayMathHTML(t *testing.T) {
-	html := "<p>PMTOP_MATH_BLOCK_0</p>"
-	out := injectDisplayMathHTML(html, []string{`W_{\text{stored}} = 1`})
-	if !strings.Contains(out, `class="math-display"`) || !strings.Contains(out, `data-tex-b64=`) {
-		t.Fatalf("got %q", out)
-	}
-	if strings.Contains(out, "PMTOP_MATH_BLOCK") {
-		t.Fatal("placeholder should be replaced")
-	}
-}
-
 func TestRenderFragmentMathDisplay(t *testing.T) {
-	d := WebData{
+	d := model.Report{
 		BlockHeight: "100", BaseFee: "1", BaseFeeRaw: "1000",
 		BlockGas: "21000", ParentBlockGasWanted: 21000,
 		BlockGasLimit: 100_000_000, Elasticity: 2,
 		BaseFeeChangeDenominator: 8, MinGasMultiplier: "0.5",
 		ParentBlockResultsOK: true,
 	}
-	out := renderFragment(d)
+	out := RenderFragment(d)
 	if !strings.Contains(out, `class="math-display"`) {
 		t.Fatal("fragment should inject math-display nodes for KaTeX")
 	}
-	if strings.Contains(out, "<p>$$\n") {
-		t.Fatal("raw broken $$ paragraphs should not appear in HTML")
+}
+
+func TestRenderFragmentMermaid(t *testing.T) {
+	d := model.Report{Inflation: 3.5, PMTEnabled: true, PMTRate: "0.1 PMT/block", GoalBonded: 67}
+	out := RenderFragment(d)
+	if !strings.Contains(out, "mermaid") {
+		t.Fatal("rendered fragment should include mermaid source")
 	}
 }

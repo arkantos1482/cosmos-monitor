@@ -30,7 +30,7 @@ push: ## git push after committing
 .PHONY: deploy
 deploy: ## pull, build, and smoke-test pmtop on node4
 	ssh -i $(KEY) ubuntu@$(NODE4_HOST) \
-		'cd ~/cosmos-monitor && git pull && /usr/local/go/bin/go build -o ~/pmtop . \
+		'cd ~/cosmos-monitor && git pull && /usr/local/go/bin/go build -o ~/pmtop ./cmd/pmtop \
 		&& tmux new-session -d -s pmtop -x 220 -y 60 "~/pmtop"; sleep 6; \
 		tmux capture-pane -t pmtop -p -S -60; tmux kill-session -t pmtop'
 

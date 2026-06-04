@@ -1,8 +1,10 @@
-package main
+package markdown
 
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/arkantos1482/cosmos-monitor/internal/model"
+	"github.com/arkantos1482/cosmos-monitor/internal/report"
 	"io"
 	"sort"
 	"strconv"
@@ -10,25 +12,6 @@ import (
 )
 
 const maxProbeJSONBytes = 12_000
-
-// Defaults aligned with tools/ops/deploy/configs/app.toml (EVM mempool + json-rpc).
-const (
-	defaultJSONRPCAPIs       = "eth,txpool,net,debug,web3"
-	defaultTxpoolGlobalSlots = 5120
-	defaultTxpoolGlobalQueue = 1024
-)
-
-func evmWSEndpoint(httpURL string) string {
-	u := strings.Replace(httpURL, "https://", "wss://", 1)
-	u = strings.Replace(u, "http://", "ws://", 1)
-	if strings.Contains(u, ":8545") {
-		return strings.Replace(u, ":8545", ":8546", 1)
-	}
-	if strings.HasSuffix(u, "/") {
-		return strings.TrimSuffix(u, "/") + ":8546"
-	}
-	return u + "  _(WS usually :8546)_"
-}
 
 func evmDisplaySymbol(denom string) string {
 	switch strings.ToLower(denom) {
@@ -42,7 +25,7 @@ func evmDisplaySymbol(denom string) string {
 	}
 }
 
-func evmRPCOverallStatus(d WebData) string {
+func evmRPCOverallStatus(d model.Report) string {
 	if !d.EVMRPCOk {
 		return "DOWN"
 	}
@@ -59,8 +42,8 @@ func probeNamespace(method string) string {
 	return "other"
 }
 
-func sortedRPCProbes(probes []WebRPCProbe) []WebRPCProbe {
-	out := append([]WebRPCProbe(nil), probes...)
+func sortedRPCProbes(probes []model.RPCProbe) []model.RPCProbe {
+	out := append([]model.RPCProbe(nil), probes...)
 	sort.SliceStable(out, func(i, j int) bool {
 		pi, pj := out[i], out[j]
 		ni, nj := probeNamespace(pi.Method), probeNamespace(pj.Method)
@@ -89,7 +72,7 @@ func jsonRPCCurl(endpoint, requestJSON string) string {
 	return fmt.Sprintf("curl -sS -X POST %s \\\n  -H 'Content-Type: application/json' \\\n  -d '%s'", endpoint, escaped)
 }
 
-func writeEVMRPCSection(w io.Writer, d WebData) {
+func writeEVMRPCSection(w io.Writer, d model.Report) {
 	hint := func(text string) { fmt.Fprintf(w, "_%s_\n\n", text) }
 	subsection := func(name string) { fmt.Fprintf(w, "\n## %s\n\n", name) }
 	row := func(label, value string) { fmt.Fprintf(w, "- **%s**: %s\n", label, value) }
@@ -128,11 +111,11 @@ func writeEVMRPCSection(w io.Writer, d WebData) {
 	}
 	wsEP := d.EVMWSEndpoint
 	if wsEP == "" {
-		wsEP = evmWSEndpoint(httpEP)
+		wsEP = report.EVMWSEndpoint(httpEP)
 	}
 	apis := d.JSONRPCAPIs
 	if apis == "" {
-		apis = defaultJSONRPCAPIs
+		apis = report.DefaultJSONRPCAPIs
 	}
 	row("HTTP JSON-RPC", "`"+httpEP+"`")
 	row("WebSocket", "`"+wsEP+"`")
@@ -189,7 +172,7 @@ func formatTxpoolCount(n, limit uint64) string {
 }
 
 // renderProbeLog builds a fixed-width monospace probe table grouped by JSON-RPC namespace.
-func renderProbeLog(probes []WebRPCProbe) string {
+func renderProbeLog(probes []model.RPCProbe) string {
 	const (
 		padMethod  = 24
 		padStatus  = 6
@@ -218,7 +201,7 @@ func renderProbeLog(probes []WebRPCProbe) string {
 		line := fmt.Sprintf("  %s  %-*s  %-*s  %-*s",
 			mark, padMethod, p.Method, padStatus, status, padLatency, p.Latency)
 		if !p.OK && p.Error != "" {
-			line += "  " + truncate(p.Error, 44)
+			line += "  " + report.Truncate(p.Error, 44)
 		}
 		b.WriteString(line + "\n")
 	}
@@ -256,7 +239,7 @@ func truncateJSON(s string, maxBytes int) string {
 }
 
 // formatProbeExchange renders one method's request/response as monospace text.
-func formatProbeExchange(p WebRPCProbe) string {
+func formatProbeExchange(p model.RPCProbe) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "── %s · %s · %s ──\n", p.Method, probeStatusLabel(p.OK), p.Latency)
 	if !p.OK && p.Error != "" {
@@ -279,7 +262,7 @@ func formatProbeExchange(p WebRPCProbe) string {
 	return strings.TrimRight(b.String(), "\n")
 }
 
-func writeEVMProbeLog(w io.Writer, d WebData, endpoint string) {
+func writeEVMProbeLog(w io.Writer, d model.Report, endpoint string) {
 	log := renderProbeLog(d.RPCProbes)
 	fmt.Fprintf(w, "```text\n%s\n```\n\n", log)
 

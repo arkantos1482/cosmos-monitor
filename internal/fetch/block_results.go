@@ -9,8 +9,8 @@ import (
 
 type blockResultsResp struct {
 	Result struct {
-		Height           string `json:"height"`
-		TxsResults       []txResult `json:"txs_results"`
+		Height           string      `json:"height"`
+		TxsResults       []txResult  `json:"txs_results"`
 		EndBlockEvents   []abciEvent `json:"end_block_events"`
 		BeginBlockEvents []abciEvent `json:"begin_block_events"`
 	} `json:"result"`
@@ -23,7 +23,7 @@ type txResult struct {
 }
 
 type abciEvent struct {
-	Type       string         `json:"type"`
+	Type       string          `json:"type"`
 	Attributes []abciAttribute `json:"attributes"`
 }
 
@@ -34,10 +34,10 @@ type abciAttribute struct {
 
 // BlockResultsSummary holds gas and feemarket data parsed from CometBFT block_results.
 type BlockResultsSummary struct {
-	GasUsedSum      uint64
-	BlockGasWanted  uint64 // from block_gas end_block event
-	BaseFeeEvent    string // from fee_market begin_block event (raw)
-	OK              bool
+	GasUsedSum     uint64
+	BlockGasWanted uint64 // from block_gas end_block event
+	BaseFeeEvent   string // from fee_market begin_block event (raw)
+	OK             bool
 }
 
 func attrValue(attrs []abciAttribute, key string) string {

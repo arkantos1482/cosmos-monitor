@@ -13,18 +13,18 @@ import (
 
 // ChainSnapshot holds all chain-level data.
 type ChainSnapshot struct {
-	NodeID     string
-	Moniker    string
-	AppVersion string
+	NodeID        string
+	Moniker       string
+	AppVersion    string
 	ListenAddr    string
 	RpcListenAddr string
 	Network       string
 
-	BlockHeight     int64
-	LatestBlockTime time.Time
-	BlockInterval   time.Duration
-	CatchingUp      bool
-	PeerCount       int
+	BlockHeight         int64
+	LatestBlockTime     time.Time
+	BlockInterval       time.Duration
+	CatchingUp          bool
+	PeerCount           int
 	PeerMonikers        []string
 	MempoolTxs          int
 	NextProposerMoniker string
@@ -49,12 +49,12 @@ type ChainSnapshot struct {
 	BlockGasLimit int64
 
 	// Parent block (H-1) from CometBFT block_results.
-	ParentBlockGasUsed    uint64
-	ParentBlockGasWanted  uint64 // stored wanted (block_gas event or REST fallback)
-	ParentBlockResultsOK  bool
-	ParentBaseFeeEvent    string // fee_market base_fee from begin_block at H (optional)
+	ParentBlockGasUsed   uint64
+	ParentBlockGasWanted uint64 // stored wanted (block_gas event or REST fallback)
+	ParentBlockResultsOK bool
+	ParentBaseFeeEvent   string // fee_market base_fee from begin_block at H (optional)
 
-	VotingProposals []ProposalInfo
+	VotingProposals  []ProposalInfo
 	DepositProposals []ProposalInfo
 
 	UpgradeName   string
@@ -79,24 +79,24 @@ type ProposalTally struct {
 
 // ValidatorInfo holds per-validator data.
 type ValidatorInfo struct {
-	Moniker            string
-	OperatorAddr       string
-	ConsensusAddr      string
-	NodeID             string // CometBFT peer ID (from /net_info or /status for this node)
-	P2PDial            string // node_id@listen_addr when known from chain RPC
-	P2PConnected       bool   // peer visible in this node's /net_info (or is this node)
-	Status             string
-	Jailed             bool
-	Tombstoned         bool
-	VotingPowerTokens  string
-	VotingPowerPercent float64
-	Commission         float64
-	MissedBlocks           int64
-	OutstandingRewards     string // formatted display string
-	OutstandingRewardsAmt  string // raw base-denom amount for summing
+	Moniker                 string
+	OperatorAddr            string
+	ConsensusAddr           string
+	NodeID                  string // CometBFT peer ID (from /net_info or /status for this node)
+	P2PDial                 string // node_id@listen_addr when known from chain RPC
+	P2PConnected            bool   // peer visible in this node's /net_info (or is this node)
+	Status                  string
+	Jailed                  bool
+	Tombstoned              bool
+	VotingPowerTokens       string
+	VotingPowerPercent      float64
+	Commission              float64
+	MissedBlocks            int64
+	OutstandingRewards      string // formatted display string
+	OutstandingRewardsAmt   string // raw base-denom amount for summing
 	OutstandingRewardsDenom string
-	CommissionEarned       string
-	ProposerPriority       int64
+	CommissionEarned        string
+	ProposerPriority        int64
 }
 
 // ProposalInfo holds governance proposal data.
@@ -118,39 +118,39 @@ type TokenPairInfo struct {
 
 // ChainParams holds chain parameters fetched once on launch.
 type ChainParams struct {
-	UnbondingTime      time.Duration
-	MaxValidators      int
-	BondDenom          string
-	SignedBlocksWindow int64
-	MinSignedPerWindow float64
-	SlashFractionDowntime   string
-	SlashFractionDoubleSign string
-	BlocksPerYear      int64
-	GoalBonded         float64
-	CommunityTax       float64
-	VotingPeriod       time.Duration
-	Quorum             float64
-	Threshold          float64
-	VetoThreshold      float64
-	EVMDenom           string
-	MinGasPrice        float64
-	Elasticity         int64
+	UnbondingTime            time.Duration
+	MaxValidators            int
+	BondDenom                string
+	SignedBlocksWindow       int64
+	MinSignedPerWindow       float64
+	SlashFractionDowntime    string
+	SlashFractionDoubleSign  string
+	BlocksPerYear            int64
+	GoalBonded               float64
+	CommunityTax             float64
+	VotingPeriod             time.Duration
+	Quorum                   float64
+	Threshold                float64
+	VetoThreshold            float64
+	EVMDenom                 string
+	MinGasPrice              float64
+	Elasticity               int64
 	NoBaseFee                bool
 	BaseFeeChangeDenominator int64
 	MinGasMultiplier         float64
 	MinGasPriceRaw           string
-	ERC20Enabled       bool
-	ActiveStaticPrecompiles []string
-	HistoryServeWindow      int64
-	HardforkLondon          string
-	HardforkShanghai        string
-	HardforkCancun          string
+	ERC20Enabled             bool
+	ActiveStaticPrecompiles  []string
+	HistoryServeWindow       int64
+	HardforkLondon           string
+	HardforkShanghai         string
+	HardforkCancun           string
 	// pmtrewards module
-	RewardPerBlockAmount      string
-	RewardPerBlockDenom       string
-	PMTRewardsEnabled         bool
-	PMTRewardsPoolAddress     string
-	PMTRewardsPoolBalanceAmt  string // raw base-denom amount
+	RewardPerBlockAmount       string
+	RewardPerBlockDenom        string
+	PMTRewardsEnabled          bool
+	PMTRewardsPoolAddress      string
+	PMTRewardsPoolBalanceAmt   string // raw base-denom amount
 	PMTRewardsPoolBalanceDenom string
 }
 
@@ -240,14 +240,14 @@ type stakingValidatorsResp struct {
 		Description     struct {
 			Moniker string `json:"moniker"`
 		} `json:"description"`
-		Status string `json:"status"`
-		Tokens string `json:"tokens"`
+		Status     string `json:"status"`
+		Tokens     string `json:"tokens"`
 		Commission struct {
 			CommissionRates struct {
 				Rate string `json:"rate"`
 			} `json:"commission_rates"`
 		} `json:"commission"`
-		Jailed         bool `json:"jailed"`
+		Jailed          bool `json:"jailed"`
 		ConsensusPubkey struct {
 			Key string `json:"key"` // base64 raw pubkey bytes
 		} `json:"consensus_pubkey"`
@@ -263,9 +263,9 @@ type stakingPoolResp struct {
 
 type signingInfosResp struct {
 	Info []struct {
-		Address            string `json:"address"`
+		Address             string `json:"address"`
 		MissedBlocksCounter string `json:"missed_blocks_counter"`
-		Tombstoned         bool   `json:"tombstoned"`
+		Tombstoned          bool   `json:"tombstoned"`
 	} `json:"info"`
 }
 
@@ -331,9 +331,9 @@ type upgradePlanResp struct {
 
 type tokenPairsResp struct {
 	TokenPairs []struct {
-		Denom    string `json:"denom"`
+		Denom        string `json:"denom"`
 		Erc20Address string `json:"erc20_address"`
-		Enabled  bool   `json:"enabled"`
+		Enabled      bool   `json:"enabled"`
 	} `json:"token_pairs"`
 }
 
@@ -431,7 +431,7 @@ type distributionParamsResp struct {
 
 type pmtRewardsParamsResp struct {
 	Params struct {
-		Enabled        bool   `json:"enabled"`
+		Enabled        bool `json:"enabled"`
 		RewardPerBlock struct {
 			Denom  string `json:"denom"`
 			Amount string `json:"amount"`
@@ -658,14 +658,14 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 		return snap
 	}
 
-	snap.NodeID     = status.Result.NodeInfo.ID
-	snap.Moniker    = status.Result.NodeInfo.Moniker
+	snap.NodeID = status.Result.NodeInfo.ID
+	snap.Moniker = status.Result.NodeInfo.Moniker
 	snap.AppVersion = status.Result.NodeInfo.Version
 	snap.ListenAddr = status.Result.NodeInfo.ListenAddr
 	snap.RpcListenAddr = status.Result.NodeInfo.Other.RPCAddress
 	snap.Network = status.Result.NodeInfo.Network
 	snap.BlockHeight = parseInt64(status.Result.SyncInfo.LatestBlockHeight)
-	snap.CatchingUp  = status.Result.SyncInfo.CatchingUp
+	snap.CatchingUp = status.Result.SyncInfo.CatchingUp
 	if t, err := time.Parse(time.RFC3339Nano, status.Result.SyncInfo.LatestBlockTime); err == nil {
 		snap.LatestBlockTime = t
 	}
