@@ -9,8 +9,8 @@ import (
 	"github.com/charmbracelet/glamour"
 )
 
-func printDashboard(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, docker fetch.DockerSnapshot) {
-	d := buildWebData(chain, ev, sys, docker)
+func printDashboard(w io.Writer, chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, docker fetch.DockerSnapshot, evmEndpoint string) {
+	d := buildWebData(chain, ev, sys, docker, evmEndpoint)
 	md := buildMarkdown(d, false)
 	r, err := glamour.NewTermRenderer(
 		glamour.WithStandardStyle("dark"),

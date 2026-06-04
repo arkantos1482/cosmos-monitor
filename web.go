@@ -109,12 +109,31 @@ code{font-family:inherit;font-size:12px;color:var(--cyan);background:transparent
 pre code{color:var(--fg)}
 p{margin:.3rem 0;color:var(--dim);font-size:12px}
 em{font-style:normal;color:var(--dim)}
+.evm-rpc-strip{display:flex;flex-wrap:wrap;gap:.35rem;margin:.5rem 0 1rem;padding:.5rem .65rem;background:var(--surface);border:1px solid var(--border);border-radius:6px}
+.evm-pill{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;color:var(--bright);background:#21262d;border:1px solid var(--border)}
+.evm-pill-ok{border-color:var(--green);color:var(--green)}
+.evm-pill-warn{border-color:var(--yellow);color:var(--yellow)}
+.evm-pill-err{border-color:var(--red);color:var(--red)}
+.evm-wallet-snippet{margin:.4rem 0 .8rem}
+.evm-wallet-snippet pre{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:.6rem 1rem;margin:0;color:var(--fg);font-size:12px}
+.evm-probe-table{display:table;width:100%;margin:.5rem 0 1rem}
+.evm-probe-table thead th{position:sticky;top:0;background:var(--bg)}
+.evm-probe-group td{color:var(--cyan);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding-top:.6rem;border-bottom:1px solid var(--border)}
+.evm-probe-ok td:nth-child(2){color:var(--green)}
+.evm-probe-fail td:nth-child(2){color:var(--red);font-weight:600}
+.evm-lat-ok td:nth-child(3){color:var(--green)}
+.evm-lat-warn td:nth-child(3){color:var(--yellow)}
+.evm-lat-slow td:nth-child(3){color:var(--red)}
+.evm-probe-detail{margin:.35rem 0 .65rem 1rem;border:1px solid var(--border);border-radius:4px;padding:.35rem .6rem;background:var(--surface)}
+.evm-probe-detail summary{cursor:pointer;color:var(--yellow);font-size:12px}
+.evm-probe-err{color:var(--red);font-size:12px;margin:.25rem 0}
+.evm-curl,.evm-json{background:#0d1117;border:1px solid var(--border);border-radius:4px;padding:.5rem .75rem;margin:.35rem 0;font-size:11px;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
 `
 
-func startWeb(addr string, doFetch func() (fetch.ChainSnapshot, fetch.EVMSnapshot, fetch.SystemSnapshot, fetch.DockerSnapshot)) {
+func startWeb(addr string, evmEndpoint string, doFetch func() (fetch.ChainSnapshot, fetch.EVMSnapshot, fetch.SystemSnapshot, fetch.DockerSnapshot)) {
 	render := func() (WebData, string) {
 		chain, ev, sys, docker := doFetch()
-		d := buildWebData(chain, ev, sys, docker)
+		d := buildWebData(chain, ev, sys, docker, evmEndpoint)
 		return d, renderFragment(d)
 	}
 

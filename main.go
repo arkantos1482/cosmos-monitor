@@ -59,7 +59,7 @@ func main() {
 	}
 
 	if *webAddr != "" {
-		startWeb(*webAddr, doFetch)
+		startWeb(*webAddr, *evm, doFetch)
 	}
 
 	fd := int(os.Stdin.Fd())
@@ -88,7 +88,7 @@ func main() {
 		fmt.Fprintln(out, "fetching…")
 		chain, ev, sys, docker := doFetch()
 		fmt.Fprint(out, "\033[H\033[2J")
-		printDashboard(out, chain, ev, sys, docker)
+		printDashboard(out, chain, ev, sys, docker, *evm)
 	}
 
 	refresh()

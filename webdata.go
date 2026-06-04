@@ -113,7 +113,11 @@ type WebData struct {
 	SlashDSInactive bool
 
 	// EVM JSON-RPC
-	EVMEndpoint     string
+	EVMHTTPEndpoint string
+	EVMWSEndpoint   string
+	JSONRPCAPIs     string
+	TxpoolGlobalSlots uint64
+	TxpoolGlobalQueue uint64
 	EVMChainID      uint64
 	EVMDenom        string
 	EVMClient       string
@@ -215,7 +219,7 @@ type WebTokenPair struct {
 	Enabled bool
 }
 
-func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, docker fetch.DockerSnapshot) WebData {
+func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, docker fetch.DockerSnapshot, evmHTTPEndpoint string) WebData {
 	p := chain.Params
 	d := WebData{}
 
@@ -470,6 +474,11 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 		}
 	}
 
+	d.EVMHTTPEndpoint = evmHTTPEndpoint
+	d.EVMWSEndpoint = evmWSEndpoint(evmHTTPEndpoint)
+	d.JSONRPCAPIs = defaultJSONRPCAPIs
+	d.TxpoolGlobalSlots = defaultTxpoolGlobalSlots
+	d.TxpoolGlobalQueue = defaultTxpoolGlobalQueue
 	d.EVMChainID = ev.ChainID
 	if p.EVMDenom != "" {
 		d.EVMDenom = p.EVMDenom
@@ -506,8 +515,8 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 			OK:       probe.OK,
 			Latency:  fmt.Sprintf("%.0fms", float64(probe.Latency)/float64(time.Millisecond)),
 			Error:    probe.Error,
-			Request:  fetch.TruncateJSON(probe.Request, 120),
-			Response: fetch.TruncateJSON(probe.Response, 180),
+			Request:  probe.Request,
+			Response: probe.Response,
 		})
 	}
 
