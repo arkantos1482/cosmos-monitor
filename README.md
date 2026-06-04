@@ -11,11 +11,12 @@ fetch → report.Build → model.Report → panel.Build (HTML fragment)
 
 ## Output
 
-`pmtop` renders a structured **HTML panel** (sections, tables, Mermaid diagrams, KaTeX math):
+`pmtop` renders a structured **HTML panel** using dashboard components (cards, stat grids, badges, data tables) plus Mermaid and KaTeX:
 
+- `<section class="dash-section">` / stat grids / status badges
 - `<div class="mermaid">` diagrams (economics, feemarket)
 - `<div class="math-display">` LaTeX blocks (EIP-1559 fee math)
-- HTML tables, lists, and `<pre>` blocks for RPC probe logs
+- Scrollable data tables and code blocks for RPC probe logs
 
 ### Web UI (default)
 

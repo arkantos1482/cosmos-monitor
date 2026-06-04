@@ -23,7 +23,7 @@ func TestBuildEVMRPCSection(t *testing.T) {
 	if !strings.Contains(out, "<strong>RPC: OK</strong>") {
 		t.Fatal("output should include RPC status line")
 	}
-	if !strings.Contains(out, "<h2>Probe health</h2>") {
+	if !strings.Contains(out, `class="dash-subheading">Probe health</h3>`) {
 		t.Fatal("expected Probe health subsection")
 	}
 }

@@ -9,7 +9,9 @@ import (
 // Build renders the full operations dashboard as an HTML fragment.
 func Build(d model.Report) string {
 	var b strings.Builder
-	writeAll(newWriter(&b), d)
+	w := newWriter(&b)
+	writeAll(w, d)
+	w.flush()
 	return b.String()
 }
 

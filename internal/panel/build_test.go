@@ -10,7 +10,7 @@ import (
 func TestBuildMermaidDiv(t *testing.T) {
 	d := model.Report{Inflation: 3.5, PMTEnabled: true, PMTRate: "0.1 PMT/block"}
 	out := Build(d)
-	if !strings.Contains(out, `<div class="mermaid">`) {
+	if !strings.Contains(out, `class="diagram-panel mermaid"`) {
 		t.Fatal("panel should emit mermaid divs")
 	}
 	if strings.Contains(out, "```mermaid") {
@@ -30,7 +30,7 @@ func TestBuildFeeMath(t *testing.T) {
 		ParentBlockResultsOK: true,
 	}
 	out := Build(d)
-	if !strings.Contains(out, `class="math-display"`) {
+	if !strings.Contains(out, `math-display`) {
 		t.Fatal("fee math should use math-display divs for KaTeX")
 	}
 }
@@ -64,10 +64,10 @@ func TestBuildGoldenMinimal(t *testing.T) {
 		BondDenom: "apmt", PMTEnabled: false,
 	}
 	out := Build(d)
-	if !strings.Contains(out, "<h1>1. INFRASTRUCTURE</h1>") {
+	if !strings.Contains(out, `class="dash-heading">1. INFRASTRUCTURE</h2>`) {
 		t.Fatal("expected infrastructure section")
 	}
-	if !strings.Contains(out, "<h1>7. EVM JSON-RPC</h1>") {
+	if !strings.Contains(out, `class="dash-heading">7. EVM JSON-RPC</h2>`) {
 		t.Fatal("expected EVM section")
 	}
 }
@@ -80,15 +80,17 @@ func TestContentInventory(t *testing.T) {
 	}
 	out := Build(d)
 	for _, want := range []string{
-		"<h1>1. INFRASTRUCTURE</h1>",
-		"<h1>2. NODE</h1>",
-		"<h1>3. VALIDATOR SET</h1>",
-		"<h1>4. THIS VALIDATOR</h1>",
-		"<h1>5. ECONOMICS</h1>",
-		"<h1>6. GOVERNANCE</h1>",
-		"<h1>7. EVM JSON-RPC</h1>",
-		"<h2>For operators</h2>",
-		"<h2>Probe health</h2>",
+		`class="dash-heading">1. INFRASTRUCTURE</h2>`,
+		`class="dash-heading">2. NODE</h2>`,
+		`class="dash-heading">3. VALIDATOR SET</h2>`,
+		`class="dash-heading">4. THIS VALIDATOR</h2>`,
+		`class="dash-heading">5. ECONOMICS</h2>`,
+		`class="dash-heading">6. GOVERNANCE</h2>`,
+		`class="dash-heading">7. EVM JSON-RPC</h2>`,
+		`class="dash-subheading">For operators</h3>`,
+		`class="dash-subheading">Probe health</h3>`,
+		`class="stat-grid"`,
+		`class="data-table"`,
 		"Fee market (x/feemarket)",
 	} {
 		if !strings.Contains(out, want) {
