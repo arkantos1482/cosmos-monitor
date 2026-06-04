@@ -25,14 +25,13 @@ func TestWriteFeemarketSectionHTML(t *testing.T) {
 		`class="fee-badge`,
 		`class="fee-meter"`,
 		`class="fee-hero-line"`,
-		`class="fee-cards"`,
-		`Last block (N−1)`,
-		`How fees adjust`,
-		`This block (N)`,
+		`class="fee-formula"`,
+		`Variables`,
+		`Formulas`,
 		`Params`,
 		`FEE FALLING`,
-		`gas_wanted`,
-		`block_results`,
+		`Stored gas wanted`,
+		`Live value`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("missing %q in output", want)
@@ -43,6 +42,12 @@ func TestWriteFeemarketSectionHTML(t *testing.T) {
 		`Receipt`, `Adjustment logic`, `fee-traffic-stats`,
 		`fee-key-metrics`, `class="code-block"`,
 		`Chain parameters`,
+		`Last block (N−1)`,
+		`How fees adjust`,
+		`This block (N)`,
+		`class="fee-cards"`,
+		`What wallets see`,
+		`class="note"`,
 	} {
 		if strings.Contains(out, bad) {
 			t.Fatalf("fee section should not contain %q", bad)
@@ -60,5 +65,30 @@ func TestWriteFeeMathHTML(t *testing.T) {
 	out := b.String()
 	if !strings.Contains(out, `math-line`) || !strings.Contains(out, `math-panel`) {
 		t.Fatalf("expected math-panel/math-line, got %q", out)
+	}
+}
+
+func TestWriteFeemarketSectionUnlimitedMaxGas(t *testing.T) {
+	var b strings.Builder
+	w := newWriter(&b)
+	d := model.Report{
+		BlockHeight: "100", BaseFee: "1 PMT", BaseFeeRaw: "1000000000000",
+		BlockGas: "21000", BlockGasLimit: ^uint64(0), Elasticity: 2,
+		BaseFeeChangeDenominator: 8,
+		ParentBlockGasUsed: 21000, ParentBlockGasWanted: 21000,
+		ParentBlockResultsOK: true, EVMDenom: "apmt",
+	}
+	writeFeemarketSection(w, d)
+	w.flush()
+	out := b.String()
+	mystery := "9,223,372,036,854,775,807"
+	if strings.Contains(out, mystery) {
+		t.Fatalf("HTML should not show raw MaxUint64 decimal: %s", out)
+	}
+	if strings.Contains(out, `class="fee-meter"`) {
+		t.Fatal("unlimited max_gas should hide load meter")
+	}
+	if !strings.Contains(out, "MaxUint64") || !strings.Contains(out, "sentinel") {
+		t.Fatal("unlimited section should label MaxUint64 sentinel")
 	}
 }

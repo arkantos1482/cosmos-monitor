@@ -32,20 +32,24 @@ func TestBuildFeemarketExplain(t *testing.T) {
 	if ex.NextAdj != "↓" {
 		t.Fatalf("next adj: got %q", ex.NextAdj)
 	}
-	if !strings.Contains(ex.HeroLine, "485,592") || !strings.Contains(ex.HeroLine, "50,000,000") {
-		t.Fatalf("hero line missing block/target: %q", ex.HeroLine)
+	if ex.HeroLine != "Block 485,592" {
+		t.Fatalf("hero should be block height only: %q", ex.HeroLine)
 	}
-	if len(ex.LastBlockRows) < 4 {
-		t.Fatalf("expected last-block rows, got %d", len(ex.LastBlockRows))
+	if len(ex.VariableRows) < 4 {
+		t.Fatalf("expected variable rows, got %d", len(ex.VariableRows))
 	}
-	if !strings.Contains(ex.LastBlockRows[1][0], "gas_wanted") {
-		t.Fatalf("missing gas_wanted row: %v", ex.LastBlockRows[1])
+	if ex.VariableRows[0][0] != "W" || !strings.Contains(ex.VariableRows[0][1], "Stored gas wanted") {
+		t.Fatalf("W row should define stored gas wanted: %v", ex.VariableRows[0])
 	}
-	if !strings.Contains(ex.FormulaLine, "50,000,000") || strings.Contains(ex.FormulaLine, "MaxUint64") {
-		t.Fatalf("finite chain formula should use real target, not sentinel: %q", ex.FormulaLine)
+	if ex.VariableRows[0][2] != "21,000" {
+		t.Fatalf("W live value: got %q", ex.VariableRows[0][2])
 	}
-	if len(ex.ThisBlockRows) == 0 || ex.ThisBlockRows[0][0] != "base_fee" {
-		t.Fatalf("this-block rows: %v", ex.ThisBlockRows)
+	formula := strings.Join(ex.FormulaBlocks, "\n")
+	if !strings.Contains(formula, "50,000,000") || strings.Contains(formula, "MaxUint64") {
+		t.Fatalf("finite chain formula should use real target, not sentinel: %q", formula)
+	}
+	if !strings.Contains(formula, "→ ↓") {
+		t.Fatalf("formula should show fee direction arrow: %q", formula)
 	}
 	if len(ex.ParamRows) == 0 {
 		t.Fatal("expected param rows")
@@ -61,12 +65,6 @@ func TestBuildFeemarketExplain(t *testing.T) {
 	}
 	if !foundElasticity {
 		t.Fatal("missing elasticity row")
-	}
-	if !strings.Contains(ex.WalletLine, "0.001 PMT") {
-		t.Fatalf("wallet line should include base fee: %q", ex.WalletLine)
-	}
-	if !strings.Contains(ex.ChainLine, "50,000,000") {
-		t.Fatalf("chain line should include target: %q", ex.ChainLine)
 	}
 }
 
@@ -86,18 +84,19 @@ func TestBuildFeemarketExplainUnlimitedMaxGas(t *testing.T) {
 	if strings.Contains(ex.HeroLine, mystery) {
 		t.Fatalf("hero should not show raw sentinel decimal: %q", ex.HeroLine)
 	}
-	combined := ex.HeroLine + ex.FormulaLine + ex.LastBlockRows[2][1]
-	for _, s := range []string{"MaxUint64", "unlimited", "sentinel"} {
+	combined := ex.HeroLine + strings.Join(ex.FormulaBlocks, "")
+	for _, row := range ex.VariableRows {
+		for _, cell := range row {
+			combined += cell
+		}
+	}
+	for _, s := range []string{"MaxUint64", "sentinel"} {
 		if !strings.Contains(combined, s) {
 			t.Fatalf("expected %q in explain output", s)
 		}
 	}
-	for _, row := range ex.LastBlockRows {
-		for _, cell := range row {
-			if strings.Contains(cell, mystery) {
-				t.Fatalf("last block row should not show mystery number: %v", row)
-			}
-		}
+	if strings.Contains(combined, mystery) {
+		t.Fatalf("output should not show mystery decimal: %q", combined)
 	}
 }
 
@@ -109,7 +108,7 @@ func TestBuildFeemarketExplainNoBaseFee(t *testing.T) {
 	if !strings.Contains(ex.HeroLine, "no_base_fee") {
 		t.Fatalf("hero should mention no_base_fee: %q", ex.HeroLine)
 	}
-	if ex.FormulaLine != "" {
-		t.Fatalf("no formula in no_base_fee mode: %q", ex.FormulaLine)
+	if len(ex.FormulaBlocks) != 0 {
+		t.Fatalf("no formulas in no_base_fee mode: %v", ex.FormulaBlocks)
 	}
 }

@@ -126,6 +126,12 @@ body::before{
   padding:.65rem .75rem;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
 }
 .fee-card__title{font-size:.8rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:0 0 .45rem}
+.fee-formula{
+  background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+  padding:.45rem .65rem;margin:.35rem 0;font-size:.78rem;line-height:1.45;
+  overflow-x:auto;white-space:pre;
+}
+.fee-formula code{font-size:inherit;color:var(--text);font-family:ui-monospace,"Cascadia Code","Fira Code",monospace}
 code{font-family:ui-monospace,"Cascadia Code","Fira Code",monospace;font-size:.82em;color:var(--accent)}
 `
 

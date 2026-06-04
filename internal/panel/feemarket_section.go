@@ -9,36 +9,25 @@ import (
 
 func writeFeemarketSection(w Writer, d model.Report) {
 	ex := buildFeemarketExplain(d)
-	w.Hint("`gas_used`, stored W → CometBFT `block_results` (height−1); W fallback → `GET /cosmos/evm/feemarket/v1/block_gas`; `base_fee` → `…/base_fee`; chain params → `…/params`; `eth_gasPrice` → EVM JSON-RPC. Payout path is in the Overview diagram above.")
+	w.Hint("`gas_used`, W → CometBFT `block_results` (H−1); W fallback → `GET /cosmos/evm/feemarket/v1/block_gas`; `base_fee` → `…/base_fee`; params → `…/params`; `eth_gasPrice` → EVM JSON-RPC.")
 	writeFeemarketHero(w, ex)
-	if len(ex.LastBlockRows) > 0 {
-		w.Subsection("Last block (N−1)")
-		w.Table([]string{"Field", "Value", "Source"}, ex.LastBlockRows)
+	if len(ex.VariableRows) > 0 {
+		w.Subsection("Variables")
+		w.Table([]string{"Symbol", "Meaning", "Live value"}, ex.VariableRows)
 	}
-	if ex.FormulaLine != "" {
-		heading := ex.FormulaHeading
-		if heading == "" {
-			heading = "How fees adjust"
-		}
-		w.Subsection(heading)
-		w.Em(ex.FormulaLine)
-	}
-	if len(ex.ThisBlockRows) > 0 {
-		w.Subsection("This block (N)")
-		w.Table([]string{"Field", "Value", "Source"}, ex.ThisBlockRows)
+	if len(ex.FormulaBlocks) > 0 {
+		w.Subsection("Formulas")
+		writeFeemarketFormulas(w, ex.FormulaBlocks)
 	}
 	if len(ex.ParamRows) > 0 {
 		w.Subsection("Params")
 		w.Table([]string{"Setting", "Value", "Meaning"}, ex.ParamRows)
 	}
-	writeFeemarketWalletChain(w, ex)
 }
 
 func writeFeemarketHero(w Writer, ex FeemarketExplain) {
 	var meterHTML string
-	if ex.HideLoadMeter {
-		meterHTML = `<p class="fee-meter-note">` + html.EscapeString(ex.UtilizationPct) + `</p>`
-	} else {
+	if !ex.HideLoadMeter {
 		barPct := ex.LoadBarPct
 		if barPct < 0 {
 			barPct = 0
@@ -68,16 +57,8 @@ func writeFeemarketHero(w Writer, ex FeemarketExplain) {
 	))
 }
 
-func writeFeemarketWalletChain(w Writer, ex FeemarketExplain) {
-	w.WriteHTML(
-		`<div class="fee-cards">` +
-			`<div class="fee-card">` +
-			`<h4 class="fee-card__title">What wallets see</h4>` +
-			fmt.Sprintf(`<p class="note">%s</p>`, inlineHTML(ex.WalletLine)) +
-			`</div>` +
-			`<div class="fee-card">` +
-			`<h4 class="fee-card__title">What the chain enforces</h4>` +
-			fmt.Sprintf(`<p class="note">%s</p>`, inlineHTML(ex.ChainLine)) +
-			`</div></div>`,
-	)
+func writeFeemarketFormulas(w Writer, blocks []string) {
+	for _, block := range blocks {
+		w.WriteHTML(`<pre class="fee-formula"><code>` + html.EscapeString(block) + `</code></pre>`)
+	}
 }
