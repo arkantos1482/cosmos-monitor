@@ -299,60 +299,72 @@ func economicsSplitEdgeLabels(d WebData) (comm, del string) {
 	return "commission", "remainder"
 }
 
-func stackMermaidQuoted(label string) string {
+func stackMermaidQuoted(label string, web bool) string {
 	label = strings.ReplaceAll(label, `"`, `'`)
+	if web {
+		label = strings.ReplaceAll(label, "\n", "<br/>")
+	}
 	return `"` + label + `"`
 }
 
-func writeStackNode(b *strings.Builder, id, label string) {
-	fmt.Fprintf(b, "  %s[%s]\n", id, stackMermaidQuoted(label))
-}
-
-func writeEconomicsNodes(b *strings.Builder, d WebData) {
-	writeStackNode(b, "fees", economicsFeesLabel(d))
-	writeStackNode(b, "infl", economicsInflLabel(d))
-	if d.PMTEnabled {
-		writeStackNode(b, "pmtPool", economicsPMTPoolLabel(d))
+// mermaidEdgeText formats edge labels for mermaid.js (commas, %, parens need quoting).
+func mermaidEdgeText(s string, web bool) string {
+	if !web || s == "" {
+		return s
 	}
-	writeStackNode(b, "fc", economicsFCLabel(d))
-	writeStackNode(b, "staking", economicsStakeLabel(d))
-	writeStackNode(b, "dist", economicsDistLabel(d))
-	writeStackNode(b, "comm", economicsCommLabel(d))
-	writeStackNode(b, "val", economicsValLabel(d))
-	writeStackNode(b, "op", economicsOpLabel(d))
-	writeStackNode(b, "del", economicsDelLabel(d))
+	s = strings.ReplaceAll(s, `"`, `'`)
+	return `"` + s + `"`
 }
 
-func writeEconomicsEdges(b *strings.Builder, d WebData) {
-	fmt.Fprintf(b, "  fees --> fc\n")
-	fmt.Fprintf(b, "  infl -->|%s| fc\n", economicsInflEdge(d))
+func writeStackNode(b *strings.Builder, id, label string, web bool) {
+	fmt.Fprintf(b, "  %s[%s]\n", id, stackMermaidQuoted(label, web))
+}
+
+func writeEconomicsNodes(b *strings.Builder, d WebData, web bool) {
+	writeStackNode(b, "fees", economicsFeesLabel(d), web)
+	writeStackNode(b, "infl", economicsInflLabel(d), web)
 	if d.PMTEnabled {
-		fmt.Fprintf(b, "  pmtPool -->|%s| fc\n", economicsPMTEdge(d))
+		writeStackNode(b, "pmtPool", economicsPMTPoolLabel(d), web)
+	}
+	writeStackNode(b, "fc", economicsFCLabel(d), web)
+	writeStackNode(b, "staking", economicsStakeLabel(d), web)
+	writeStackNode(b, "dist", economicsDistLabel(d), web)
+	writeStackNode(b, "comm", economicsCommLabel(d), web)
+	writeStackNode(b, "val", economicsValLabel(d), web)
+	writeStackNode(b, "op", economicsOpLabel(d), web)
+	writeStackNode(b, "del", economicsDelLabel(d), web)
+}
+
+func writeEconomicsEdges(b *strings.Builder, d WebData, web bool) {
+	fmt.Fprintf(b, "  fees --> fc\n")
+	fmt.Fprintf(b, "  infl -->|%s| fc\n", mermaidEdgeText(economicsInflEdge(d), web))
+	if d.PMTEnabled {
+		fmt.Fprintf(b, "  pmtPool -->|%s| fc\n", mermaidEdgeText(economicsPMTEdge(d), web))
 	}
 	if d.BlockHeight != "" {
-		fmt.Fprintf(b, "  fc -->|block %s| dist\n", d.BlockHeight)
+		fmt.Fprintf(b, "  fc -->|%s| dist\n", mermaidEdgeText("block "+d.BlockHeight, web))
 	} else {
 		fmt.Fprintf(b, "  fc --> dist\n")
 	}
-	fmt.Fprintf(b, "  staking -->|%.1f%% bonded| dist\n", d.BondedPct)
-	fmt.Fprintf(b, "  dist -->|%s| comm\n", economicsDistCommEdge(d))
-	fmt.Fprintf(b, "  dist -->|%s| val\n", economicsDistValEdge(d))
+	fmt.Fprintf(b, "  staking -->|%s| dist\n", mermaidEdgeText(fmt.Sprintf("%.1f%% bonded", d.BondedPct), web))
+	fmt.Fprintf(b, "  dist -->|%s| comm\n", mermaidEdgeText(economicsDistCommEdge(d), web))
+	fmt.Fprintf(b, "  dist -->|%s| val\n", mermaidEdgeText(economicsDistValEdge(d), web))
 	commEdge, delEdge := economicsSplitEdgeLabels(d)
-	fmt.Fprintf(b, "  val -->|%s| op\n", commEdge)
-	fmt.Fprintf(b, "  val -->|%s| del\n", delEdge)
+	fmt.Fprintf(b, "  val -->|%s| op\n", mermaidEdgeText(commEdge, web))
+	fmt.Fprintf(b, "  val -->|%s| del\n", mermaidEdgeText(delEdge, web))
 }
 
 // economicsOverviewMermaid is the full LR graph for mermaid.js (web).
 func economicsOverviewMermaid(d WebData) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "graph LR\n")
-	writeEconomicsNodes(&b, d)
+	writeEconomicsNodes(&b, d, true)
 	fmt.Fprintf(&b, "  subgraph sources\n    fees\n    infl\n")
 	if d.PMTEnabled {
 		fmt.Fprintf(&b, "    pmtPool\n")
 	}
 	fmt.Fprintf(&b, "  end\n")
-	writeEconomicsEdges(&b, d)
+	writeEconomicsEdges(&b, d, true)
 	return b.String()
 }
 
@@ -360,8 +372,8 @@ func economicsOverviewMermaid(d WebData) string {
 func economicsOverviewMermaidASCII(d WebData) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "graph TD\n")
-	writeEconomicsNodes(&b, d)
-	writeEconomicsEdges(&b, d)
+	writeEconomicsNodes(&b, d, false)
+	writeEconomicsEdges(&b, d, false)
 	return b.String()
 }
 
@@ -506,27 +518,27 @@ func feemarketEndBlockLabel(d WebData) string {
 	return stackLabelText(lines...)
 }
 
-func writeFeemarketNodes(b *strings.Builder, d WebData) {
-	writeStackNode(b, "endBlk", feemarketEndBlockLabel(d))
-	writeStackNode(b, "gasWanted", feemarketGasWantedLabel(d))
-	writeStackNode(b, "gasTarget", feemarketGasTargetLabel(d))
-	writeStackNode(b, "compare", feemarketCompareLabel(d))
-	writeStackNode(b, "parentBF", feemarketParentBFLabel(d))
-	writeStackNode(b, "params", feemarketParamsLabel(d))
-	writeStackNode(b, "calc", feemarketCalcLabel(d))
-	writeStackNode(b, "baseFee", feemarketBaseFeeLabel(d))
-	writeStackNode(b, "ante", feemarketAnteLabel(d))
-	writeStackNode(b, "gasRPC", feemarketGasRPCLabel(d))
+func writeFeemarketNodes(b *strings.Builder, d WebData, web bool) {
+	writeStackNode(b, "endBlk", feemarketEndBlockLabel(d), web)
+	writeStackNode(b, "gasWanted", feemarketGasWantedLabel(d), web)
+	writeStackNode(b, "gasTarget", feemarketGasTargetLabel(d), web)
+	writeStackNode(b, "compare", feemarketCompareLabel(d), web)
+	writeStackNode(b, "parentBF", feemarketParentBFLabel(d), web)
+	writeStackNode(b, "params", feemarketParamsLabel(d), web)
+	writeStackNode(b, "calc", feemarketCalcLabel(d), web)
+	writeStackNode(b, "baseFee", feemarketBaseFeeLabel(d), web)
+	writeStackNode(b, "ante", feemarketAnteLabel(d), web)
+	writeStackNode(b, "gasRPC", feemarketGasRPCLabel(d), web)
 }
 
-func writeFeemarketEdges(b *strings.Builder, d WebData) {
-	fmt.Fprintf(b, "  endBlk -->|prior block| gasWanted\n")
+func writeFeemarketEdges(b *strings.Builder, d WebData, web bool) {
+	fmt.Fprintf(b, "  endBlk -->|%s| gasWanted\n", mermaidEdgeText("prior block", web))
 	fmt.Fprintf(b, "  gasWanted --> compare\n")
 	fmt.Fprintf(b, "  gasTarget --> compare\n")
 	fmt.Fprintf(b, "  parentBF --> calc\n")
 	fmt.Fprintf(b, "  params --> calc\n")
 	fmt.Fprintf(b, "  compare --> calc\n")
-	fmt.Fprintf(b, "  calc -->|%s| baseFee\n", feemarketCalcEdge(d))
+	fmt.Fprintf(b, "  calc -->|%s| baseFee\n", mermaidEdgeText(feemarketCalcEdge(d), web))
 	fmt.Fprintf(b, "  baseFee --> ante\n")
 	fmt.Fprintf(b, "  baseFee --> gasRPC\n")
 	fmt.Fprintf(b, "  ante --> endBlk\n")
@@ -536,8 +548,8 @@ func writeFeemarketEdges(b *strings.Builder, d WebData) {
 func feemarketMechanicsMermaid(d WebData) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "graph TD\n")
-	writeFeemarketNodes(&b, d)
-	writeFeemarketEdges(&b, d)
+	writeFeemarketNodes(&b, d, false)
+	writeFeemarketEdges(&b, d, false)
 	return b.String()
 }
 
@@ -545,11 +557,11 @@ func feemarketMechanicsMermaid(d WebData) string {
 func feemarketMechanicsMermaidWeb(d WebData) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "graph LR\n")
-	writeFeemarketNodes(&b, d)
-	fmt.Fprintf(&b, "  subgraph endBlock[\"EndBlock N−1\"]\n    endBlk\n  end\n")
+	writeFeemarketNodes(&b, d, true)
+	fmt.Fprintf(&b, "  subgraph endBlock[\"EndBlock N-1\"]\n    endBlk\n  end\n")
 	fmt.Fprintf(&b, "  subgraph beginBlock[\"BeginBlock N\"]\n    gasWanted\n    gasTarget\n    compare\n    parentBF\n    params\n    calc\n    baseFee\n  end\n")
 	fmt.Fprintf(&b, "  subgraph execution[\"Block N txs\"]\n    ante\n    gasRPC\n  end\n")
-	writeFeemarketEdges(&b, d)
+	writeFeemarketEdges(&b, d, true)
 	return b.String()
 }
 

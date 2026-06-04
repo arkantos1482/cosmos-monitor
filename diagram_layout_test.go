@@ -72,7 +72,7 @@ func TestMultilineLabelNarrowsBox(t *testing.T) {
 		"fee_collector",
 		"outstanding 0.006854 PMT",
 		"across 4 validators",
-	))
+	), false)
 	srcFlat := "graph TD\n  fc[" + flat + "]\n"
 	srcStack := "graph TD\n  fc[" + stacked + "]\n"
 	outFlat, err := renderMermaid(srcFlat)

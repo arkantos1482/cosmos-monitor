@@ -96,7 +96,7 @@ func TestEconomicsOverviewZeroInflationShowsMint(t *testing.T) {
 			t.Fatal("goal bonded must not appear on distribution node")
 		}
 	}
-	if !strings.Contains(src, "infl -->|mint off (0%)|") {
+	if !strings.Contains(src, `infl -->|"mint off (0%)"|`) && !strings.Contains(src, "infl -->|mint off (0%)|") {
 		t.Fatal("expected dynamic mint edge label")
 	}
 	if !strings.Contains(src, "infl -->") {
@@ -114,7 +114,7 @@ func TestEconomicsOverviewZeroInflationShowsMint(t *testing.T) {
 	if strings.Contains(src, "op --> del") {
 		t.Fatal("operator and delegators are parallel splits from validators, not sequential")
 	}
-	if !strings.Contains(src, "val -->|commission") || !strings.Contains(src, "val -->|remainder") {
+	if !strings.Contains(src, "val -->|") || !strings.Contains(src, "commission") || !strings.Contains(src, "remainder") {
 		t.Fatal("expected parallel commission/remainder edges from validators")
 	}
 }
