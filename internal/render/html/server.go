@@ -20,7 +20,7 @@ func Start(addr string, evmEndpoint string, render RenderFunc) {
 		v := panel.ParseView(r.URL.Query().Get("view"))
 		d := render(v)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprint(w, RenderView(v, d))
+		fmt.Fprint(w, WrapFragment(v, RenderView(v, d)))
 	})
 
 	http.HandleFunc("/s/", func(w http.ResponseWriter, r *http.Request) {

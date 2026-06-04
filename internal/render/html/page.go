@@ -180,9 +180,23 @@ body::before{
 code{font-family:ui-monospace,"Cascadia Code","Fira Code",monospace;font-size:.82em;color:var(--accent)}
 `
 
+func viewInput(v panel.View) string {
+	return fmt.Sprintf(`<input type="hidden" id="dash-view" name="view" value="%s">`, html.EscapeString(string(v)))
+}
+
+// WrapFragment appends HTMX out-of-band swaps so polling and nav stay on the rendered view.
+func WrapFragment(v panel.View, body string) string {
+	nav := navHTML(v)
+	nav = strings.Replace(nav, `<nav id="dash-nav"`, `<nav id="dash-nav" hx-swap-oob="true"`, 1)
+	return body + fmt.Sprintf(
+		`<input type="hidden" id="dash-view" name="view" value="%s" hx-swap-oob="true">`,
+		html.EscapeString(string(v)),
+	) + nav
+}
+
 func navHTML(active panel.View) string {
 	var b strings.Builder
-	fmt.Fprint(&b, `<nav class="dash-nav" aria-label="Sections">`)
+	fmt.Fprint(&b, `<nav id="dash-nav" class="dash-nav" aria-label="Sections">`)
 	fmt.Fprint(&b, `<p class="dash-nav__title">Sections</p>`)
 	for _, item := range panel.Nav {
 		cls := "dash-nav__link"
@@ -206,7 +220,6 @@ func FullPage(moniker string, active panel.View, fragment string) string {
 			break
 		}
 	}
-	fragURL := fmt.Sprintf("/fragment?view=%s", html.EscapeString(string(active)))
 	return fmt.Sprintf(`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -227,9 +240,11 @@ func FullPage(moniker string, active panel.View, fragment string) string {
 </header>
 <div class="dash-shell">
 %s
-<main class="dash-main" id="data" hx-get="%s" hx-trigger="every 5s" hx-swap="innerHTML scroll:none show:none settle:none">
+%s
+<main class="dash-main" id="data">
 %s
 </main>
+<div id="dash-refresh" hx-get="/fragment" hx-include="#dash-view" hx-trigger="every 5s" hx-target="#data" hx-swap="innerHTML scroll:none show:none settle:none" hidden></div>
 </div>
 <script>
 mermaid.initialize({startOnLoad:false,theme:'dark',securityLevel:'loose'});
@@ -280,29 +295,7 @@ function restoreDashState(){
   });
   window.scrollTo(0,dashSwap.scrollY);
 }
-function viewFromPath(){
-  var p=window.location.pathname;
-  if(p==='/'||p==='')return 'home';
-  if(p.indexOf('/s/')===0){
-    var slug=p.slice(3).replace(/\/$/,'');
-    return slug||'home';
-  }
-  return 'home';
-}
-function syncDashView(){
-  var view=viewFromPath();
-  var el=document.getElementById('data');
-  if(el)el.setAttribute('hx-get','/fragment?view='+encodeURIComponent(view));
-  var path=window.location.pathname.replace(/\/$/,'')||'/';
-  document.querySelectorAll('.dash-nav__link').forEach(function(a){
-    var href=a.getAttribute('href');
-    if(!href)return;
-    var h=href.replace(/\/$/,'')||'/';
-    a.classList.toggle('dash-nav__link--active',h===path);
-  });
-}
 function afterDataSwap(){
-  syncDashView();
   restoreDashState();
   renderDiagrams();
   requestAnimationFrame(function(){
@@ -310,14 +303,7 @@ function afterDataSwap(){
     setTimeout(function(){window.scrollTo(0,dashSwap.scrollY);},80);
   });
 }
-document.addEventListener('DOMContentLoaded',function(){syncDashView();renderDiagrams();});
-window.addEventListener('popstate',function(){
-  syncDashView();
-  var el=document.getElementById('data');
-  if(el&&typeof htmx!=='undefined'){
-    htmx.ajax('GET',el.getAttribute('hx-get'),{target:'#data',swap:'innerHTML scroll:none show:none settle:none'});
-  }
-});
+document.addEventListener('DOMContentLoaded',renderDiagrams);
 document.body.addEventListener('htmx:beforeSwap',function(e){
   if(e.detail.target&&e.detail.target.id==='data')snapshotDashState();
 });
@@ -328,5 +314,5 @@ document.body.addEventListener('htmx:afterSwap',function(e){
 </body>
 </html>`, html.EscapeString(moniker), pageTitle, pageCSS,
 		html.EscapeString(moniker), html.EscapeString(pageTitle),
-		navHTML(active), fragURL, fragment)
+		viewInput(active), navHTML(active), fragment)
 }
