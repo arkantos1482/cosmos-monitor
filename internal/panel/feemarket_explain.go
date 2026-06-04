@@ -10,32 +10,32 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/report"
 )
 
-// FeemarketExplain holds structured fee-market dashboard data (no LaTeX).
+// FeemarketExplain holds structured fee-market dashboard data (no LaTeX / Mermaid).
 type FeemarketExplain struct {
-	SummaryLine       string
-	Hint              string
-	Verdict           string
-	NextAdj           string // ↑, ↓, or =
-	TrafficLabel      string // FEE RISING / FEE FALLING / STABLE
-	TrafficClass      string // rising | falling | stable
-	UtilizationPct    string
-	LoadBarPct        float64 // 0–100 for meter width (capped)
-	MatchOK           bool
-	MatchNote         string
-	Receipt           string
-	ParamRows         [][]string
-	AdjustmentBullets []string
-	NoBaseFee         bool
+	HeroLine         string
+	TrafficLabel     string
+	TrafficClass     string
+	UtilizationPct   string
+	LoadBarPct       float64
+	NextAdj          string
+	StatBaseFee      string
+	StatGasPrice     string
+	StatNextAdj      string
+	ParamRows        [][]string
+	Receipt          string
+	WalletLine       string
+	ChainLine        string
+	AdjustmentBullets []string // 0–2 live bullets; omit when receipt/table suffice
+	NoBaseFee        bool
+}
 
-	StatBaseFee   string
-	StatGasPrice  string
-	StatLastLoad  string
-	StatNextAdj   string
-	WalletGasPrice string
-	WalletPayNote  string
-	ChainBaseFee   string
-	ChainNoBaseFee string
-	ChainDemandNote string
+type feemarketLoad struct {
+	wanted     uint64
+	target     uint64
+	hasTarget  bool
+	gasUsed    uint64
+	utilPct    string
+	loadBarPct float64
 }
 
 func calcGasBaseFee(gasUsed, gasTarget, baseFeeChangeDenom uint64, baseFee, minUnitGas, minGasPrice math.LegacyDec) math.LegacyDec {
@@ -136,24 +136,34 @@ func formatUint(n uint64) string {
 	return report.FormatInt(int64(n))
 }
 
-func formatDecAmount(d math.LegacyDec, denom string) string {
-	if d.IsNil() {
-		return "—"
+func feemarketLoadContext(d model.Report) feemarketLoad {
+	ld := feemarketLoad{
+		wanted:  feemarketStoredWanted(d),
+		gasUsed: d.ParentBlockGasUsed,
 	}
-	return fetch.FormatFeeAmount(d.String(), denom)
+	ld.target, ld.hasTarget = feemarketGasTarget(d)
+	if ld.hasTarget && ld.target > 0 {
+		pct := float64(ld.wanted) / float64(ld.target) * 100
+		ld.utilPct = fmt.Sprintf("%.2f%%", pct)
+		ld.loadBarPct = pct
+		if ld.loadBarPct > 100 {
+			ld.loadBarPct = 100
+		}
+	}
+	return ld
 }
 
-func feemarketVerdictPlain(wanted, target uint64, hasTarget bool) string {
+func feemarketVerdictShort(wanted, target uint64, hasTarget bool) string {
 	if !hasTarget {
-		return "target unknown — cannot predict fee direction"
+		return "fee direction unknown"
 	}
 	switch {
 	case wanted > target:
-		return "fee increases (↑) — last block was busier than target"
+		return "fee rising"
 	case wanted < target:
-		return "fee decreases (↓) — last block was quieter than target"
+		return "fee falling"
 	default:
-		return "unchanged (=) — last block matched target load"
+		return "fee stable"
 	}
 }
 
@@ -171,202 +181,235 @@ func feemarketTraffic(wanted, target uint64, hasTarget bool) (label, class, next
 	}
 }
 
-func buildFeemarketParamRows(d model.Report, target uint64, hasTarget bool) [][]string {
+func feemarketHeroLine(d model.Report, ld feemarketLoad, verdict string) string {
+	line := fmt.Sprintf("Block %s", d.BlockHeight)
+	if ld.hasTarget {
+		line += fmt.Sprintf(" · demand %s / target %s (%s) → %s",
+			formatUint(ld.wanted), formatUint(ld.target), ld.utilPct, verdict)
+	} else {
+		line += fmt.Sprintf(" · demand %s → %s", formatUint(ld.wanted), verdict)
+	}
+	return line
+}
+
+func feemarketTargetFormula(d model.Report, target uint64) string {
+	if d.BlockGasLimit > 0 && d.Elasticity > 0 {
+		return fmt.Sprintf("%s ÷ elasticity %d = %s gas",
+			formatUint(d.BlockGasLimit), d.Elasticity, formatUint(target))
+	}
+	return "unknown (need max block gas and elasticity)"
+}
+
+func buildFeemarketParamRows(d model.Report, ld feemarketLoad) [][]string {
 	var rows [][]string
 	if d.Elasticity > 0 {
-		val := fmt.Sprintf("%d", d.Elasticity)
-		desc := "Target block fullness = max block gas ÷ elasticity (EIP-1559 style half-full aim)"
-		if hasTarget {
-			val += fmt.Sprintf(" → target %s gas", formatUint(target))
+		note := feemarketTargetFormula(d, ld.target)
+		if ld.hasTarget {
+			note += fmt.Sprintf(" — last block %s of target (%s)", ld.utilPct, feemarketVerdictShort(ld.wanted, ld.target, true))
 		}
-		rows = append(rows, []string{"elasticity_multiplier", val, desc})
+		rows = append(rows, []string{
+			"elasticity_multiplier",
+			fmt.Sprintf("%d", d.Elasticity),
+			note,
+		})
 	}
 	if d.BlockGasLimit > 0 {
 		rows = append(rows, []string{
 			"max block gas (consensus)",
 			formatUint(d.BlockGasLimit),
-			"Hard cap on gas per block from CometBFT consensus params",
+			fmt.Sprintf("Hard cap per block; target gas uses %s", feemarketTargetFormula(d, ld.target)),
 		})
 	}
 	if d.BaseFeeChangeDenominator > 0 {
+		note := fmt.Sprintf("Per-block |Δbase| ≤ base × |demand−target| / (target × %d)", d.BaseFeeChangeDenominator)
+		if ld.hasTarget && d.BaseFee != "" {
+			note += fmt.Sprintf("; at current load (%s) next block moves %s", ld.utilPct, feemarketVerdictShort(ld.wanted, ld.target, true))
+		}
 		rows = append(rows, []string{
 			"base_fee_change_denominator",
 			fmt.Sprintf("%d", d.BaseFeeChangeDenominator),
-			"Larger value → slower base-fee moves per block (max change ≈ 1/d per block)",
+			note,
 		})
 	}
 	if d.MinGasPrice != "" {
 		rows = append(rows, []string{
 			"min_gas_price (floor)",
 			d.MinGasPrice,
-			"Base fee will not drop below this chain minimum",
+			fmt.Sprintf("Base fee will not fall below %s on decrease", d.MinGasPrice),
 		})
 	}
 	if d.MinGasMultiplier != "" {
 		rows = append(rows, []string{
 			"min_gas_multiplier",
 			d.MinGasMultiplier,
-			"EndBlock records demand as max(mempool gas × μ, gas actually used)",
+			fmt.Sprintf("Recorded demand = max(mempool gas × %s, gas used %s)", d.MinGasMultiplier, formatUint(ld.gasUsed)),
 		})
 	}
 	noBase := report.BoolStr(d.NoBaseFee)
-	desc := "EIP-1559 auto-adjust active"
+	note := "EIP-1559 auto-adjust on — base fee moves with congestion"
 	if d.NoBaseFee {
-		desc = "Fixed minimum gas — base fee does not move with congestion"
+		note = "Fixed minimum gas — congestion does not move base fee"
 	}
-	rows = append(rows, []string{"no_base_fee", noBase, desc})
+	rows = append(rows, []string{"no_base_fee", noBase, note})
 	if d.AdjCap != "" {
-		rows = append(rows, []string{"base_fee max change (cap)", d.AdjCap, "Upper bound on per-block base-fee delta when configured"})
+		rows = append(rows, []string{
+			"base_fee max change (cap)",
+			d.AdjCap,
+			fmt.Sprintf("Upper bound on per-block delta when set (denominator %d)", d.BaseFeeChangeDenominator),
+		})
 	}
 	return rows
 }
 
-func defaultAdjustmentBullets() []string {
+func feemarketWalletLine(d model.Report, gasPrice string) string {
+	if d.NoBaseFee {
+		return fmt.Sprintf("eth_gasPrice %s — fixed pricing (no_base_fee=true); pay ≈ gas × quoted price", gasPrice)
+	}
+	return fmt.Sprintf("eth_gasPrice %s — pay ≈ gas × (base %s + priority tip)", gasPrice, d.BaseFee)
+}
+
+func feemarketChainLine(d model.Report, ld feemarketLoad) string {
+	if d.NoBaseFee {
+		return fmt.Sprintf("Chain enforces min gas %s; no_base_fee=true — prior block load does not adjust fees", d.BaseFee)
+	}
+	if ld.hasTarget {
+		return fmt.Sprintf("BeginBlock base fee %s from prior demand %s vs target %s (%s, %s)",
+			d.BaseFee, formatUint(ld.wanted), formatUint(ld.target), ld.utilPct,
+			feemarketVerdictShort(ld.wanted, ld.target, true))
+	}
+	return fmt.Sprintf("BeginBlock base fee %s — target unknown (need max gas ÷ elasticity)", d.BaseFee)
+}
+
+func feemarketAdjustmentBullets(d model.Report, ld feemarketLoad, nextAdj string) []string {
+	if d.NoBaseFee {
+		return []string{
+			fmt.Sprintf("no_base_fee=true — minimum stays at %s; recorded demand %s is informational only",
+				d.BaseFee, formatUint(ld.wanted)),
+			fmt.Sprintf("Wallets quote eth_gasPrice %s from node JSON-RPC", formatGasPriceStat(d)),
+		}
+	}
+	if !ld.hasTarget {
+		return nil
+	}
 	return []string{
-		"After each block, the chain stores how busy it was (recorded demand).",
-		"Compare recorded demand to the target capacity (max gas ÷ elasticity).",
-		"Busier than target → raise minimum gas price next block; quieter → lower (not below floor).",
-		"Wallets quote eth_gasPrice ≈ base fee + typical priority tip; you pay gas × (base + tip).",
+		fmt.Sprintf("Prior block demand %s vs target %s (%s) → next minimum gas price %s (%s)",
+			formatUint(ld.wanted), formatUint(ld.target), ld.utilPct, nextAdj,
+			feemarketVerdictShort(ld.wanted, ld.target, true)),
+		fmt.Sprintf("Max block %s ÷ elasticity %d = target %s; denominator %d caps per-block %s moves",
+			formatUint(d.BlockGasLimit), d.Elasticity, formatUint(ld.target),
+			d.BaseFeeChangeDenominator, nextAdj),
 	}
 }
 
-func buildFeemarketExplain(d model.Report) FeemarketExplain {
-	ex := FeemarketExplain{}
+func formatGasPriceStat(d model.Report) string {
 	denom := diagramDenom(d)
-
-	ex.StatBaseFee = d.BaseFee
 	if d.GasPrice != "" {
-		ex.StatGasPrice = fetch.FormatFeeAmount(d.GasPrice, denom)
-		ex.WalletGasPrice = ex.StatGasPrice
-	} else {
-		ex.StatGasPrice = "—"
-		ex.WalletGasPrice = "—"
+		return fetch.FormatFeeAmount(d.GasPrice, denom)
 	}
-	ex.ChainBaseFee = d.BaseFee
-	if d.BaseFee == "" {
-		ex.ChainBaseFee = "—"
-	}
-	ex.ChainNoBaseFee = report.BoolStr(d.NoBaseFee)
-	ex.WalletPayNote = "Typical cost ≈ gas used × (minimum gas price + optional priority tip)"
-	ex.ChainDemandNote = "EndBlock demand from the previous block drives the base fee applied at BeginBlock of this block"
+	return "—"
+}
 
+func buildFeemarketReceipt(d model.Report, ld feemarketLoad, ex *FeemarketExplain) string {
 	if d.NoBaseFee {
-		ex.NoBaseFee = true
-		ex.SummaryLine = "Fixed gas pricing — EIP-1559 auto-adjust is off (no_base_fee)"
-		ex.Hint = "Fees stay at the configured minimum; block congestion does not nudge the minimum gas price."
-		ex.TrafficLabel = "FIXED PRICING"
-		ex.TrafficClass = "stable"
-		ex.NextAdj = "—"
-		ex.StatNextAdj = "—"
-		ex.Verdict = "no auto-adjust"
-		ex.StatLastLoad = "n/a"
-		ex.ParamRows = buildFeemarketParamRows(d, 0, false)
-		ex.AdjustmentBullets = []string{
-			"no_base_fee is enabled — the chain does not run EIP-1559 style base-fee updates.",
-			"Wallets still use eth_gasPrice / min gas price from node config.",
-		}
-		ex.Receipt = strings.Join([]string{
-			"1. EIP-1559 auto-adjust: OFF (no_base_fee)",
-			"2. Minimum gas price: " + ex.ChainBaseFee,
-			"3. eth_gasPrice: " + ex.WalletGasPrice,
+		return strings.Join([]string{
+			"1. EIP-1559 auto-adjust: OFF (no_base_fee=true)",
+			"2. Minimum gas price: " + ex.StatBaseFee,
+			"3. eth_gasPrice: " + ex.StatGasPrice,
 		}, "\n")
-		return ex
 	}
 
-	wanted := feemarketStoredWanted(d)
-	target, hasTarget := feemarketGasTarget(d)
-	gasUsed := d.ParentBlockGasUsed
-
-	ex.TrafficLabel, ex.TrafficClass, ex.NextAdj = feemarketTraffic(wanted, target, hasTarget)
-	ex.StatNextAdj = ex.NextAdj
-	ex.Verdict = feemarketVerdictPlain(wanted, target, hasTarget)
-
-	if hasTarget && target > 0 {
-		pct := float64(wanted) / float64(target) * 100
-		ex.UtilizationPct = fmt.Sprintf("%.1f%%", pct)
-		ex.StatLastLoad = ex.UtilizationPct + " of target"
-		ex.LoadBarPct = pct
-		if ex.LoadBarPct > 100 {
-			ex.LoadBarPct = 100
-		}
-	} else {
-		ex.StatLastLoad = "unknown"
-	}
-
-	ex.SummaryLine = fmt.Sprintf("Block %s — base fee %s", d.BlockHeight, d.BaseFee)
-	if ex.StatGasPrice != "—" {
-		ex.SummaryLine += fmt.Sprintf(" · eth_gasPrice %s", ex.StatGasPrice)
-	}
-	if ex.UtilizationPct != "" {
-		ex.SummaryLine += fmt.Sprintf(" · last block load %s of target", ex.UtilizationPct)
-	}
-
-	ex.Hint = "The **previous** block's load (recorded demand vs target) nudges the **minimum gas price** for this block — like a thermostat reacting to yesterday's temperature."
-
-	ex.ParamRows = buildFeemarketParamRows(d, target, hasTarget)
-	ex.AdjustmentBullets = defaultAdjustmentBullets()
-
-	var receipt []string
+	var lines []string
 	step := 1
 	if !d.ParentBlockResultsOK {
-		receipt = append(receipt, "⚠ Previous-block gas may be incomplete (block_results unavailable)")
+		lines = append(lines, "⚠ Previous-block gas may be incomplete (block_results unavailable)")
 	}
-	receipt = append(receipt, fmt.Sprintf("%d. Previous block gas used: %s", step, formatUint(gasUsed)))
+	lines = append(lines, fmt.Sprintf("%d. Previous block gas used: %s", step, formatUint(ld.gasUsed)))
 	step++
 
-	demandLine := fmt.Sprintf("%d. Recorded demand (for next fee): %s", step, formatUint(wanted))
+	demandLine := fmt.Sprintf("%d. Recorded demand (fee input): %s", step, formatUint(ld.wanted))
 	if d.MinGasMultiplier != "" && d.MinGasMultiplier != "1" {
-		demandLine += fmt.Sprintf("  [= max(mempool × %s, gas used)]", d.MinGasMultiplier)
-	} else if wanted > 0 && wanted != gasUsed {
-		demandLine += "  [= max(mempool, gas used)]"
+		demandLine += fmt.Sprintf(" [= max(mempool × %s, gas used)]", d.MinGasMultiplier)
+	} else if ld.wanted > 0 && ld.wanted != ld.gasUsed {
+		demandLine += " [= max(mempool, gas used)]"
 	}
-	receipt = append(receipt, demandLine)
+	lines = append(lines, demandLine)
 	step++
 
-	if hasTarget {
-		receipt = append(receipt, fmt.Sprintf("%d. Target capacity: %s gas  (max %s ÷ elasticity %d)",
-			step, formatUint(target), formatUint(d.BlockGasLimit), d.Elasticity))
+	if ld.hasTarget {
+		lines = append(lines, fmt.Sprintf("%d. Target: %s  (%s)",
+			step, formatUint(ld.target), feemarketTargetFormula(d, ld.target)))
 		step++
-		loadLine := fmt.Sprintf("%d. Load vs target: %s / %s", step, formatUint(wanted), formatUint(target))
-		if ex.UtilizationPct != "" {
-			loadLine += " ≈ " + ex.UtilizationPct
+		loadLine := fmt.Sprintf("%d. Load: %s / %s", step, formatUint(ld.wanted), formatUint(ld.target))
+		if ld.utilPct != "" {
+			loadLine += " = " + ld.utilPct
 		}
-		loadLine += " → " + ex.Verdict
-		receipt = append(receipt, loadLine)
+		loadLine += " → " + feemarketVerdictShort(ld.wanted, ld.target, true) + " (" + ex.NextAdj + " next block)"
+		lines = append(lines, loadLine)
 		step++
 	} else {
-		receipt = append(receipt, fmt.Sprintf("%d. Target capacity: unknown (need max block gas)", step))
+		lines = append(lines, fmt.Sprintf("%d. Target: unknown (need max block gas + elasticity)", step))
 		step++
 	}
 
-	receipt = append(receipt, fmt.Sprintf("%d. Base fee this block: %s", step, d.BaseFee))
+	lines = append(lines, fmt.Sprintf("%d. Base fee this block: %s", step, d.BaseFee))
 	step++
 	if ex.StatGasPrice != "—" {
-		receipt = append(receipt, fmt.Sprintf("%d. eth_gasPrice: %s", step, ex.StatGasPrice))
+		lines = append(lines, fmt.Sprintf("%d. eth_gasPrice: %s", step, ex.StatGasPrice))
 		step++
 	}
 
 	current, okCurrent := parseLegacyDec(d.BaseFeeRaw)
-	if okCurrent && hasTarget && d.BaseFeeChangeDenominator > 0 {
+	if okCurrent && ld.hasTarget && d.BaseFeeChangeDenominator > 0 {
 		minGasPrice := math.LegacyZeroDec()
 		if mp, ok := parseLegacyDec(d.MinGasPriceRaw); ok {
 			minGasPrice = mp
 		}
-		minUnit := math.LegacyOneDec()
 		denomU := uint64(d.BaseFeeChangeDenominator)
-		parent, okParent := inferParentBaseFee(current, wanted, target, denomU, minUnit, minGasPrice)
-		if okParent {
-			ex.MatchOK = calcGasBaseFee(wanted, target, denomU, parent, minUnit, minGasPrice).Equal(current)
+		parent, okParent := inferParentBaseFee(current, ld.wanted, ld.target, denomU, math.LegacyOneDec(), minGasPrice)
+		if okParent && calcGasBaseFee(ld.wanted, ld.target, denomU, parent, math.LegacyOneDec(), minGasPrice).Equal(current) {
+			lines = append(lines, fmt.Sprintf("%d. ✓ recomputed base fee matches chain (parent → current)", step))
+		} else if okParent {
+			lines = append(lines, fmt.Sprintf("%d. ⚠ base fee verify inconclusive (check block_results / params)", step))
 		}
 	}
-	if ex.MatchOK {
-		ex.MatchNote = "✓ recomputed base fee matches chain"
-		receipt = append(receipt, fmt.Sprintf("%d. %s", step, ex.MatchNote))
-	} else if okCurrent && hasTarget {
-		ex.MatchNote = "⚠ could not verify base fee against parent (check block_results / params)"
-		receipt = append(receipt, fmt.Sprintf("%d. %s", step, ex.MatchNote))
+	return strings.Join(lines, "\n")
+}
+
+func buildFeemarketExplain(d model.Report) FeemarketExplain {
+	ex := FeemarketExplain{}
+	ld := feemarketLoadContext(d)
+
+	ex.StatBaseFee = d.BaseFee
+	if ex.StatBaseFee == "" {
+		ex.StatBaseFee = "—"
+	}
+	ex.StatGasPrice = formatGasPriceStat(d)
+	ex.NoBaseFee = d.NoBaseFee
+
+	if d.NoBaseFee {
+		ex.TrafficLabel = "FIXED PRICING"
+		ex.TrafficClass = "stable"
+		ex.NextAdj = "—"
+		ex.StatNextAdj = "—"
+		ex.HeroLine = fmt.Sprintf("Block %s · fixed gas pricing (no_base_fee) · base %s", d.BlockHeight, ex.StatBaseFee)
+		ex.ParamRows = buildFeemarketParamRows(d, ld)
+		ex.WalletLine = feemarketWalletLine(d, ex.StatGasPrice)
+		ex.ChainLine = feemarketChainLine(d, ld)
+		ex.AdjustmentBullets = feemarketAdjustmentBullets(d, ld, ex.NextAdj)
+		ex.Receipt = buildFeemarketReceipt(d, ld, &ex)
+		return ex
 	}
 
-	ex.Receipt = strings.Join(receipt, "\n")
+	verdict := feemarketVerdictShort(ld.wanted, ld.target, ld.hasTarget)
+	ex.TrafficLabel, ex.TrafficClass, ex.NextAdj = feemarketTraffic(ld.wanted, ld.target, ld.hasTarget)
+	ex.StatNextAdj = ex.NextAdj
+	ex.UtilizationPct = ld.utilPct
+	ex.LoadBarPct = ld.loadBarPct
+	ex.HeroLine = feemarketHeroLine(d, ld, verdict)
+	ex.ParamRows = buildFeemarketParamRows(d, ld)
+	ex.WalletLine = feemarketWalletLine(d, ex.StatGasPrice)
+	ex.ChainLine = feemarketChainLine(d, ld)
+	ex.AdjustmentBullets = feemarketAdjustmentBullets(d, ld, ex.NextAdj)
+	ex.Receipt = buildFeemarketReceipt(d, ld, &ex)
 	return ex
 }

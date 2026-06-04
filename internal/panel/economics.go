@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
-	"github.com/arkantos1482/cosmos-monitor/internal/report"
 )
 
 func writeEconomics(w Writer, d model.Report) {
@@ -83,38 +82,8 @@ func writeEconomics(w Writer, d model.Report) {
 	}
 
 	w.Subsection("Fee market (x/feemarket)")
-	w.Hint("Live status, receipt walkthrough, and wallet vs chain view from feemarket REST, CometBFT block_results, and eth_gasPrice. Payout path is in the Overview diagram above.")
+	w.Hint("Live load, parameters, and receipt from feemarket REST, block_results, and eth_gasPrice. Fee payout path is in the Overview diagram above.")
 	writeFeemarketSection(w, d)
-
-	w.Row("model", "EIP-1559  _(base fee rises when blocks are full, falls when empty)_")
-	if d.BaseFee != "" {
-		w.Row("current base fee", d.BaseFee)
-	}
-	if d.GasPrice != "" {
-		w.Row("current gas price", d.GasPrice+"  _(from JSON-RPC eth_gasPrice)_")
-	}
-	if d.MinGasPrice != "" {
-		w.Row("min gas price", d.MinGasPrice+"  _(chain-enforced floor)_")
-	}
-	if d.BlockGas != "" {
-		w.Row("gas used (last block)", d.BlockGas)
-	}
-	if d.Elasticity > 0 {
-		w.Row("block gas target", fmt.Sprintf("max_block_gas ÷ %d", d.Elasticity))
-	}
-	if d.AdjCap != "" {
-		w.Row("base fee max change", d.AdjCap)
-	}
-	if d.BaseFeeChangeDenominator > 0 {
-		w.Row("change denominator", fmt.Sprintf("%d", d.BaseFeeChangeDenominator))
-	}
-	noBaseFeeStr := report.BoolStr(d.NoBaseFee)
-	if d.NoBaseFee {
-		noBaseFeeStr += "  _(EIP-1559 enforcement disabled)_"
-	} else {
-		noBaseFeeStr += "  _(EIP-1559 active)_"
-	}
-	w.Row("no_base_fee flag", noBaseFeeStr)
 
 	w.Subsection("PMT Rewards  (x/pmtrewards — custom)")
 	w.Hint("`status`, `reward rate`, pool address → `GET /cosmos/evm/pmtrewards/v1/params`; `pool balance` → `x/bank` balances for pool address; runway/emissions derived in pmtop.")

@@ -9,23 +9,30 @@ import (
 
 func writeFeemarketSection(w Writer, d model.Report) {
 	ex := buildFeemarketExplain(d)
-
-	w.StrongLine(ex.SummaryLine)
-	writeFeemarketTraffic(w, ex)
-	writeFeemarketStatusDashboard(w, ex)
-	w.Subsection("Receipt walkthrough")
+	writeFeemarketHero(w, ex)
+	writeFeemarketKeyMetrics(w, ex)
+	if len(ex.ParamRows) > 0 {
+		w.Subsection("Chain parameters")
+		w.Table([]string{"Setting", "Value", "Note"}, ex.ParamRows)
+	}
+	w.Subsection("Receipt")
 	w.Pre(ex.Receipt)
-	writeFeemarketWalletChainCards(w, ex)
+	writeFeemarketWalletChain(w, ex)
+	if len(ex.AdjustmentBullets) > 0 {
+		for _, b := range ex.AdjustmentBullets {
+			w.ListItem(b)
+		}
+	}
 }
 
-func writeFeemarketTraffic(w Writer, ex FeemarketExplain) {
+func writeFeemarketHero(w Writer, ex FeemarketExplain) {
 	barPct := ex.LoadBarPct
 	if barPct < 0 {
 		barPct = 0
 	}
-	loadLabel := ex.StatLastLoad
-	if ex.UtilizationPct != "" {
-		loadLabel = ex.UtilizationPct + " of target"
+	meterLabel := ex.UtilizationPct
+	if meterLabel == "" {
+		meterLabel = "—"
 	}
 	w.WriteHTML(fmt.Sprintf(
 		`<div class="fee-traffic">`+
@@ -34,55 +41,40 @@ func writeFeemarketTraffic(w Writer, ex FeemarketExplain) {
 			`<div class="fee-meter__label"><span>Block load vs target</span><span>%s</span></div>`+
 			`<div class="fee-meter__track"><div class="fee-meter__fill" style="width:%.1f%%"></div></div>`+
 			`</div>`+
-			`<dl class="stat-grid fee-traffic-stats">`+
-			`<div class="stat"><dt>base fee now</dt><dd>%s</dd></div>`+
-			`<div class="stat"><dt>eth_gasPrice</dt><dd>%s</dd></div>`+
-			`<div class="stat"><dt>next adjustment</dt><dd>%s</dd></div>`+
-			`</dl></div>`,
+			`<p class="fee-hero-line">%s</p>`+
+			`</div>`,
 		html.EscapeString(ex.TrafficClass),
 		html.EscapeString(ex.TrafficLabel),
 		barPct,
-		html.EscapeString(loadLabel),
+		html.EscapeString(meterLabel),
 		barPct,
+		inlineHTML(ex.HeroLine),
+	))
+}
+
+func writeFeemarketKeyMetrics(w Writer, ex FeemarketExplain) {
+	w.WriteHTML(fmt.Sprintf(
+		`<dl class="stat-grid fee-key-metrics">`+
+			`<div class="stat"><dt>base fee</dt><dd>%s</dd></div>`+
+			`<div class="stat"><dt>eth_gasPrice</dt><dd>%s</dd></div>`+
+			`<div class="stat"><dt>next adjustment</dt><dd>%s</dd></div>`+
+			`</dl>`,
 		html.EscapeString(ex.StatBaseFee),
 		html.EscapeString(ex.StatGasPrice),
 		html.EscapeString(ex.StatNextAdj),
 	))
 }
 
-func writeFeemarketStatusDashboard(w Writer, ex FeemarketExplain) {
-	w.Hint(ex.Hint)
-	w.Row("base fee now", ex.StatBaseFee)
-	w.Row("eth_gasPrice", ex.StatGasPrice)
-	w.Row("next adjustment", ex.StatNextAdj+"  _("+ex.Verdict+")_")
-	w.Row("last block load", ex.StatLastLoad)
-	if len(ex.ParamRows) > 0 {
-		w.Subsection("Chain parameters")
-		w.Table([]string{"Setting", "Value", "What it does"}, ex.ParamRows)
-	}
-}
-
-func writeFeemarketWalletChainCards(w Writer, ex FeemarketExplain) {
+func writeFeemarketWalletChain(w Writer, ex FeemarketExplain) {
 	w.WriteHTML(
 		`<div class="fee-cards">` +
 			`<div class="fee-card">` +
 			`<h4 class="fee-card__title">What wallets see</h4>` +
-			`<dl class="stat-grid">` +
-			fmt.Sprintf(`<div class="stat"><dt>eth_gasPrice</dt><dd>%s</dd></div>`, html.EscapeString(ex.WalletGasPrice)) +
-			`</dl>` +
-			fmt.Sprintf(`<p class="note">%s</p>`, inlineHTML(ex.WalletPayNote)) +
+			fmt.Sprintf(`<p class="note">%s</p>`, inlineHTML(ex.WalletLine)) +
 			`</div>` +
 			`<div class="fee-card">` +
 			`<h4 class="fee-card__title">What the chain enforces</h4>` +
-			`<dl class="stat-grid">` +
-			fmt.Sprintf(`<div class="stat"><dt>base_fee</dt><dd>%s</dd></div>`, html.EscapeString(ex.ChainBaseFee)) +
-			fmt.Sprintf(`<div class="stat"><dt>no_base_fee</dt><dd>%s</dd></div>`, html.EscapeString(ex.ChainNoBaseFee)) +
-			`</dl>` +
-			fmt.Sprintf(`<p class="note">%s</p>`, inlineHTML(ex.ChainDemandNote)) +
+			fmt.Sprintf(`<p class="note">%s</p>`, inlineHTML(ex.ChainLine)) +
 			`</div></div>`,
 	)
-	w.Subsection("Adjustment logic")
-	for _, b := range ex.AdjustmentBullets {
-		w.ListItem(b)
-	}
 }

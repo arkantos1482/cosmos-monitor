@@ -106,7 +106,8 @@ body::before{
 .fee-meter__label{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);margin-bottom:.3rem}
 .fee-meter__track{height:10px;background:var(--surface-2);border-radius:999px;border:1px solid var(--border);overflow:hidden}
 .fee-meter__fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .3s ease}
-.fee-traffic-stats{margin-top:.45rem}
+.fee-hero-line{margin:.35rem 0 .5rem;font-size:.88rem;line-height:1.45}
+.fee-key-metrics{margin:.35rem 0 .65rem}
 .fee-cards{
   display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
   gap:.65rem;margin:.55rem 0 .65rem;
