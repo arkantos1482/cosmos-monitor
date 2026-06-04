@@ -48,16 +48,30 @@ func fullPage(moniker, fragment string) string {
 <script>
 mermaid.initialize({startOnLoad:false,theme:'dark',securityLevel:'loose'});
 function renderMermaid(){mermaid.run({querySelector:'#data .mermaid'});}
+function renderFeeMathTex(){
+  if(typeof katex==='undefined')return;
+  document.querySelectorAll('#data .fee-math-tex').forEach(function(el){
+    if(el.dataset.rendered)return;
+    var b64=el.getAttribute('data-tex-b64');
+    if(!b64)return;
+    try{
+      var tex=decodeURIComponent(escape(atob(b64)));
+      katex.render(tex,el,{displayMode:true,throwOnError:false});
+      el.dataset.rendered='1';
+    }catch(e){}
+  });
+}
 function renderMath(){
+  renderFeeMathTex();
   if(typeof renderMathInElement!=='function')return;
-  const root=document.getElementById('data');
-  renderMathInElement(root,{
+  renderMathInElement(document.getElementById('data'),{
     delimiters:[
       {left:'$$',right:'$$',display:true},
       {left:'\\(',right:'\\)',display:false},
       {left:'\\[',right:'\\]',display:true}
     ],
     ignoredTags:['script','noscript','style','textarea','pre','code'],
+    ignoredClasses:['fee-math'],
     throwOnError:false
   });
 }
@@ -90,6 +104,7 @@ pre{background:var(--surface);border:1px solid var(--border);border-radius:4px;p
 .mermaid svg{max-width:100%;height:auto}
 .fee-math{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:.8rem 1rem;margin:.4rem 0 .6rem;overflow-x:auto}
 .fee-math .katex{font-size:1.05em}
+.fee-math-tex{margin:.35rem 0}
 code{font-family:inherit;font-size:12px;color:var(--cyan);background:transparent}
 pre code{color:var(--fg)}
 p{margin:.3rem 0;color:var(--dim);font-size:12px}

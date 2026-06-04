@@ -31,8 +31,8 @@ func TestBuildMarkdownWebFeeMath(t *testing.T) {
 	if !strings.Contains(md, `class="fee-math"`) {
 		t.Fatal("web markdown should include fee-math div")
 	}
-	if !strings.Contains(md, `W_{\text{stored}}`) {
-		t.Fatal("web markdown should include katex formula")
+	if !strings.Contains(md, `class="fee-math-tex"`) {
+		t.Fatal("web markdown should include katex render nodes")
 	}
 }
 
@@ -45,14 +45,11 @@ func TestRenderFragmentFeeMathHTMLSafe(t *testing.T) {
 		ParentBlockResultsOK: true,
 	}
 	out := renderFragment(d)
-	if strings.Contains(out, `\begin{aligned}`) {
-		t.Fatal("rendered HTML must not include aligned env (& breaks KaTeX in div)")
+	if !strings.Contains(out, `class="fee-math-tex"`) || !strings.Contains(out, `data-tex-b64=`) {
+		t.Fatal("fee math must use base64 katex nodes, not raw latex in HTML")
 	}
-	if strings.Contains(out, "&\\textbf") {
-		t.Fatal("raw & before LaTeX breaks HTML entity parsing")
-	}
-	if strings.Contains(out, "live substitution") && !strings.Contains(out, `\[`) {
-		t.Fatal("live substitution block must keep \\[ delimiters in HTML")
+	if strings.Contains(out, `[ \\textbf`) || strings.Contains(out, "[ \\textbf") {
+		t.Fatal("raw display-math delimiters must not appear in HTML")
 	}
 }
 

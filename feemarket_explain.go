@@ -231,7 +231,7 @@ B_{\text{parent}} + \max(\epsilon,\, \Delta) & W_{\text{stored}} > T \\
 	if hasTarget && d.BlockGasLimit > 0 && d.Elasticity > 0 {
 		params = append(params, fmt.Sprintf(
 			`T = \left\lfloor\frac{%s}{%s}\right\rfloor = %s`,
-			katexInt(int64(d.BlockGasLimit)), katexInt(d.Elasticity), katexInt(int64(target)),
+			katexUint(d.BlockGasLimit), katexInt(d.Elasticity), katexUint(target),
 		))
 	}
 	if d.BaseFeeChangeDenominator > 0 {
@@ -281,8 +281,8 @@ B_{\text{parent}} + \max(\epsilon,\, \Delta) & W_{\text{stored}} > T \\
 			currentLit := katexTextLit(formatDecAmount(current, denom))
 			sub = append(sub, fmt.Sprintf(
 				`\Delta = \frac{\left|%s - %s\right| \cdot %s}{%s \cdot %s} = %s`,
-				katexInt(int64(wanted)), katexInt(int64(target)), parentLit,
-				katexInt(int64(target)), katexInt(int64(denomU)), deltaLit,
+				katexUint(wanted), katexUint(target), parentLit,
+				katexUint(target), katexUint(denomU), deltaLit,
 			))
 			sub = append(sub, fmt.Sprintf(`B_{\text{parent}} = %s`, parentLit))
 			switch {
