@@ -434,7 +434,11 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	if chain.BlockGas > 0 {
 		d.BlockGas = fmtInt(int64(chain.BlockGas))
 	}
-	if chain.BlockGasLimit > 0 {
+	switch {
+	case chain.BlockGasLimit < 0:
+		// CometBFT -1 = unlimited; feemarket uses MaxUint64 in CalcGasBaseFee.
+		d.BlockGasLimit = ^uint64(0)
+	case chain.BlockGasLimit > 0:
 		d.BlockGasLimit = uint64(chain.BlockGasLimit)
 	}
 	d.ParentBlockGasUsed = chain.ParentBlockGasUsed

@@ -63,6 +63,9 @@ func TestBuildFeemarketExplainKatexAndReceipt(t *testing.T) {
 	if !strings.Contains(ex.LatexSubstituted, `\[`) {
 		t.Fatal("substituted latex must use display math delimiters")
 	}
+	if strings.Contains(ex.LatexSubstituted, `\begin{aligned}`) {
+		t.Fatal("substituted latex must not use aligned (& breaks HTML)")
+	}
 	if !strings.Contains(ex.LatexSubstituted, "21{,}000") && !strings.Contains(ex.LatexSubstituted, "21000") {
 		t.Fatal("missing substituted values")
 	}

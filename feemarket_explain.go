@@ -127,11 +127,20 @@ func katexInt(n int64) string {
 	return strings.ReplaceAll(fmtInt(n), ",", `{,}`)
 }
 
-func katexDisplayAligned(lines []string) string {
+// katexDisplayLines renders each line as its own \[...\] block. Avoids aligned
+// environments with & inside HTML (browsers treat & as entity starts).
+func katexDisplayLines(lines []string) string {
 	if len(lines) == 0 {
 		return ""
 	}
-	return `\[ \begin{aligned}` + strings.Join(lines, ` \\ `) + ` \end{aligned} \]`
+	var b strings.Builder
+	for i, line := range lines {
+		if i > 0 {
+			b.WriteString("\n\n")
+		}
+		fmt.Fprintf(&b, `\[ %s \]`, line)
+	}
+	return b.String()
 }
 
 func feemarketVerdictLatex(wanted, target uint64, hasTarget bool) string {
@@ -209,16 +218,12 @@ B_{\text{parent}} + \max(\epsilon,\, \Delta) & W_{\text{stored}} > T \\
 \max(B_{\min},\; B_{\text{parent}} - \Delta) & W_{\text{stored}} < T
 \end{cases}
 \]
-\[
-T = \left\lfloor \frac{\text{max\_gas}}{e} \right\rfloor,\quad
-d = \text{change denom},\quad \mu = \text{min\_gas\_multiplier},\quad
-\epsilon = 1\ \text{unit},\quad B_{\min} = \text{min\_gas\_price}
 \]`)
 
 	var sub []string
-	sub = append(sub, fmt.Sprintf(`&\textbf{\text{Block %s — live substitution}}`, d.BlockHeight))
+	sub = append(sub, fmt.Sprintf(`\textbf{\text{Block %s — live substitution}}`, d.BlockHeight))
 	if !d.ParentBlockResultsOK {
-		sub = append(sub, `&\text{⚠ parent block\_results unavailable — } G_{\text{used}} \text{ may be incomplete}`)
+		sub = append(sub, `\text{⚠ parent block\_results unavailable — } G_{\text{used}} \text{ may be incomplete}`)
 	}
 
 	// Chain parameters (replaces symbolic legend with live values).
@@ -240,7 +245,9 @@ d = \text{change denom},\quad \mu = \text{min\_gas\_multiplier},\quad
 		params = append(params, fmt.Sprintf(`B_{\min} = %s`, katexTextLit(d.MinGasPrice)))
 	}
 	if len(params) > 0 {
-		sub = append(sub, "&"+strings.Join(params, `,\quad `))
+		sub = append(sub, strings.Join(params, `,\quad `))
+	} else if !hasTarget && d.Elasticity > 0 {
+		sub = append(sub, `\text{⚠ block gas limit unknown — } T \text{ not shown (need max\_gas from consensus)}`)
 	}
 
 	// EndBlock: W_stored = max(W_sum · μ, G_used).
@@ -249,12 +256,12 @@ d = \text{change denom},\quad \mu = \text{min\_gas\_multiplier},\quad
 		mu = `1`
 	}
 	sub = append(sub, fmt.Sprintf(
-		`&G_{\text{used}} = %s,\quad W_{\text{stored}} = \max(W_{\text{sum}} \cdot %s,\; G_{\text{used}}) = %s`,
+		`G_{\text{used}} = %s,\quad W_{\text{stored}} = \max(W_{\text{sum}} \cdot %s,\, G_{\text{used}}) = %s`,
 		katexInt(int64(gasUsed)), mu, katexInt(int64(wanted)),
 	))
 
 	if hasTarget {
-		sub = append(sub, "&"+feemarketVerdictLatex(wanted, target, true))
+		sub = append(sub, feemarketVerdictLatex(wanted, target, true))
 	}
 
 	current, okCurrent := parseLegacyDec(d.BaseFeeRaw)
@@ -273,43 +280,43 @@ d = \text{change denom},\quad \mu = \text{min\_gas\_multiplier},\quad
 			deltaLit := katexTextLit(formatDecAmount(delta, denom))
 			currentLit := katexTextLit(formatDecAmount(current, denom))
 			sub = append(sub, fmt.Sprintf(
-				`&\Delta = \frac{\left|%s - %s\right| \cdot %s}{%s \cdot %s} = %s`,
+				`\Delta = \frac{\left|%s - %s\right| \cdot %s}{%s \cdot %s} = %s`,
 				katexInt(int64(wanted)), katexInt(int64(target)), parentLit,
 				katexInt(int64(target)), katexInt(int64(denomU)), deltaLit,
 			))
-			sub = append(sub, fmt.Sprintf(`&B_{\text{parent}} = %s`, parentLit))
+			sub = append(sub, fmt.Sprintf(`B_{\text{parent}} = %s`, parentLit))
 			switch {
 			case wanted == target:
-				sub = append(sub, fmt.Sprintf(`&B_{\text{new}} = B_{\text{parent}} = %s`, currentLit))
+				sub = append(sub, fmt.Sprintf(`B_{\text{new}} = B_{\text{parent}} = %s`, currentLit))
 			case wanted > target:
 				sub = append(sub, fmt.Sprintf(
-					`&B_{\text{new}} = B_{\text{parent}} + \max(\epsilon,\, \Delta) = %s + \max(1,\, %s) = %s`,
+					`B_{\text{new}} = B_{\text{parent}} + \max(\epsilon,\, \Delta) = %s + \max(1,\, %s) = %s`,
 					parentLit, deltaLit, currentLit,
 				))
 			default:
 				bMin := katexTextLit(formatDecAmount(minGasPrice, denom))
 				sub = append(sub, fmt.Sprintf(
-					`&B_{\text{new}} = \max(B_{\min},\, B_{\text{parent}} - \Delta) = \max(%s,\, %s - %s) = %s`,
+					`B_{\text{new}} = \max(B_{\min},\, B_{\text{parent}} - \Delta) = \max(%s,\, %s - %s) = %s`,
 					bMin, parentLit, deltaLit, currentLit,
 				))
 			}
 			ex.MatchOK = calcGasBaseFee(wanted, target, denomU, parent, minUnit, minGasPrice).Equal(current)
 			if ex.MatchOK {
-				sub = append(sub, `&\checkmark\;\text{recomputed base fee matches chain}`)
+				sub = append(sub, `\checkmark\;\text{recomputed base fee matches chain}`)
 			} else {
-				sub = append(sub, `&\text{⚠ recomputed base fee mismatch vs chain}`)
+				sub = append(sub, `\text{⚠ recomputed base fee mismatch vs chain}`)
 			}
 		} else {
 			sub = append(sub, fmt.Sprintf(
-				`&B_{\text{new}} = %s \quad\text{(could not infer } B_{\text{parent}}\text{ from current fee)}`,
+				`B_{\text{new}} = %s \quad\text{(could not infer } B_{\text{parent}}\text{ from current fee)}`,
 				katexTextLit(d.BaseFee),
 			))
 		}
 	} else if d.BaseFee != "" {
-		sub = append(sub, fmt.Sprintf(`&B_{\text{new}} = %s`, katexTextLit(d.BaseFee)))
+		sub = append(sub, fmt.Sprintf(`B_{\text{new}} = %s`, katexTextLit(d.BaseFee)))
 	}
 
-	ex.LatexSubstituted = katexDisplayAligned(sub)
+	ex.LatexSubstituted = katexDisplayLines(sub)
 
 	// Plain-text receipt (terminal).
 	var lines []string

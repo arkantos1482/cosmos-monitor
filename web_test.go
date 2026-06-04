@@ -36,6 +36,26 @@ func TestBuildMarkdownWebFeeMath(t *testing.T) {
 	}
 }
 
+func TestRenderFragmentFeeMathHTMLSafe(t *testing.T) {
+	d := WebData{
+		BlockHeight: "482,764", BaseFee: "7.00e-18 PMT", BaseFeeRaw: "7000000000000",
+		BlockGas: "0", ParentBlockGasWanted: 0, ParentBlockGasUsed: 0,
+		BlockGasLimit: ^uint64(0), Elasticity: 2,
+		BaseFeeChangeDenominator: 8, MinGasMultiplier: "0.5",
+		ParentBlockResultsOK: true,
+	}
+	out := renderFragment(d)
+	if strings.Contains(out, `\begin{aligned}`) {
+		t.Fatal("rendered HTML must not include aligned env (& breaks KaTeX in div)")
+	}
+	if strings.Contains(out, "&\\textbf") {
+		t.Fatal("raw & before LaTeX breaks HTML entity parsing")
+	}
+	if strings.Contains(out, "live substitution") && !strings.Contains(out, `\[`) {
+		t.Fatal("live substitution block must keep \\[ delimiters in HTML")
+	}
+}
+
 func TestBuildMarkdownTerminalASCII(t *testing.T) {
 	d := WebData{Inflation: 3.5, PMTEnabled: true, PMTRate: "0.1 PMT/block"}
 	md := buildMarkdown(d, false)

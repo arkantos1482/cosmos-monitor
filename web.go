@@ -50,12 +50,14 @@ mermaid.initialize({startOnLoad:false,theme:'dark',securityLevel:'loose'});
 function renderMermaid(){mermaid.run({querySelector:'#data .mermaid'});}
 function renderMath(){
   if(typeof renderMathInElement!=='function')return;
-  renderMathInElement(document.getElementById('data'),{
+  const root=document.getElementById('data');
+  renderMathInElement(root,{
     delimiters:[
       {left:'$$',right:'$$',display:true},
       {left:'\\(',right:'\\)',display:false},
       {left:'\\[',right:'\\]',display:true}
     ],
+    ignoredTags:['script','noscript','style','textarea','pre','code'],
     throwOnError:false
   });
 }
