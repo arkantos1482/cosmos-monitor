@@ -100,25 +100,58 @@ func diagramMaxWidth(s string) int {
 	return m
 }
 
-func TestFeemarketMechanicsVerticalSpine(t *testing.T) {
-	src := feemarketMechanicsMermaid(WebData{
+func TestFeemarketMechanicsTopology(t *testing.T) {
+	d := WebData{
 		BlockGas:                 "21000",
 		Elasticity:               2,
 		BaseFee:                  "1000",
 		BaseFeeChangeDenominator: 8,
 		MinGasPrice:              "0.001 PMT",
 		AdjCap:                   "±0.01/block",
-	})
-	// No fan-in: calc should have a single predecessor in the chain.
-	if strings.Contains(src, "gasUsed --> calc\n") {
-		t.Fatal("expected vertical chain, not gasUsed --> calc fan-in")
+		GasPrice:                 "1100",
 	}
-	if !strings.Contains(src, "gasUsed --> gasTarget\n") {
-		t.Fatal("expected vertical spine starting gasUsed --> gasTarget")
-	}
-	for _, want := range []string{"gas used: 21000", "elasticity 2", "change denom 8", "min_gas 0.001 PMT", "max Δ"} {
+	src := feemarketMechanicsMermaid(d)
+	for _, want := range []string{
+		"gasWanted --> compare",
+		"gasTarget --> compare",
+		"compare --> calc",
+		"parentBF --> calc",
+		"params --> calc",
+		"endBlk -->|prior block| gasWanted",
+		"ante --> endBlk",
+		"CalculateBaseFee",
+		"21000",
+		"elasticity 2",
+		"change denom 8",
+		"min_gas 0.001 PMT",
+		"max Δ",
+		"eth_gasPrice",
+	} {
 		if !strings.Contains(src, want) {
-			t.Fatalf("expected value %q preserved", want)
+			t.Fatalf("expected %q in feemarket mermaid:\n%s", want, src)
 		}
+	}
+	for _, forbidden := range []string{"gasUsed --> gasTarget", "paramsTune", "paramsFloor", "gasUsed["} {
+		if strings.Contains(src, forbidden) {
+			t.Fatalf("obsolete feemarket layout fragment %q", forbidden)
+		}
+	}
+	out, err := renderMermaid(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := diagramMaxWidth(out)
+	if w > 420 {
+		t.Fatalf("feemarket diagram too wide: %d cols\n%s", w, out)
+	}
+}
+
+func TestFeemarketMechanicsWebSubgraphs(t *testing.T) {
+	src := feemarketMechanicsMermaidWeb(WebData{BlockGas: "21000", Elasticity: 2})
+	if !strings.Contains(src, "subgraph beginBlock") {
+		t.Fatal("web feemarket diagram should group BeginBlock inputs")
+	}
+	if !strings.Contains(src, "gasWanted --> compare") {
+		t.Fatal("web diagram should keep compare fan-in")
 	}
 }

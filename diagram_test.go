@@ -117,13 +117,15 @@ func TestEconomicsOverviewZeroInflationShowsMint(t *testing.T) {
 }
 
 func TestFeemarketMechanicsNoDistribution(t *testing.T) {
-	src := feemarketMechanicsMermaid(WebData{BaseFee: "1000", Elasticity: 2})
+	src := feemarketMechanicsMermaid(WebData{BaseFee: "1000", Elasticity: 2, BlockGas: "21000"})
 	for _, forbidden := range []string{"x/distribution", "Community pool", "Validators + delegators", "pmtPool", "fee_collector"} {
 		if strings.Contains(src, forbidden) {
 			t.Fatalf("feemarket diagram must not mention payout path: %q", forbidden)
 		}
 	}
-	if !strings.Contains(src, "CalculateBaseFee") {
-		t.Fatal("expected CalculateBaseFee in feemarket diagram")
+	for _, want := range []string{"CalculateBaseFee", "block_gas_wanted", "compare gas wanted"} {
+		if !strings.Contains(src, want) {
+			t.Fatalf("expected %q in feemarket diagram", want)
+		}
 	}
 }

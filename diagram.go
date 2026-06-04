@@ -322,83 +322,139 @@ func economicsOverviewMermaidASCII(d WebData) string {
 	return b.String()
 }
 
-func feemarketMechanicsMermaid(d WebData) string {
-	denom := diagramDenom(d)
-
-	gasUsed := "gas used (last block)"
+func feemarketGasWantedLabel(d WebData) string {
+	lines := []string{"parent block gas wanted", "GetBlockGasWanted store"}
 	if d.BlockGas != "" {
-		gasUsed = "gas used: " + d.BlockGas
+		lines = append(lines, d.BlockGas)
 	}
-	gasTarget := "target = max_block_gas ÷ elasticity"
+	return stackLabelText(lines...)
+}
+
+func feemarketGasTargetLabel(d WebData) string {
+	lines := []string{"gas target", "max_block_gas ÷ elasticity"}
 	if d.Elasticity > 0 {
-		gasTarget = fmt.Sprintf("target = max_block_gas ÷ %d", d.Elasticity)
+		lines = append(lines, fmt.Sprintf("elasticity %d", d.Elasticity))
 	}
+	return stackLabelText(lines...)
+}
 
-	parentBF := "parent base fee"
-	if d.BaseFee != "" {
-		parentBF = "parent base fee: " + fetch.FormatFeeAmount(d.BaseFee, denom)
-	}
-
-	baseFeeLabel := "base fee (this block)"
+func feemarketParentBFLabel(d WebData) string {
+	denom := diagramDenom(d)
+	lines := []string{"parent base fee", "params.BaseFee input"}
 	if d.NoBaseFee {
-		baseFeeLabel = "base fee disabled (no_base_fee)"
-	} else if d.BaseFee != "" {
-		baseFeeLabel = "base fee: " + fetch.FormatFeeAmount(d.BaseFee, denom)
+		return stackLabelText("no_base_fee", "EIP-1559 off")
 	}
-
-	gasRPC := "eth_gasPrice"
-	if d.GasPrice != "" {
-		gasRPC = "gas price: " + fetch.FormatFeeAmount(d.GasPrice, denom)
+	if d.BaseFee != "" {
+		lines = append(lines, fetch.FormatFeeAmount(d.BaseFee, denom))
 	}
+	return stackLabelText(lines...)
+}
 
-	var paramsTune []string
+func feemarketParamsLabel(d WebData) string {
+	lines := []string{"x/feemarket params"}
 	if d.BaseFeeChangeDenominator > 0 {
-		paramsTune = append(paramsTune, fmt.Sprintf("change denom %d", d.BaseFeeChangeDenominator))
+		lines = append(lines, fmt.Sprintf("change denom %d", d.BaseFeeChangeDenominator))
 	}
 	if d.Elasticity > 0 {
-		paramsTune = append(paramsTune, fmt.Sprintf("elasticity %d", d.Elasticity))
+		lines = append(lines, fmt.Sprintf("elasticity %d", d.Elasticity))
 	}
-	paramsTuneLabel := "feemarket tuning"
-	if len(paramsTune) > 0 {
-		paramsTuneLabel = strings.Join(paramsTune, " · ")
-	}
-
-	var paramsFloor []string
 	if d.MinGasPrice != "" {
-		paramsFloor = append(paramsFloor, "min_gas "+d.MinGasPrice)
+		lines = append(lines, "min_gas "+d.MinGasPrice)
 	}
 	if d.AdjCap != "" {
-		paramsFloor = append(paramsFloor, "max Δ "+d.AdjCap)
+		lines = append(lines, "max Δ "+d.AdjCap)
 	}
-	paramsFloorLabel := "feemarket floors"
-	if len(paramsFloor) > 0 {
-		paramsFloorLabel = strings.Join(paramsFloor, " · ")
-	}
+	return stackLabelText(lines...)
+}
 
+func feemarketCalcLabel(d WebData) string {
+	return stackLabelText("BeginBlock", "CalculateBaseFee", "CalcGasBaseFee")
+}
+
+func feemarketCompareLabel(d WebData) string {
+	return stackLabelText("compare gas wanted", "vs gas target", "drives fee ↑ or ↓")
+}
+
+func feemarketBaseFeeLabel(d WebData) string {
+	denom := diagramDenom(d)
+	if d.NoBaseFee {
+		return stackLabelText("base fee disabled", "no_base_fee")
+	}
+	lines := []string{"base fee this block", "SetBaseFee + event"}
+	if d.BaseFee != "" {
+		lines = append(lines, fetch.FormatFeeAmount(d.BaseFee, denom))
+	}
+	return stackLabelText(lines...)
+}
+
+func feemarketAnteLabel(d WebData) string {
+	return stackLabelText("ante handler", "VerifyFee + DeductFees", "effective ≥ base fee")
+}
+
+func feemarketGasRPCLabel(d WebData) string {
+	denom := diagramDenom(d)
+	lines := []string{"eth_gasPrice", "JSON-RPC hint"}
+	if d.GasPrice != "" {
+		lines = append(lines, fetch.FormatFeeAmount(d.GasPrice, denom))
+	}
+	return stackLabelText(lines...)
+}
+
+func feemarketEndBlockLabel(d WebData) string {
+	return stackLabelText("EndBlock", "block_gas_wanted", "min_gas_multiplier clamp")
+}
+
+func writeFeemarketNodes(b *strings.Builder, d WebData) {
+	writeStackNode(b, "endBlk", feemarketEndBlockLabel(d))
+	writeStackNode(b, "gasWanted", feemarketGasWantedLabel(d))
+	writeStackNode(b, "gasTarget", feemarketGasTargetLabel(d))
+	writeStackNode(b, "compare", feemarketCompareLabel(d))
+	writeStackNode(b, "parentBF", feemarketParentBFLabel(d))
+	writeStackNode(b, "params", feemarketParamsLabel(d))
+	writeStackNode(b, "calc", feemarketCalcLabel(d))
+	writeStackNode(b, "baseFee", feemarketBaseFeeLabel(d))
+	writeStackNode(b, "ante", feemarketAnteLabel(d))
+	writeStackNode(b, "gasRPC", feemarketGasRPCLabel(d))
+}
+
+func writeFeemarketEdges(b *strings.Builder) {
+	fmt.Fprintf(b, "  endBlk -->|prior block| gasWanted\n")
+	fmt.Fprintf(b, "  gasWanted --> compare\n")
+	fmt.Fprintf(b, "  gasTarget --> compare\n")
+	fmt.Fprintf(b, "  parentBF --> calc\n")
+	fmt.Fprintf(b, "  params --> calc\n")
+	fmt.Fprintf(b, "  compare --> calc\n")
+	fmt.Fprintf(b, "  calc -->|wanted vs target| baseFee\n")
+	fmt.Fprintf(b, "  baseFee --> ante\n")
+	fmt.Fprintf(b, "  baseFee --> gasRPC\n")
+	fmt.Fprintf(b, "  ante --> endBlk\n")
+}
+
+// feemarketMechanicsMermaid is TD fan-in for mermaid-ascii (terminal).
+func feemarketMechanicsMermaid(d WebData) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "graph TD\n")
-	fmt.Fprintf(&b, "  gasUsed[%s]\n", mermaidLabel(gasUsed))
-	fmt.Fprintf(&b, "  gasTarget[%s]\n", mermaidLabel(gasTarget))
-	fmt.Fprintf(&b, "  parentBF[%s]\n", mermaidLabel(parentBF))
-	fmt.Fprintf(&b, "  paramsTune[%s]\n", mermaidLabel(paramsTuneLabel))
-	fmt.Fprintf(&b, "  paramsFloor[%s]\n", mermaidLabel(paramsFloorLabel))
-	fmt.Fprintf(&b, "  calc[%s]\n", mermaidLabel("BeginBlock: CalculateBaseFee"))
-	fmt.Fprintf(&b, "  baseFee[%s]\n", mermaidLabel(baseFeeLabel))
-	fmt.Fprintf(&b, "  eff[%s]\n", mermaidLabel("effective price ≥ base fee"))
-	fmt.Fprintf(&b, "  ante[%s]\n", mermaidLabel("ante: VerifyFee + DeductFees"))
-	fmt.Fprintf(&b, "  gasRPC[%s]\n", mermaidLabel(gasRPC))
-	fmt.Fprintf(&b, "  endBlk[%s]\n", mermaidLabel("EndBlock: block_gas_wanted"))
-
-	// Vertical spine (avoids wide fan-in to calc / baseFee).
-	fmt.Fprintf(&b, "  gasUsed --> gasTarget\n")
-	fmt.Fprintf(&b, "  gasTarget --> parentBF\n")
-	fmt.Fprintf(&b, "  parentBF --> paramsTune\n")
-	fmt.Fprintf(&b, "  paramsTune --> paramsFloor\n")
-	fmt.Fprintf(&b, "  paramsFloor --> calc\n")
-	fmt.Fprintf(&b, "  calc -->|gasUsed > target ⇒ fee ↑| baseFee\n")
-	fmt.Fprintf(&b, "  baseFee --> eff\n")
-	fmt.Fprintf(&b, "  eff --> ante\n")
-	fmt.Fprintf(&b, "  baseFee --> gasRPC\n")
-	fmt.Fprintf(&b, "  ante --> endBlk\n")
+	writeFeemarketNodes(&b, d)
+	writeFeemarketEdges(&b)
 	return b.String()
+}
+
+// feemarketMechanicsMermaidWeb is LR with block-phase grouping for mermaid.js.
+func feemarketMechanicsMermaidWeb(d WebData) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "graph LR\n")
+	writeFeemarketNodes(&b, d)
+	fmt.Fprintf(&b, "  subgraph endBlock[\"EndBlock N−1\"]\n    endBlk\n  end\n")
+	fmt.Fprintf(&b, "  subgraph beginBlock[\"BeginBlock N\"]\n    gasWanted\n    gasTarget\n    compare\n    parentBF\n    params\n    calc\n    baseFee\n  end\n")
+	fmt.Fprintf(&b, "  subgraph execution[\"Block N txs\"]\n    ante\n    gasRPC\n  end\n")
+	writeFeemarketEdges(&b)
+	return b.String()
+}
+
+func writeFeemarketDiagram(w io.Writer, d WebData, web bool) {
+	src := feemarketMechanicsMermaid(d)
+	if web {
+		src = feemarketMechanicsMermaidWeb(d)
+	}
+	writeDiagram(w, src, web)
 }
