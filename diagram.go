@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 
 	mcmd "github.com/AlexanderGrooff/mermaid-ascii/cmd"
@@ -133,17 +134,19 @@ func splitOutstandingSuffix(s string) (amount, suffix string) {
 
 func economicsFeesLabel(d WebData) string {
 	lines := []string{"Tx fees (ante / EVM)"}
-	if d.MempoolTxs > 0 {
-		lines = append(lines, fmt.Sprintf("mempool %d", d.MempoolTxs))
-	}
-	if d.PendingTx > 0 {
-		lines = append(lines, fmt.Sprintf("evm pending %d", d.PendingTx))
+	lines = append(lines, fmt.Sprintf("mempool %d · evm %d+%d", d.MempoolTxs, d.PendingTx, d.QueuedTx))
+	if d.GasPrice != "" {
+		lines = append(lines, "gas "+fetch.FormatFeeAmount(d.GasPrice, diagramDenom(d)))
 	}
 	return stackLabelText(lines...)
 }
 
 func economicsFCLabel(d WebData) string {
-	return stackLabelText("fee_collector", "cleared each BeginBlock")
+	lines := []string{"fee_collector", "cleared BeginBlock"}
+	if d.BlockHeight != "" {
+		lines = append(lines, "height "+d.BlockHeight)
+	}
+	return stackLabelText(lines...)
 }
 
 func economicsStakeLabel(d WebData) string {
@@ -229,11 +232,47 @@ func economicsPMTPoolLabel(d WebData) string {
 }
 
 func economicsDistLabel(d WebData) string {
-	return stackLabelText(
-		"x/distribution BeginBlock",
-		"allocates block rewards",
-		"reads x/staking",
-	)
+	lines := []string{"x/distribution BeginBlock"}
+	if d.CommunityTax != "" {
+		lines = append(lines, "community tax "+d.CommunityTax)
+	}
+	if d.TotalOutstanding != "" {
+		amt, suffix := splitOutstandingSuffix(d.TotalOutstanding)
+		lines = append(lines, "unclaimed "+amt)
+		if suffix != "" {
+			lines = append(lines, suffix)
+		}
+	}
+	return stackLabelText(lines...)
+}
+
+func economicsInflEdge(d WebData) string {
+	if d.Inflation > 0 {
+		return fmt.Sprintf("mint +%.2f%%", d.Inflation)
+	}
+	return "mint off (0%)"
+}
+
+func economicsPMTEdge(d WebData) string {
+	if d.PMTRate != "" {
+		return d.PMTRate
+	}
+	return "mint hook"
+}
+
+func economicsDistCommEdge(d WebData) string {
+	if d.CommunityTaxZero {
+		return "tax 0%"
+	}
+	return "tax " + d.CommunityTax
+}
+
+func economicsDistValEdge(d WebData) string {
+	pct := 100.0 - d.CommunityTaxPct
+	if pct <= 0 {
+		return "to validators"
+	}
+	return fmt.Sprintf("%.0f%% to validators", pct)
 }
 
 func economicsInflLabel(d WebData) string {
@@ -286,14 +325,18 @@ func writeEconomicsNodes(b *strings.Builder, d WebData) {
 
 func writeEconomicsEdges(b *strings.Builder, d WebData) {
 	fmt.Fprintf(b, "  fees --> fc\n")
-	fmt.Fprintf(b, "  infl -->|mint if active| fc\n")
+	fmt.Fprintf(b, "  infl -->|%s| fc\n", economicsInflEdge(d))
 	if d.PMTEnabled {
-		fmt.Fprintf(b, "  pmtPool -->|mint hook| fc\n")
+		fmt.Fprintf(b, "  pmtPool -->|%s| fc\n", economicsPMTEdge(d))
 	}
-	fmt.Fprintf(b, "  fc --> dist\n")
-	fmt.Fprintf(b, "  staking -->|voting power| dist\n")
-	fmt.Fprintf(b, "  dist --> comm\n")
-	fmt.Fprintf(b, "  dist --> val\n")
+	if d.BlockHeight != "" {
+		fmt.Fprintf(b, "  fc -->|block %s| dist\n", d.BlockHeight)
+	} else {
+		fmt.Fprintf(b, "  fc --> dist\n")
+	}
+	fmt.Fprintf(b, "  staking -->|%.1f%% bonded| dist\n", d.BondedPct)
+	fmt.Fprintf(b, "  dist -->|%s| comm\n", economicsDistCommEdge(d))
+	fmt.Fprintf(b, "  dist -->|%s| val\n", economicsDistValEdge(d))
 	commEdge, delEdge := economicsSplitEdgeLabels(d)
 	fmt.Fprintf(b, "  val -->|%s| op\n", commEdge)
 	fmt.Fprintf(b, "  val -->|%s| del\n", delEdge)
@@ -322,6 +365,22 @@ func economicsOverviewMermaidASCII(d WebData) string {
 	return b.String()
 }
 
+func parseDiagramUint(s string) uint64 {
+	s = strings.ReplaceAll(s, ",", "")
+	n, _ := strconv.ParseUint(s, 10, 64)
+	return n
+}
+
+func feemarketGasNumbers(d WebData) (wanted, target uint64, ok bool) {
+	if d.BlockGas != "" {
+		wanted = parseDiagramUint(d.BlockGas)
+	}
+	if d.BlockGasLimit > 0 && d.Elasticity > 0 {
+		return wanted, d.BlockGasLimit / uint64(d.Elasticity), true
+	}
+	return wanted, 0, false
+}
+
 func feemarketGasWantedLabel(d WebData) string {
 	lines := []string{"parent block gas wanted", "GetBlockGasWanted store"}
 	if d.BlockGas != "" {
@@ -331,9 +390,13 @@ func feemarketGasWantedLabel(d WebData) string {
 }
 
 func feemarketGasTargetLabel(d WebData) string {
-	lines := []string{"gas target", "max_block_gas ÷ elasticity"}
-	if d.Elasticity > 0 {
-		lines = append(lines, fmt.Sprintf("elasticity %d", d.Elasticity))
+	_, target, ok := feemarketGasNumbers(d)
+	lines := []string{"gas target"}
+	if ok {
+		lines = append(lines, fmt.Sprintf("limit %s ÷ %d", fmtInt(int64(d.BlockGasLimit)), d.Elasticity))
+		lines = append(lines, "= "+fmtInt(int64(target)))
+	} else if d.Elasticity > 0 {
+		lines = append(lines, fmt.Sprintf("÷ elasticity %d", d.Elasticity))
 	}
 	return stackLabelText(lines...)
 }
@@ -372,7 +435,37 @@ func feemarketCalcLabel(d WebData) string {
 }
 
 func feemarketCompareLabel(d WebData) string {
-	return stackLabelText("compare gas wanted", "vs gas target", "drives fee ↑ or ↓")
+	wanted, target, ok := feemarketGasNumbers(d)
+	lines := []string{"used vs target"}
+	if ok {
+		lines = append(lines, fmt.Sprintf("wanted %s", fmtInt(int64(wanted))))
+		lines = append(lines, fmt.Sprintf("target %s", fmtInt(int64(target))))
+		verdict := "="
+		switch {
+		case wanted > target:
+			verdict = "fee ↑"
+		case wanted < target:
+			verdict = "fee ↓"
+		}
+		lines = append(lines, verdict)
+	} else if d.BlockGas != "" {
+		lines = append(lines, "wanted "+d.BlockGas)
+	}
+	return stackLabelText(lines...)
+}
+
+func feemarketCalcEdge(d WebData) string {
+	wanted, target, ok := feemarketGasNumbers(d)
+	if !ok {
+		return "wanted vs target"
+	}
+	if wanted > target {
+		return fmt.Sprintf("%s > %s ↑", fmtInt(int64(wanted)), fmtInt(int64(target)))
+	}
+	if wanted < target {
+		return fmt.Sprintf("%s < %s ↓", fmtInt(int64(wanted)), fmtInt(int64(target)))
+	}
+	return fmt.Sprintf("%s = %s", fmtInt(int64(wanted)), fmtInt(int64(target)))
 }
 
 func feemarketBaseFeeLabel(d WebData) string {
@@ -388,7 +481,9 @@ func feemarketBaseFeeLabel(d WebData) string {
 }
 
 func feemarketAnteLabel(d WebData) string {
-	return stackLabelText("ante handler", "VerifyFee + DeductFees", "effective ≥ base fee")
+	lines := []string{"ante VerifyFee + DeductFees"}
+	lines = append(lines, fmt.Sprintf("mempool %d · evm %d+%d", d.MempoolTxs, d.PendingTx, d.QueuedTx))
+	return stackLabelText(lines...)
 }
 
 func feemarketGasRPCLabel(d WebData) string {
@@ -401,7 +496,14 @@ func feemarketGasRPCLabel(d WebData) string {
 }
 
 func feemarketEndBlockLabel(d WebData) string {
-	return stackLabelText("EndBlock", "block_gas_wanted", "min_gas_multiplier clamp")
+	lines := []string{"EndBlock", "stores block_gas_wanted"}
+	if d.BlockGas != "" {
+		lines = append(lines, "last: "+d.BlockGas)
+	}
+	if d.BlockHeight != "" {
+		lines = append(lines, "height "+d.BlockHeight)
+	}
+	return stackLabelText(lines...)
 }
 
 func writeFeemarketNodes(b *strings.Builder, d WebData) {
@@ -417,14 +519,14 @@ func writeFeemarketNodes(b *strings.Builder, d WebData) {
 	writeStackNode(b, "gasRPC", feemarketGasRPCLabel(d))
 }
 
-func writeFeemarketEdges(b *strings.Builder) {
+func writeFeemarketEdges(b *strings.Builder, d WebData) {
 	fmt.Fprintf(b, "  endBlk -->|prior block| gasWanted\n")
 	fmt.Fprintf(b, "  gasWanted --> compare\n")
 	fmt.Fprintf(b, "  gasTarget --> compare\n")
 	fmt.Fprintf(b, "  parentBF --> calc\n")
 	fmt.Fprintf(b, "  params --> calc\n")
 	fmt.Fprintf(b, "  compare --> calc\n")
-	fmt.Fprintf(b, "  calc -->|wanted vs target| baseFee\n")
+	fmt.Fprintf(b, "  calc -->|%s| baseFee\n", feemarketCalcEdge(d))
 	fmt.Fprintf(b, "  baseFee --> ante\n")
 	fmt.Fprintf(b, "  baseFee --> gasRPC\n")
 	fmt.Fprintf(b, "  ante --> endBlk\n")
@@ -435,7 +537,7 @@ func feemarketMechanicsMermaid(d WebData) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "graph TD\n")
 	writeFeemarketNodes(&b, d)
-	writeFeemarketEdges(&b)
+	writeFeemarketEdges(&b, d)
 	return b.String()
 }
 
@@ -447,7 +549,7 @@ func feemarketMechanicsMermaidWeb(d WebData) string {
 	fmt.Fprintf(&b, "  subgraph endBlock[\"EndBlock N−1\"]\n    endBlk\n  end\n")
 	fmt.Fprintf(&b, "  subgraph beginBlock[\"BeginBlock N\"]\n    gasWanted\n    gasTarget\n    compare\n    parentBF\n    params\n    calc\n    baseFee\n  end\n")
 	fmt.Fprintf(&b, "  subgraph execution[\"Block N txs\"]\n    ante\n    gasRPC\n  end\n")
-	writeFeemarketEdges(&b)
+	writeFeemarketEdges(&b, d)
 	return b.String()
 }
 

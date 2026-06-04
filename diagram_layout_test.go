@@ -22,12 +22,12 @@ func TestEconomicsOverviewLiveLabels(t *testing.T) {
 		},
 	}
 	src := economicsOverviewMermaid(d)
-	for _, want := range []string{"mempool 2", "400M PMT", "4 validators", "0 PMT", "500K PMT", "0.1 PMT/block", "across 4 validators", "x/staking", "voting power"} {
+	for _, want := range []string{"mempool 2 · evm", "400M PMT", "4 validators", "0 PMT", "500K PMT", "0.1 PMT/block", "across 4 validators", "x/staking", "bonded"} {
 		if !strings.Contains(src, want) {
 			t.Fatalf("expected live label fragment %q in:\n%s", want, src)
 		}
 	}
-	if !strings.Contains(src, "fees --> fc") || strings.Contains(src, "dist --> pmt") {
+	if !strings.Contains(src, "fees --> fc") || !strings.Contains(src, "0.1 PMT/block") || strings.Contains(src, "dist --> pmt") {
 		t.Fatalf("unexpected topology in:\n%s", src)
 	}
 }
@@ -102,13 +102,18 @@ func diagramMaxWidth(s string) int {
 
 func TestFeemarketMechanicsTopology(t *testing.T) {
 	d := WebData{
+		BlockHeight:              "482,160",
 		BlockGas:                 "21000",
+		BlockGasLimit:            100_000_000,
 		Elasticity:               2,
 		BaseFee:                  "1000",
 		BaseFeeChangeDenominator: 8,
 		MinGasPrice:              "0.001 PMT",
 		AdjCap:                   "±0.01/block",
 		GasPrice:                 "1100",
+		MempoolTxs:               1,
+		PendingTx:                2,
+		QueuedTx:                 3,
 	}
 	src := feemarketMechanicsMermaid(d)
 	for _, want := range []string{
@@ -120,7 +125,13 @@ func TestFeemarketMechanicsTopology(t *testing.T) {
 		"endBlk -->|prior block| gasWanted",
 		"ante --> endBlk",
 		"CalculateBaseFee",
-		"21000",
+		"wanted 21,000",
+		"target 50,000,000",
+		"fee ↓",
+		"21,000 < 50,000,000 ↓",
+		"limit 100,000,000 ÷ 2",
+		"height 482,160",
+		"mempool 1 · evm 2+3",
 		"elasticity 2",
 		"change denom 8",
 		"min_gas 0.001 PMT",
@@ -131,7 +142,7 @@ func TestFeemarketMechanicsTopology(t *testing.T) {
 			t.Fatalf("expected %q in feemarket mermaid:\n%s", want, src)
 		}
 	}
-	for _, forbidden := range []string{"gasUsed --> gasTarget", "paramsTune", "paramsFloor", "gasUsed["} {
+	for _, forbidden := range []string{"gasUsed --> gasTarget", "paramsTune", "paramsFloor", "gasUsed[", "drives fee"} {
 		if strings.Contains(src, forbidden) {
 			t.Fatalf("obsolete feemarket layout fragment %q", forbidden)
 		}

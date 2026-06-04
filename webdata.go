@@ -90,6 +90,7 @@ type WebData struct {
 	// fee market (shown in economics)
 	BaseFee         string
 	BlockGas        string
+	BlockGasLimit   uint64 // consensus max_gas; 0 when unknown or unlimited
 	GasPrice        string
 	MinGasPrice     string
 	AdjCap          string
@@ -425,6 +426,9 @@ func buildWebData(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.Sys
 	}
 	if chain.BlockGas > 0 {
 		d.BlockGas = fmtInt(int64(chain.BlockGas))
+	}
+	if chain.BlockGasLimit > 0 {
+		d.BlockGasLimit = uint64(chain.BlockGasLimit)
 	}
 	d.GasPrice = ev.GasPrice
 	d.BaseFeeChangeDenominator = p.BaseFeeChangeDenominator

@@ -96,6 +96,9 @@ func TestEconomicsOverviewZeroInflationShowsMint(t *testing.T) {
 			t.Fatal("goal bonded must not appear on distribution node")
 		}
 	}
+	if !strings.Contains(src, "infl -->|mint off (0%)|") {
+		t.Fatal("expected dynamic mint edge label")
+	}
 	if !strings.Contains(src, "infl -->") {
 		t.Fatal("expected mint → fee_collector edge")
 	}
@@ -123,7 +126,7 @@ func TestFeemarketMechanicsNoDistribution(t *testing.T) {
 			t.Fatalf("feemarket diagram must not mention payout path: %q", forbidden)
 		}
 	}
-	for _, want := range []string{"CalculateBaseFee", "block_gas_wanted", "compare gas wanted"} {
+	for _, want := range []string{"CalculateBaseFee", "block_gas_wanted", "used vs target"} {
 		if !strings.Contains(src, want) {
 			t.Fatalf("expected %q in feemarket diagram", want)
 		}

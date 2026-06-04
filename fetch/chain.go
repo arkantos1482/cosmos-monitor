@@ -45,6 +45,8 @@ type ChainSnapshot struct {
 
 	BaseFee  string
 	BlockGas uint64
+	// BlockGasLimit is consensus block.max_gas (-1 = unlimited, 0 = unknown).
+	BlockGasLimit int64
 
 	VotingProposals []ProposalInfo
 	DepositProposals []ProposalInfo
@@ -209,6 +211,16 @@ type blockResp struct {
 				Time   string `json:"time"`
 			} `json:"header"`
 		} `json:"block"`
+	} `json:"result"`
+}
+
+type consensusParamsResp struct {
+	Result struct {
+		ConsensusParams struct {
+			Block struct {
+				MaxGas string `json:"max_gas"`
+			} `json:"block"`
+		} `json:"consensus_params"`
 	} `json:"result"`
 }
 
@@ -650,6 +662,11 @@ func FetchChain(rpc, rest string) ChainSnapshot {
 	}
 	snap.LocalConsensusAddr = strings.ToLower(status.Result.ValidatorInfo.Address)
 	snap.LocalVotingPower = parseInt64(status.Result.ValidatorInfo.VotingPower)
+
+	var consensusParams consensusParamsResp
+	if err := doJSON(rpc+"/consensus_params", &consensusParams); err == nil {
+		snap.BlockGasLimit = parseInt64(consensusParams.Result.ConsensusParams.Block.MaxGas)
+	}
 
 	peerByMoniker := map[string]struct {
 		nodeID string
