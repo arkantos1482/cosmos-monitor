@@ -94,6 +94,27 @@ body::before{
 .math-line:last-child{margin-bottom:0}
 .math-line .katex{font-size:1.02em}
 .math-line .katex-display{margin:0;overflow:visible}
+.fee-traffic{margin:.5rem 0 .75rem}
+.fee-badge{
+  display:inline-block;padding:.45rem 1rem;border-radius:8px;
+  font-size:.85rem;font-weight:700;letter-spacing:.06em;margin-bottom:.65rem;
+}
+.fee-badge--rising{background:rgba(240,113,120,.18);color:var(--bad);border:1px solid rgba(240,113,120,.35)}
+.fee-badge--falling{background:rgba(110,231,168,.15);color:var(--ok);border:1px solid rgba(110,231,168,.35)}
+.fee-badge--stable{background:rgba(94,179,255,.12);color:var(--accent);border:1px solid rgba(94,179,255,.3)}
+.fee-meter{margin:.35rem 0 .55rem}
+.fee-meter__label{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);margin-bottom:.3rem}
+.fee-meter__track{height:10px;background:var(--surface-2);border-radius:999px;border:1px solid var(--border);overflow:hidden}
+.fee-meter__fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .3s ease}
+.fee-traffic-stats{margin-top:.45rem}
+.fee-cards{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:.65rem;margin:.55rem 0 .65rem;
+}
+.fee-card{
+  padding:.65rem .75rem;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+}
+.fee-card__title{font-size:.8rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:0 0 .45rem}
 code{font-family:ui-monospace,"Cascadia Code","Fira Code",monospace;font-size:.82em;color:var(--accent)}
 `
 

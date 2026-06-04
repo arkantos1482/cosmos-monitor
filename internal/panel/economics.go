@@ -83,7 +83,7 @@ func writeEconomics(w Writer, d model.Report) {
 	}
 
 	w.Subsection("Fee market (x/feemarket)")
-	w.Hint("Educational walkthrough + EIP-1559 formulas with live substitution from feemarket REST, CometBFT `block_results`, and `eth_gasPrice`. Payout path is in the Overview diagram above.")
+	w.Hint("Live status, receipt walkthrough, and wallet vs chain view from feemarket REST, CometBFT block_results, and eth_gasPrice. Payout path is in the Overview diagram above.")
 	writeFeemarketSection(w, d)
 
 	w.Row("model", "EIP-1559  _(base fee rises when blocks are full, falls when empty)_")

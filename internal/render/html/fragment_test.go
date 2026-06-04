@@ -7,7 +7,7 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-func TestRenderFragmentMathDisplay(t *testing.T) {
+func TestRenderFragmentFeeMarket(t *testing.T) {
 	d := model.Report{
 		BlockHeight: "100", BaseFee: "1", BaseFeeRaw: "1000",
 		BlockGas: "21000", ParentBlockGasWanted: 21000,
@@ -16,8 +16,8 @@ func TestRenderFragmentMathDisplay(t *testing.T) {
 		ParentBlockResultsOK: true,
 	}
 	out := RenderFragment(d)
-	if !strings.Contains(out, `math-panel`) {
-		t.Fatal("fragment should include math-panel nodes for KaTeX")
+	if !strings.Contains(out, `class="fee-traffic"`) {
+		t.Fatal("fragment should include fee-market traffic panel")
 	}
 }
 

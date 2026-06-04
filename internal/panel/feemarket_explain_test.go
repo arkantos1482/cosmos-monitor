@@ -16,13 +16,6 @@ func TestCalcGasBaseFeeDecrease(t *testing.T) {
 	}
 }
 
-func TestLatexTextLitScientificNotation(t *testing.T) {
-	got := latexTextLit("7.00e-18 PMT")
-	if !strings.Contains(got, `\text{7.00e-18 PMT}`) {
-		t.Fatalf("expected text literal wrapper, got %q", got)
-	}
-}
-
 func TestBuildFeemarketExplain(t *testing.T) {
 	d := model.Report{
 		BlockHeight: "100", BaseFee: "0.001 PMT", BaseFeeRaw: "1000000000000",
@@ -30,18 +23,29 @@ func TestBuildFeemarketExplain(t *testing.T) {
 		BaseFeeChangeDenominator: 8, MinGasMultiplier: "0.5",
 		ParentBlockGasUsed: 21000, ParentBlockGasWanted: 21000,
 		ParentBlockResultsOK: true, MinGasPriceRaw: "0", EVMDenom: "apmt",
+		GasPrice: "1200000000000",
 	}
 	ex := buildFeemarketExplain(d)
-	if !strings.Contains(ex.LatexGeneral, `Step 1`) {
-		t.Fatal("missing educational general latex")
+	if ex.TrafficLabel != "FEE FALLING" {
+		t.Fatalf("traffic: got %q", ex.TrafficLabel)
 	}
-	if !strings.Contains(ex.LatexGeneral, `W_{\text{stored}}`) {
-		t.Fatal("missing technical formulas in general latex")
+	if ex.NextAdj != "↓" {
+		t.Fatalf("next adj: got %q", ex.NextAdj)
 	}
-	if !strings.Contains(ex.LatexSubstituted, `W_{\text{stored}}`) {
-		t.Fatal("missing live substitution latex")
+	if !strings.Contains(ex.Receipt, "Recorded demand") {
+		t.Fatal("missing receipt demand line")
 	}
-	if !strings.Contains(ex.TextReceipt, "CalcGasBaseFee") {
-		t.Fatal("missing text receipt")
+	if len(ex.ParamRows) == 0 {
+		t.Fatal("expected param rows")
+	}
+	if ex.StatBaseFee == "" {
+		t.Fatal("expected stat base fee")
+	}
+}
+
+func TestBuildFeemarketExplainNoBaseFee(t *testing.T) {
+	ex := buildFeemarketExplain(model.Report{NoBaseFee: true, BaseFee: "1 PMT"})
+	if !ex.NoBaseFee || ex.TrafficLabel != "FIXED PRICING" {
+		t.Fatalf("no_base_fee mode: %+v", ex)
 	}
 }

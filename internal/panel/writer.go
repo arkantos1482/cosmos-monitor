@@ -26,6 +26,7 @@ type Writer interface {
 	Mermaid(src string)
 	MathLatex(parts ...string)
 	WriteString(s string)
+	WriteHTML(s string) // trusted panel markup (not escaped)
 }
 
 type docWriter struct {
@@ -95,6 +96,12 @@ func (d *docWriter) WriteString(s string) {
 	d.closeList()
 	d.closeStatGrid()
 	fmt.Fprint(d.w, inlineHTML(s))
+}
+
+func (d *docWriter) WriteHTML(s string) {
+	d.closeList()
+	d.closeStatGrid()
+	fmt.Fprint(d.w, s)
 }
 
 func (d *docWriter) Section(title string) {
@@ -169,6 +176,23 @@ func (d *docWriter) Mermaid(src string) {
 	d.closeStatGrid()
 	src = strings.TrimSpace(src)
 	fmt.Fprintf(d.w, `<div class="diagram-panel mermaid">%s</div>`+"\n", html.EscapeString(src))
+}
+
+func splitLatexDisplayBlocks(s string) []string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil
+	}
+	var blocks []string
+	for _, chunk := range strings.Split(s, `\]`) {
+		chunk = strings.TrimSpace(chunk)
+		chunk = strings.TrimPrefix(chunk, `\[`)
+		chunk = strings.TrimSpace(chunk)
+		if chunk != "" {
+			blocks = append(blocks, chunk)
+		}
+	}
+	return blocks
 }
 
 func (d *docWriter) MathLatex(parts ...string) {

@@ -21,7 +21,7 @@ func TestBuildMermaidDiv(t *testing.T) {
 	}
 }
 
-func TestBuildFeeMath(t *testing.T) {
+func TestBuildFeeMarketPanel(t *testing.T) {
 	d := model.Report{
 		BlockHeight: "100", BaseFee: "1", BaseFeeRaw: "1000",
 		BlockGas: "21000", ParentBlockGasWanted: 21000,
@@ -30,8 +30,18 @@ func TestBuildFeeMath(t *testing.T) {
 		ParentBlockResultsOK: true,
 	}
 	out := Build(d)
-	if !strings.Contains(out, `math-panel`) {
-		t.Fatal("fee math should use math-panel for KaTeX")
+	if !strings.Contains(out, `class="fee-traffic"`) {
+		t.Fatal("fee market section should render fee-traffic panel")
+	}
+	if strings.Contains(out, `Fee market (x/feemarket)`) {
+		idx := strings.Index(out, `Fee market (x/feemarket)`)
+		chunk := out[idx:]
+		if end := strings.Index(chunk, `PMT Rewards`); end > 0 {
+			chunk = chunk[:end]
+		}
+		if strings.Contains(chunk, `math-panel`) || strings.Contains(chunk, `class="diagram-panel mermaid"`) {
+			t.Fatal("fee market subsection should not use KaTeX or feemarket mermaid")
+		}
 	}
 }
 
