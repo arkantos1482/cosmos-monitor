@@ -32,11 +32,20 @@ func TestBuildFeemarketExplain(t *testing.T) {
 	if ex.NextAdj != "↓" {
 		t.Fatalf("next adj: got %q", ex.NextAdj)
 	}
-	if !strings.Contains(ex.HeroLine, "485,592") || !strings.Contains(ex.HeroLine, "fee falling") {
-		t.Fatalf("hero line missing block/verdict: %q", ex.HeroLine)
+	if !strings.Contains(ex.HeroLine, "485,592") || !strings.Contains(ex.HeroLine, "50,000,000") {
+		t.Fatalf("hero line missing block/target: %q", ex.HeroLine)
 	}
-	if !strings.Contains(ex.Receipt, "Recorded demand") {
-		t.Fatal("missing receipt demand line")
+	if len(ex.LastBlockRows) < 4 {
+		t.Fatalf("expected last-block rows, got %d", len(ex.LastBlockRows))
+	}
+	if !strings.Contains(ex.LastBlockRows[1][0], "gas_wanted") {
+		t.Fatalf("missing gas_wanted row: %v", ex.LastBlockRows[1])
+	}
+	if !strings.Contains(ex.FormulaLine, "target × 8") {
+		t.Fatalf("formula line: %q", ex.FormulaLine)
+	}
+	if len(ex.ThisBlockRows) == 0 || ex.ThisBlockRows[0][0] != "base_fee" {
+		t.Fatalf("this-block rows: %v", ex.ThisBlockRows)
 	}
 	if len(ex.ParamRows) == 0 {
 		t.Fatal("expected param rows")
@@ -45,8 +54,8 @@ func TestBuildFeemarketExplain(t *testing.T) {
 	for _, row := range ex.ParamRows {
 		if len(row) >= 1 && row[0] == "elasticity_multiplier" {
 			foundElasticity = true
-			if !strings.Contains(row[2], "elasticity 2") {
-				t.Fatalf("elasticity note should be live: %q", row[2])
+			if strings.Contains(row[2], "last block") || strings.Contains(row[2], "%") {
+				t.Fatalf("elasticity meaning should be static: %q", row[2])
 			}
 		}
 	}
@@ -59,9 +68,6 @@ func TestBuildFeemarketExplain(t *testing.T) {
 	if !strings.Contains(ex.ChainLine, "50,000,000") {
 		t.Fatalf("chain line should include target: %q", ex.ChainLine)
 	}
-	if len(ex.AdjustmentBullets) > 2 {
-		t.Fatalf("at most 2 adjustment bullets, got %d", len(ex.AdjustmentBullets))
-	}
 }
 
 func TestBuildFeemarketExplainNoBaseFee(t *testing.T) {
@@ -71,5 +77,8 @@ func TestBuildFeemarketExplainNoBaseFee(t *testing.T) {
 	}
 	if !strings.Contains(ex.HeroLine, "no_base_fee") {
 		t.Fatalf("hero should mention no_base_fee: %q", ex.HeroLine)
+	}
+	if ex.FormulaLine != "" {
+		t.Fatalf("no formula in no_base_fee mode: %q", ex.FormulaLine)
 	}
 }

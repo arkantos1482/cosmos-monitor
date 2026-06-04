@@ -25,12 +25,14 @@ func TestWriteFeemarketSectionHTML(t *testing.T) {
 		`class="fee-badge`,
 		`class="fee-meter"`,
 		`class="fee-hero-line"`,
-		`fee-key-metrics`,
 		`class="fee-cards"`,
-		`class="code-block"`,
-		`Chain parameters`,
-		`Receipt`,
-		`fee falling`,
+		`Last block (N−1)`,
+		`Formula`,
+		`This block (N)`,
+		`Params`,
+		`FEE FALLING`,
+		`gas_wanted`,
+		`block_results`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("missing %q in output", want)
@@ -38,15 +40,16 @@ func TestWriteFeemarketSectionHTML(t *testing.T) {
 	}
 	for _, bad := range []string{
 		`math-panel`, `mermaid`, `data-tex-b64`,
-		`Receipt walkthrough`, `Adjustment logic`, `fee-traffic-stats`,
+		`Receipt`, `Adjustment logic`, `fee-traffic-stats`,
+		`fee-key-metrics`, `class="code-block"`,
+		`Chain parameters`,
 	} {
 		if strings.Contains(out, bad) {
 			t.Fatalf("fee section should not contain %q", bad)
 		}
 	}
-	count := strings.Count(out, `class="stat-grid`)
-	if count != 1 {
-		t.Fatalf("expected one stat-grid (key metrics), got %d", count)
+	if strings.Count(out, `class="stat-grid"`) != 0 {
+		t.Fatal("fee section should not use stat-grid key metrics")
 	}
 }
 

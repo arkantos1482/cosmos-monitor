@@ -80,7 +80,6 @@ func writeEconomics(w Writer, d model.Report) {
 	}
 
 	w.Subsection("Fee market (x/feemarket)")
-	w.Hint("Live load, parameters, and receipt from feemarket REST, block_results, and eth_gasPrice. Fee payout path is in the Overview diagram above.")
 	writeFeemarketSection(w, d)
 
 	w.Subsection("PMT Rewards  (x/pmtrewards — custom)")

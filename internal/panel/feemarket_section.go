@@ -9,20 +9,25 @@ import (
 
 func writeFeemarketSection(w Writer, d model.Report) {
 	ex := buildFeemarketExplain(d)
+	w.Hint("`gas_used`, stored W → CometBFT `block_results` (height−1); W fallback → `GET /cosmos/evm/feemarket/v1/block_gas`; `base_fee` → `…/base_fee`; chain params → `…/params`; `eth_gasPrice` → EVM JSON-RPC. Payout path is in the Overview diagram above.")
 	writeFeemarketHero(w, ex)
-	writeFeemarketKeyMetrics(w, ex)
+	if len(ex.LastBlockRows) > 0 {
+		w.Subsection("Last block (N−1)")
+		w.Table([]string{"Field", "Value", "Source"}, ex.LastBlockRows)
+	}
+	if ex.FormulaLine != "" {
+		w.Subsection("Formula")
+		w.Em(ex.FormulaLine)
+	}
+	if len(ex.ThisBlockRows) > 0 {
+		w.Subsection("This block (N)")
+		w.Table([]string{"Field", "Value", "Source"}, ex.ThisBlockRows)
+	}
 	if len(ex.ParamRows) > 0 {
-		w.Subsection("Chain parameters")
-		w.Table([]string{"Setting", "Value", "Note"}, ex.ParamRows)
+		w.Subsection("Params")
+		w.Table([]string{"Setting", "Value", "Meaning"}, ex.ParamRows)
 	}
-	w.Subsection("Receipt")
-	w.Pre(ex.Receipt)
 	writeFeemarketWalletChain(w, ex)
-	if len(ex.AdjustmentBullets) > 0 {
-		for _, b := range ex.AdjustmentBullets {
-			w.ListItem(b)
-		}
-	}
 }
 
 func writeFeemarketHero(w Writer, ex FeemarketExplain) {
@@ -38,7 +43,7 @@ func writeFeemarketHero(w Writer, ex FeemarketExplain) {
 		`<div class="fee-traffic">`+
 			`<div class="fee-badge fee-badge--%s">%s</div>`+
 			`<div class="fee-meter" role="meter" aria-valuenow="%.0f" aria-valuemin="0" aria-valuemax="100" aria-label="Previous block load vs target">`+
-			`<div class="fee-meter__label"><span>Block load vs target</span><span>%s</span></div>`+
+			`<div class="fee-meter__label"><span>W / target</span><span>%s</span></div>`+
 			`<div class="fee-meter__track"><div class="fee-meter__fill" style="width:%.1f%%"></div></div>`+
 			`</div>`+
 			`<p class="fee-hero-line">%s</p>`+
@@ -49,19 +54,6 @@ func writeFeemarketHero(w Writer, ex FeemarketExplain) {
 		html.EscapeString(meterLabel),
 		barPct,
 		inlineHTML(ex.HeroLine),
-	))
-}
-
-func writeFeemarketKeyMetrics(w Writer, ex FeemarketExplain) {
-	w.WriteHTML(fmt.Sprintf(
-		`<dl class="stat-grid fee-key-metrics">`+
-			`<div class="stat"><dt>base fee</dt><dd>%s</dd></div>`+
-			`<div class="stat"><dt>eth_gasPrice</dt><dd>%s</dd></div>`+
-			`<div class="stat"><dt>next adjustment</dt><dd>%s</dd></div>`+
-			`</dl>`,
-		html.EscapeString(ex.StatBaseFee),
-		html.EscapeString(ex.StatGasPrice),
-		html.EscapeString(ex.StatNextAdj),
 	))
 }
 
