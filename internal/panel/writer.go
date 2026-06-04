@@ -27,7 +27,7 @@ type Writer interface {
 	MathLatex(parts ...string)
 	WriteString(s string)
 	WriteHTML(s string) // trusted panel markup (not escaped)
-	Details(summary string, fn func(Writer))
+	Details(id, summary string, fn func(Writer))
 }
 
 type docWriter struct {
@@ -213,11 +213,16 @@ func (d *docWriter) MathLatex(parts ...string) {
 	}
 }
 
-func (d *docWriter) Details(summary string, fn func(Writer)) {
+func (d *docWriter) Details(id, summary string, fn func(Writer)) {
 	d.closeList()
 	d.closeStatGrid()
-	fmt.Fprintf(d.w, `<details class="dash-details"><summary class="dash-details__summary">%s</summary><div class="dash-details__body">`+"\n",
-		html.EscapeString(summary))
+	if id != "" {
+		fmt.Fprintf(d.w, `<details class="dash-details" id="%s" data-details-key="%s"><summary class="dash-details__summary">%s</summary><div class="dash-details__body">`+"\n",
+			html.EscapeString(id), html.EscapeString(id), html.EscapeString(summary))
+	} else {
+		fmt.Fprintf(d.w, `<details class="dash-details"><summary class="dash-details__summary">%s</summary><div class="dash-details__body">`+"\n",
+			html.EscapeString(summary))
+	}
 	if fn != nil {
 		fn(d)
 	}

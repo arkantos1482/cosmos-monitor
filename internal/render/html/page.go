@@ -155,7 +155,7 @@ func FullPage(moniker, fragment string) string {
 <h1>PMT operations</h1>
 <span class="meta">%s · live · refreshes every 5s</span>
 </header>
-<main class="dash-main" id="data" hx-get="/fragment" hx-trigger="every 5s" hx-swap="innerHTML">
+<main class="dash-main" id="data" hx-get="/fragment" hx-trigger="every 5s" hx-swap="innerHTML scroll:none show:none settle:none">
 %s
 </main>
 <script>
@@ -190,8 +190,38 @@ function renderMath(){
   });
 }
 function renderDiagrams(){renderMermaid();renderMath();}
+var dashSwap={scrollY:0,openDetails:[]};
+function snapshotDashState(){
+  dashSwap.scrollY=window.scrollY;
+  dashSwap.openDetails=[];
+  document.querySelectorAll('#data details.dash-details[open]').forEach(function(el){
+    var key=el.id||el.getAttribute('data-details-key');
+    if(key)dashSwap.openDetails.push(key);
+  });
+}
+function restoreDashState(){
+  dashSwap.openDetails.forEach(function(key){
+    var el=document.getElementById(key);
+    if(!el&&typeof CSS!=='undefined'&&CSS.escape)el=document.querySelector('#data details[data-details-key="'+CSS.escape(key)+'"]');
+    if(el)el.setAttribute('open','');
+  });
+  window.scrollTo(0,dashSwap.scrollY);
+}
+function afterDataSwap(){
+  restoreDashState();
+  renderDiagrams();
+  requestAnimationFrame(function(){
+    window.scrollTo(0,dashSwap.scrollY);
+    setTimeout(function(){window.scrollTo(0,dashSwap.scrollY);},80);
+  });
+}
 document.addEventListener('DOMContentLoaded',renderDiagrams);
-document.body.addEventListener('htmx:afterSwap',function(e){if(e.detail.target.id==='data')renderDiagrams();});
+document.body.addEventListener('htmx:beforeSwap',function(e){
+  if(e.detail.target&&e.detail.target.id==='data')snapshotDashState();
+});
+document.body.addEventListener('htmx:afterSwap',function(e){
+  if(e.detail.target&&e.detail.target.id==='data')afterDataSwap();
+});
 </script>
 </body>
 </html>`, html.EscapeString(moniker), pageCSS, html.EscapeString(moniker), fragment)

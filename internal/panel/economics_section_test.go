@@ -52,7 +52,8 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		"Block reward ledger",
 		"fee_collector",
 		"this validator → commission",
-		`<details class="dash-details">`,
+		`id="economics-chain-params"`,
+		`data-details-key="economics-chain-params"`,
 		"Chain parameters (reference)",
 	} {
 		if !strings.Contains(chunk, want) {

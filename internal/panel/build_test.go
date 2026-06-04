@@ -92,6 +92,7 @@ func TestContentInventory(t *testing.T) {
 		`class="data-table"`,
 		"At a glance",
 		"Block reward ledger",
+		`id="economics-chain-params"`,
 		"Chain parameters (reference)",
 		"Fee market (x/feemarket)",
 	} {

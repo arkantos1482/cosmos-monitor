@@ -12,7 +12,7 @@ func writeEconomics(w Writer, d model.Report) {
 
 	writeEconomicsOverview(w, d)
 
-	w.Details("Chain parameters (reference)", func(w Writer) {
+	w.Details("economics-chain-params", "Chain parameters (reference)", func(w Writer) {
 		writeEconomicsReference(w, d)
 	})
 }

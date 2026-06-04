@@ -33,4 +33,7 @@ func TestRenderFragmentEconomicsTables(t *testing.T) {
 	if !strings.Contains(out, "Chain parameters (reference)") {
 		t.Fatal("rendered fragment should include collapsed economics reference")
 	}
+	if !strings.Contains(out, `id="economics-chain-params"`) {
+		t.Fatal("economics reference details should have stable id for HTMX restore")
+	}
 }
