@@ -52,9 +52,7 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		"Block reward ledger",
 		"fee_collector",
 		"this validator → commission",
-		`id="economics-chain-params"`,
-		`data-details-key="economics-chain-params"`,
-		"Chain parameters (reference)",
+		`class="dash-subheading">Chain parameters (reference)</h3>`,
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("economics chunk missing %q", want)

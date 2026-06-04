@@ -30,10 +30,10 @@ func TestRenderFragmentEconomicsTables(t *testing.T) {
 	if !strings.Contains(out, "Block reward ledger") {
 		t.Fatal("rendered fragment should include economics ledger")
 	}
-	if !strings.Contains(out, "Chain parameters (reference)") {
-		t.Fatal("rendered fragment should include collapsed economics reference")
+	if !strings.Contains(out, `class="dash-subheading">Chain parameters (reference)</h3>`) {
+		t.Fatal("rendered fragment should include economics reference subsection")
 	}
-	if !strings.Contains(out, `id="economics-chain-params"`) {
-		t.Fatal("economics reference details should have stable id for HTMX restore")
+	if strings.Contains(out, `data-details-key="economics-chain-params"`) {
+		t.Fatal("economics reference should not use collapsible details")
 	}
 }

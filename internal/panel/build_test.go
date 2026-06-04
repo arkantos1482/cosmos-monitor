@@ -92,8 +92,7 @@ func TestContentInventory(t *testing.T) {
 		`class="data-table"`,
 		"At a glance",
 		"Block reward ledger",
-		`id="economics-chain-params"`,
-		"Chain parameters (reference)",
+		`class="dash-subheading">Chain parameters (reference)</h3>`,
 		"Fee market (x/feemarket)",
 	} {
 		if !strings.Contains(out, want) {
