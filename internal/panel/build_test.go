@@ -30,6 +30,12 @@ func TestBuildEconomicsUsesTablesNotMermaid(t *testing.T) {
 	if !strings.Contains(eco, "At a glance") {
 		t.Fatal("economics should include at-a-glance stats")
 	}
+	if !strings.Contains(eco, `economics-kpi-band`) {
+		t.Fatal("economics should wrap at-a-glance in KPI band")
+	}
+	if !strings.Contains(eco, `data-table--ledger`) {
+		t.Fatal("ledger table should use ledger styling")
+	}
 }
 
 func TestBuildFeeMarketPanel(t *testing.T) {
@@ -41,8 +47,14 @@ func TestBuildFeeMarketPanel(t *testing.T) {
 		ParentBlockResultsOK: true,
 	}
 	out := Build(d)
+	if !strings.Contains(out, `class="fee-hero"`) {
+		t.Fatal("fee market section should render fee-hero panel")
+	}
 	if !strings.Contains(out, `class="fee-traffic"`) {
 		t.Fatal("fee market section should render fee-traffic panel")
+	}
+	if !strings.Contains(out, `fee-key-metrics`) {
+		t.Fatal("fee market hero should include KPI row")
 	}
 	if strings.Contains(out, `Fee market (x/feemarket)`) {
 		idx := strings.Index(out, `Fee market (x/feemarket)`)
@@ -64,6 +76,9 @@ func TestBuildGoldenMinimal(t *testing.T) {
 	out := Build(d)
 	if !strings.Contains(out, `class="dash-heading">1. INFRASTRUCTURE</h2>`) {
 		t.Fatal("expected infrastructure section")
+	}
+	if !strings.Contains(out, `dash-section--infra`) {
+		t.Fatal("expected infrastructure section accent")
 	}
 	if !strings.Contains(out, `class="dash-heading">7. EVM JSON-RPC</h2>`) {
 		t.Fatal("expected EVM section")
@@ -88,7 +103,8 @@ func TestContentInventory(t *testing.T) {
 		`class="dash-heading">7. EVM JSON-RPC</h2>`,
 		`class="dash-subheading">For operators</h3>`,
 		`class="dash-subheading">Probe health</h3>`,
-		`class="stat-grid"`,
+		`class="kpi-grid"`,
+		`class="kpi-tile"`,
 		`class="data-table"`,
 		"At a glance",
 		"Block reward ledger",

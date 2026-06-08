@@ -21,10 +21,13 @@ func TestWriteFeemarketSectionHTML(t *testing.T) {
 	w.flush()
 	out := b.String()
 	for _, want := range []string{
+		`class="fee-hero"`,
 		`class="fee-traffic"`,
 		`class="fee-badge`,
 		`class="fee-meter"`,
 		`class="fee-hero-line"`,
+		`fee-key-metrics`,
+		`fee-kpi`,
 		`class="fee-formula"`,
 		`Variables`,
 		`Formulas`,
@@ -32,6 +35,9 @@ func TestWriteFeemarketSectionHTML(t *testing.T) {
 		`FEE FALLING`,
 		`Stored gas wanted`,
 		`Live value`,
+		`Utilization`,
+		`Next adjustment`,
+		`Base fee`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("missing %q in output", want)
@@ -40,21 +46,18 @@ func TestWriteFeemarketSectionHTML(t *testing.T) {
 	for _, bad := range []string{
 		`math-panel`, `mermaid`, `data-tex-b64`,
 		`Receipt`, `Adjustment logic`, `fee-traffic-stats`,
-		`fee-key-metrics`, `class="code-block"`,
 		`Chain parameters`,
 		`Last block (N−1)`,
 		`How fees adjust`,
 		`This block (N)`,
-		`class="fee-cards"`,
 		`What wallets see`,
-		`class="note"`,
 	} {
 		if strings.Contains(out, bad) {
 			t.Fatalf("fee section should not contain %q", bad)
 		}
 	}
-	if strings.Count(out, `class="stat-grid"`) != 0 {
-		t.Fatal("fee section should not use stat-grid key metrics")
+	if strings.Count(out, `class="kpi-grid"`) != 0 {
+		t.Fatal("fee section should not use kpi-grid for key metrics")
 	}
 }
 

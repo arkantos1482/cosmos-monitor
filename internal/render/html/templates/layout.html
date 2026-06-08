@@ -20,10 +20,12 @@
 </header>
 <div class="dash-shell">
 {{.Nav}}
+<div class="dash-content">
 <main class="dash-main" id="data"
   hx-get="{{.DataURL}}"
   hx-trigger="every 5s"
-  hx-swap="innerHTML show:none scroll:none settle:none">{{.Content}}</main>
+  hx-swap="innerHTML settle:0.15s">{{.Content}}</main>
+</div>
 </div>
 </body>
 </html>

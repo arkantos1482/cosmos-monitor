@@ -5,6 +5,7 @@ import (
 	"html"
 	"io"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -58,7 +59,7 @@ func (d *docWriter) closeStatGrid() {
 	if !d.inStatGrid {
 		return
 	}
-	fmt.Fprint(d.w, "</dl>\n")
+	fmt.Fprint(d.w, "</div>\n")
 	d.inStatGrid = false
 }
 
@@ -86,7 +87,7 @@ func (d *docWriter) openStatGrid() {
 		return
 	}
 	d.closeList()
-	fmt.Fprint(d.w, `<dl class="stat-grid">`+"\n")
+	fmt.Fprint(d.w, `<div class="kpi-grid">`+"\n")
 	d.inStatGrid = true
 }
 
@@ -102,36 +103,82 @@ func (d *docWriter) WriteHTML(s string) {
 	fmt.Fprint(d.w, s)
 }
 
+func sectionSlug(title string) string {
+	upper := strings.ToUpper(title)
+	switch {
+	case strings.Contains(upper, "INFRASTRUCTURE"):
+		return "infra"
+	case strings.Contains(upper, "NODE") && !strings.Contains(upper, "VALIDATOR"):
+		return "node"
+	case strings.Contains(upper, "VALIDATOR SET"):
+		return "validators"
+	case strings.Contains(upper, "THIS VALIDATOR"):
+		return "local"
+	case strings.Contains(upper, "ECONOMICS"):
+		return "economics"
+	case strings.Contains(upper, "GOVERNANCE"):
+		return "governance"
+	case strings.Contains(upper, "EVM"):
+		return "evm"
+	default:
+		return ""
+	}
+}
+
 func (d *docWriter) Section(title string) {
 	d.closeSection()
-	fmt.Fprintf(d.w, `<section class="dash-section"><h2 class="dash-heading">%s</h2>`+"\n",
-		html.EscapeString(title))
+	slug := sectionSlug(title)
+	cls := "dash-section"
+	if slug != "" {
+		cls += " dash-section--" + slug
+	}
+	fmt.Fprintf(d.w, `<section class="%s"><h2 class="dash-heading">%s</h2>`+"\n",
+		cls, html.EscapeString(title))
 	d.inSection = true
 }
 
 func (d *docWriter) Subsection(title string) {
 	d.closeSubsection()
-	fmt.Fprintf(d.w, `<div class="dash-block"><h3 class="dash-subheading">%s</h3>`+"\n",
+	fmt.Fprintf(d.w, `<div class="dash-block"><div class="dash-block__header"><h3 class="dash-subheading">%s</h3></div>`+"\n",
 		html.EscapeString(title))
 	d.inSubsection = true
 }
 
+var pctInValueRE = regexp.MustCompile(`\((\d+(?:\.\d+)?)%\)`)
+
 func (d *docWriter) Row(label, value string) {
 	d.openStatGrid()
-	fmt.Fprintf(d.w, `<div class="stat"><dt>%s</dt><dd>%s</dd></div>`+"\n",
-		html.EscapeString(label), formatValue(value))
+	valHTML := formatValue(value)
+	barHTML := kpiBarHTML(value)
+	fmt.Fprintf(d.w, `<div class="kpi-tile"><div class="kpi-tile__label">%s</div><div class="kpi-tile__value">%s</div>%s</div>`+"\n",
+		html.EscapeString(label), valHTML, barHTML)
+}
+
+func kpiBarHTML(value string) string {
+	m := pctInValueRE.FindStringSubmatch(value)
+	if len(m) < 2 {
+		return ""
+	}
+	pct, err := strconv.ParseFloat(m[1], 64)
+	if err != nil || pct < 0 {
+		return ""
+	}
+	if pct > 100 {
+		pct = 100
+	}
+	return fmt.Sprintf(`<div class="kpi-bar"><div class="kpi-bar__fill" style="width:%.1f%%"></div></div>`, pct)
 }
 
 func (d *docWriter) Hint(text string) {
 	d.closeList()
 	d.closeStatGrid()
-	fmt.Fprintf(d.w, `<p class="hint">%s</p>`+"\n", inlineHTML(text))
+	fmt.Fprintf(d.w, `<p class="dash-callout dash-callout--hint hint">%s</p>`+"\n", inlineHTML(text))
 }
 
 func (d *docWriter) Em(text string) {
 	d.closeList()
 	d.closeStatGrid()
-	fmt.Fprintf(d.w, `<p class="note">%s</p>`+"\n", inlineHTML(text))
+	fmt.Fprintf(d.w, `<p class="dash-callout dash-callout--note note">%s</p>`+"\n", inlineHTML(text))
 }
 
 func (d *docWriter) StrongLine(text string) {
@@ -160,13 +207,13 @@ func (d *docWriter) ListItem(text string) {
 func (d *docWriter) Pre(content string) {
 	d.closeList()
 	d.closeStatGrid()
-	fmt.Fprintf(d.w, `<pre class="code-block"><code>%s</code></pre>`+"\n", html.EscapeString(content))
+	fmt.Fprintf(d.w, `<pre class="code-block terminal-panel"><code>%s</code></pre>`+"\n", html.EscapeString(content))
 }
 
 func (d *docWriter) PreBash(content string) {
 	d.closeList()
 	d.closeStatGrid()
-	fmt.Fprintf(d.w, `<pre class="code-block"><code class="language-bash">%s</code></pre>`+"\n", html.EscapeString(content))
+	fmt.Fprintf(d.w, `<pre class="code-block terminal-panel"><code class="language-bash">%s</code></pre>`+"\n", html.EscapeString(content))
 }
 
 func (d *docWriter) Details(id, summary string, fn func(Writer)) {
@@ -185,22 +232,61 @@ func (d *docWriter) Details(id, summary string, fn func(Writer)) {
 	fmt.Fprint(d.w, `</div></details>`+"\n")
 }
 
+var numericCellRE = regexp.MustCompile(`^[\d,.\s%+\-]+$`)
+
 func (d *docWriter) Table(headers []string, rows [][]string) {
 	d.closeList()
 	d.closeStatGrid()
-	fmt.Fprint(d.w, `<div class="table-scroll"><table class="data-table"><thead><tr>`)
-	for _, h := range headers {
-		fmt.Fprintf(d.w, "<th>%s</th>", html.EscapeString(h))
+	ledger := len(headers) > 0 && headers[0] == "Step"
+	tableCls := "data-table"
+	if ledger {
+		tableCls += " data-table--ledger"
+	}
+	fmt.Fprintf(d.w, `<div class="table-scroll"><table class="%s"><thead><tr>`, tableCls)
+	for i, h := range headers {
+		thCls := ""
+		if i > 0 && isNumericHeader(h) {
+			thCls = ` class="data-table__num"`
+		}
+		fmt.Fprintf(d.w, "<th%s>%s</th>", thCls, html.EscapeString(h))
 	}
 	fmt.Fprint(d.w, "</tr></thead><tbody>")
 	for _, row := range rows {
 		fmt.Fprint(d.w, "<tr>")
-		for _, cell := range row {
-			fmt.Fprintf(d.w, "<td>%s</td>", formatValue(cell))
+		for i, cell := range row {
+			if ledger && i == 0 {
+				step := html.EscapeString(strings.TrimSpace(cell))
+				fmt.Fprintf(d.w, `<td class="data-table__step" data-step="%s">%s</td>`, step, step)
+				continue
+			}
+			tdCls := ""
+			if i > 0 && looksNumeric(cell) {
+				tdCls = ` class="data-table__num"`
+			}
+			fmt.Fprintf(d.w, "<td%s>%s</td>", tdCls, formatValue(cell))
 		}
 		fmt.Fprint(d.w, "</tr>")
 	}
 	fmt.Fprint(d.w, "</tbody></table></div>\n")
+}
+
+func isNumericHeader(h string) bool {
+	lower := strings.ToLower(h)
+	return strings.Contains(lower, "balance") ||
+		strings.Contains(lower, "block") && !strings.Contains(lower, "where") ||
+		lower == "value" || lower == "check"
+}
+
+func looksNumeric(s string) bool {
+	plain := strings.TrimSpace(s)
+	if plain == "" || plain == "—" {
+		return false
+	}
+	// strip HTML badge content check on raw string
+	if strings.HasPrefix(plain, "0.") || strings.HasPrefix(plain, "~") {
+		return true
+	}
+	return numericCellRE.MatchString(plain)
 }
 
 func formatValue(s string) string {

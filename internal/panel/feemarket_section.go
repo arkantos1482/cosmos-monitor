@@ -10,7 +10,7 @@ import (
 func writeFeemarketSection(w Writer, d model.Report) {
 	ex := buildFeemarketExplain(d)
 	w.Hint("`gas_used`, W → CometBFT `block_results` (H−1); W fallback → `GET /cosmos/evm/feemarket/v1/block_gas`; `base_fee` → `…/base_fee`; params → `…/params`; `eth_gasPrice` → EVM JSON-RPC.")
-	writeFeemarketHero(w, ex)
+	writeFeemarketHero(w, ex, d)
 	if len(ex.VariableRows) > 0 {
 		w.Subsection("Variables")
 		w.Table([]string{"Symbol", "Meaning", "Live value"}, ex.VariableRows)
@@ -25,7 +25,7 @@ func writeFeemarketSection(w Writer, d model.Report) {
 	}
 }
 
-func writeFeemarketHero(w Writer, ex FeemarketExplain) {
+func writeFeemarketHero(w Writer, ex FeemarketExplain, d model.Report) {
 	var meterHTML string
 	if !ex.HideLoadMeter {
 		barPct := ex.LoadBarPct
@@ -44,16 +44,44 @@ func writeFeemarketHero(w Writer, ex FeemarketExplain) {
 			barPct, html.EscapeString(meterLabel), barPct,
 		)
 	}
+
+	util := ex.UtilizationPct
+	if util == "" {
+		util = "—"
+	}
+	nextAdj := ex.NextAdj
+	if nextAdj == "" {
+		nextAdj = "—"
+	}
+	baseFee := d.BaseFee
+	if baseFee == "" {
+		baseFee = "—"
+	}
+
+	kpiHTML := fmt.Sprintf(
+		`<div class="fee-key-metrics">`+
+			`<div class="fee-kpi"><div class="fee-kpi__label">Utilization</div><div class="fee-kpi__value">%s</div></div>`+
+			`<div class="fee-kpi"><div class="fee-kpi__label">Next adjustment</div><div class="fee-kpi__value">%s</div></div>`+
+			`<div class="fee-kpi"><div class="fee-kpi__label">Base fee</div><div class="fee-kpi__value">%s</div></div>`+
+			`</div>`,
+		html.EscapeString(util),
+		html.EscapeString(nextAdj),
+		html.EscapeString(baseFee),
+	)
+
 	w.WriteHTML(fmt.Sprintf(
-		`<div class="fee-traffic">`+
+		`<div class="fee-hero">`+
+			`<div class="fee-traffic">`+
 			`<div class="fee-badge fee-badge--%s">%s</div>`+
 			`%s`+
 			`<p class="fee-hero-line">%s</p>`+
-			`</div>`,
+			`%s`+
+			`</div></div>`,
 		html.EscapeString(ex.TrafficClass),
 		html.EscapeString(ex.TrafficLabel),
 		meterHTML,
 		inlineHTML(ex.HeroLine),
+		kpiHTML,
 	))
 }
 

@@ -12,6 +12,7 @@ func writeEconomicsOverview(w Writer, d model.Report) {
 func writeEconomicsAtAGlance(w Writer, d model.Report) {
 	w.Subsection("At a glance")
 	w.Hint("Live REST balances and per-block rates. `fee_collector` should clear each BeginBlock after distribution.")
+	w.WriteHTML(`<div class="economics-kpi-band">`)
 
 	if total := RewardInPerBlockTotal(d); total != "—" {
 		w.Row("reward in / block", total)
@@ -45,6 +46,7 @@ func writeEconomicsAtAGlance(w Writer, d model.Report) {
 	if d.Local.IsValidator && d.Local.CommissionEarned != "" {
 		w.Row("your commission", d.Local.CommissionEarned)
 	}
+	w.WriteHTML(`</div>`)
 }
 
 func writeEconomicsLedger(w Writer, d model.Report) {

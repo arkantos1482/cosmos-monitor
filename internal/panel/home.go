@@ -3,6 +3,7 @@ package panel
 import (
 	"fmt"
 	"html"
+	"math"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
@@ -10,7 +11,7 @@ import (
 func writeHome(w Writer, d model.Report) {
 	w.WriteHTML(`<div class="dash-home">`)
 	w.WriteHTML(`<p class="dash-home__lead">Live snapshot — pick a section for full detail. Refreshes every 5s.</p>`)
-	w.WriteHTML(`<div class="dash-cards">`)
+	w.WriteHTML(`<div class="dash-cards dash-cards--bento">`)
 
 	syncStr := "synced"
 	if !d.Synced {
@@ -48,13 +49,16 @@ func writeHome(w Writer, d model.Report) {
 	}
 
 	cards := []struct {
-		href   string
-		title  string
-		lines  []string
-		badges []struct{ text, kind string }
+		href    string
+		slug    string
+		title   string
+		span2   bool
+		gauges  bool
+		lines   []string
+		badges  []struct{ text, kind string }
 	}{
 		{
-			href: "/s/infra", title: "Infrastructure",
+			href: "/s/infra", slug: "infra", title: "Infrastructure", span2: true, gauges: true,
 			lines: []string{
 				fmt.Sprintf("load %.2f / %.2f / %.2f", d.Load1, d.Load5, d.Load15),
 				fmt.Sprintf("ram %s / %s (%d%%)", d.MemUsed, d.MemTotal, d.MemPct),
@@ -63,7 +67,7 @@ func writeHome(w Writer, d model.Report) {
 			badges: []struct{ text, kind string }{{nodeStatus, badgeKind(nodeStatus)}},
 		},
 		{
-			href: "/s/node", title: "Node",
+			href: "/s/node", slug: "node", title: "Node", span2: true, gauges: true,
 			lines: []string{
 				d.Moniker,
 				fmt.Sprintf("height %s · %s", d.BlockHeight, d.TimeSinceBlock),
@@ -72,19 +76,19 @@ func writeHome(w Writer, d model.Report) {
 			badges: []struct{ text, kind string }{{syncStr, badgeKind(syncStr)}},
 		},
 		{
-			href: "/s/validators", title: "Validator set",
+			href: "/s/validators", slug: "validators", title: "Validator set",
 			lines: []string{
 				fmt.Sprintf("%d bonded", d.BondedCount),
 				fmt.Sprintf("%d jailed · %d tombstoned", d.JailedCount, d.TombstonedCount),
 			},
 		},
 		{
-			href: "/s/local", title: "This validator",
+			href: "/s/local", slug: "local", title: "This validator",
 			lines: []string{localRole},
 			badges: localBadges(d),
 		},
 		{
-			href: "/s/economics", title: "Economics",
+			href: "/s/economics", slug: "economics", title: "Economics",
 			lines: []string{
 				fmt.Sprintf("bonded %.2f%% · inflation %.2f%%", d.BondedPct, d.Inflation),
 				fmt.Sprintf("PMT rewards %s", pmtStatus),
@@ -93,7 +97,7 @@ func writeHome(w Writer, d model.Report) {
 			badges: []struct{ text, kind string }{{pmtStatus, badgeKind(pmtStatus)}},
 		},
 		{
-			href: "/s/governance", title: "Governance",
+			href: "/s/governance", slug: "governance", title: "Governance",
 			lines: []string{
 				govSummary,
 				fmt.Sprintf("upgrade %s", upgrade),
@@ -101,7 +105,7 @@ func writeHome(w Writer, d model.Report) {
 			},
 		},
 		{
-			href: "/s/evm", title: "EVM JSON-RPC",
+			href: "/s/evm", slug: "evm", title: "EVM JSON-RPC",
 			lines: []string{
 				fmt.Sprintf("chain %d · block %s", d.EVMChainID, d.EVMBlock),
 				fmt.Sprintf("txpool %d pending · %d queued", d.PendingTx, d.QueuedTx),
@@ -112,7 +116,7 @@ func writeHome(w Writer, d model.Report) {
 	}
 
 	for _, c := range cards {
-		writeSummaryCard(w, c.href, c.title, c.lines, c.badges)
+		writeSummaryCard(w, c.href, c.slug, c.title, c.span2, c.gauges, d, c.lines, c.badges)
 	}
 	w.WriteHTML(`</div></div>`)
 }
@@ -147,8 +151,12 @@ func badgeKind(v string) string {
 	}
 }
 
-func writeSummaryCard(w Writer, href, title string, lines []string, badges []struct{ text, kind string }) {
-	w.WriteHTML(fmt.Sprintf(`<a class="dash-card" href="%s">`, html.EscapeString(href)))
+func writeSummaryCard(w Writer, href, slug, title string, span2, gauges bool, d model.Report, lines []string, badges []struct{ text, kind string }) {
+	cls := "dash-card dash-card--" + slug
+	if span2 {
+		cls += " dash-card--span2"
+	}
+	w.WriteHTML(fmt.Sprintf(`<a class="%s" href="%s">`, cls, html.EscapeString(href)))
 	w.WriteHTML(fmt.Sprintf(`<h2 class="dash-card__title">%s</h2>`, html.EscapeString(title)))
 	if len(badges) > 0 {
 		w.WriteHTML(`<div class="dash-card__badges">`)
@@ -156,13 +164,16 @@ func writeSummaryCard(w Writer, href, title string, lines []string, badges []str
 			if b.text == "" {
 				continue
 			}
-			cls := "badge"
+			bcls := "badge"
 			if b.kind != "" {
-				cls += " badge--" + b.kind
+				bcls += " badge--" + b.kind
 			}
-			w.WriteHTML(fmt.Sprintf(`<span class="%s">%s</span> `, cls, html.EscapeString(b.text)))
+			w.WriteHTML(fmt.Sprintf(`<span class="%s">%s</span> `, bcls, html.EscapeString(b.text)))
 		}
 		w.WriteHTML(`</div>`)
+	}
+	if gauges {
+		writeCardGauges(w, slug, d)
 	}
 	w.WriteHTML(`<ul class="dash-card__lines">`)
 	for _, line := range lines {
@@ -171,5 +182,42 @@ func writeSummaryCard(w Writer, href, title string, lines []string, badges []str
 		}
 		w.WriteHTML(fmt.Sprintf(`<li>%s</li>`, html.EscapeString(line)))
 	}
-	w.WriteHTML(`</ul></a>`)
+	w.WriteHTML(`</ul>`)
+	w.WriteHTML(`<div class="dash-card__footer">View section →</div>`)
+	w.WriteHTML(`</a>`)
+}
+
+func writeCardGauges(w Writer, slug string, d model.Report) {
+	w.WriteHTML(`<div class="dash-card__gauges">`)
+	switch slug {
+	case "infra":
+		writeMiniGauge(w, "RAM", d.MemPct)
+		writeMiniGauge(w, "Disk", d.DiskPct)
+		loadPct := int(math.Min(d.Load1*100/4, 100)) // normalize load ~4 cores
+		if loadPct < 0 {
+			loadPct = 0
+		}
+		writeMiniGauge(w, "Load 1m", loadPct)
+	case "node":
+		syncPct := 100
+		if !d.Synced {
+			syncPct = 45
+		}
+		writeMiniGauge(w, "Sync", syncPct)
+	}
+	w.WriteHTML(`</div>`)
+}
+
+func writeMiniGauge(w Writer, label string, pct int) {
+	if pct < 0 {
+		pct = 0
+	}
+	if pct > 100 {
+		pct = 100
+	}
+	w.WriteHTML(fmt.Sprintf(
+		`<div class="mini-gauge"><div class="mini-gauge__label"><span>%s</span><span>%d%%</span></div>`+
+			`<div class="mini-gauge__track"><div class="mini-gauge__fill" style="width:%d%%"></div></div></div>`,
+		html.EscapeString(label), pct, pct,
+	))
 }
