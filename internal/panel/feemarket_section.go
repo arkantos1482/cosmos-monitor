@@ -9,21 +9,21 @@ import (
 
 func writeFeemarketSection(w Writer, d model.Report) {
 	ex := buildFeemarketExplain(d)
-	w.Hint("`gas_used`, W → CometBFT `block_results` (H−1); W fallback → `GET /cosmos/evm/feemarket/v1/block_gas`; `base_fee` → `…/base_fee`; params → `…/params`; `eth_gasPrice` → EVM JSON-RPC.")
+	w.Hint("`gas_used`, W → CometBFT GET /block_results (H−1); W fallback → REST GET /cosmos/evm/feemarket/v1/block_gas; `base_fee` → REST GET …/base_fee; params → REST GET …/params; `eth_gasPrice` → JSON-RPC eth_gasPrice.")
 	writeFeemarketHero(w, ex, d)
 	if len(ex.VariableRows) > 0 {
 		w.Subsection("Variables")
-		w.Hint("`W` → fee-market hero sources; `target` → `x/feemarket` params + `block_gas`; `base_fee` → `GET /cosmos/evm/feemarket/v1/base_fee`; `utilization` → derived from `W` / `target`.")
+		w.Hint("`W` → derived (fee-market hero sources); `target` → module x/feemarket params + block_gas; `base_fee` → REST GET /cosmos/evm/feemarket/v1/base_fee; `utilization` → derived (W / target).")
 		w.Table([]string{"Symbol", "Meaning", "Live value"}, ex.VariableRows)
 	}
 	if len(ex.FormulaBlocks) > 0 {
 		w.Subsection("Formulas")
-		w.Hint("`base fee adjustment` → `x/feemarket` EIP-1559-style formula (constants from params below).")
+		w.Hint("`base fee adjustment` → module x/feemarket EIP-1559-style formula (params below).")
 		writeFeemarketFormulas(w, ex.FormulaBlocks)
 	}
 	if len(ex.ParamRows) > 0 {
 		w.Subsection("Params")
-		w.Hint("`elasticity`, `base_fee_change_denominator`, `min_gas_price`, … → `GET /cosmos/evm/feemarket/v1/params`.")
+		w.Hint("`elasticity`, `base_fee_change_denominator`, `min_gas_price`, … → REST GET /cosmos/evm/feemarket/v1/params.")
 		w.Table([]string{"Setting", "Value", "Meaning"}, ex.ParamRows)
 	}
 }

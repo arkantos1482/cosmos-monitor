@@ -18,7 +18,7 @@ func writeEconomics(w Writer, d model.Report) {
 
 func writeEconomicsReference(w Writer, d model.Report) {
 	w.Subsection("Staking pool")
-	w.Hint("`bond denom`, `unbonding time`, `max validators` → `GET /cosmos/staking/v1beta1/params`; `total supply` → `x/bank` supply; `bonded` / `not bonded` → `…/pool`.")
+	w.Hint("`bond denom`, `unbonding time`, `max validators` → REST GET /cosmos/staking/v1beta1/params; `total supply` → module x/bank supply; `bonded`, `not bonded` → REST GET …/pool.")
 	if d.BondDenom != "" {
 		w.Row("bond denom", d.BondDenom)
 	}
@@ -33,7 +33,7 @@ func writeEconomicsReference(w Writer, d model.Report) {
 	}
 
 	w.Subsection("Slashing params")
-	w.Hint("`signed blocks window`, `min signed`, slash fractions → `GET /cosmos/slashing/v1beta1/params`.")
+	w.Hint("`signed blocks window`, `min signed`, slash fractions → REST GET /cosmos/slashing/v1beta1/params.")
 	if d.SlashWindow != "" && d.SlashWindow != "0" {
 		w.Row("signed blocks window", d.SlashWindow+" blocks")
 	}
@@ -56,7 +56,7 @@ func writeEconomicsReference(w Writer, d model.Report) {
 	}
 
 	w.Subsection("Mint / inflation params")
-	w.Hint("`annual provisions` → `GET /cosmos/mint/v1beta1/annual-provisions`; `goal bonded`, `blocks / year` → `…/params`.")
+	w.Hint("`annual provisions` → REST GET /cosmos/mint/v1beta1/annual-provisions; `goal bonded`, `blocks / year` → REST GET …/params.")
 	if d.AnnualProvisions != "" {
 		w.Row("annual provisions", d.AnnualProvisions+"  _(absolute new tokens/year if inflation active)_")
 	}
@@ -66,7 +66,7 @@ func writeEconomicsReference(w Writer, d model.Report) {
 	}
 
 	w.Subsection("Distribution params")
-	w.Hint("`community tax` → `GET /cosmos/distribution/v1beta1/params` (live balances and per-block split are in the ledger above).")
+	w.Hint("`community tax` → REST GET /cosmos/distribution/v1beta1/params; live balances, per-block split → ledger.")
 	if d.CommunityTax != "" {
 		w.Row("community tax", d.CommunityTax+"  _(%% of block rewards → community pool)_")
 	}
@@ -75,7 +75,7 @@ func writeEconomicsReference(w Writer, d model.Report) {
 	writeFeemarketSection(w, d)
 
 	w.Subsection("PMT Rewards  (x/pmtrewards)")
-	w.Hint("`status`, pool address → `GET /cosmos/evm/pmtrewards/v1/params`; per-block rate and pool balance are in the ledger above.")
+	w.Hint("`status`, `pool address` → REST GET /cosmos/evm/pmtrewards/v1/params; `per-block rate`, `pool balance` → ledger (Block reward ledger above).")
 	w.Row("status", pmtStatus(d))
 	if d.PMTAnnual != "" {
 		w.Row("annual emissions", d.PMTAnnual)

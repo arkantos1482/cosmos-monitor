@@ -11,7 +11,7 @@ func writeEconomicsOverview(w Writer, d model.Report) {
 
 func writeEconomicsAtAGlance(w Writer, d model.Report) {
 	w.Subsection("At a glance")
-	w.Hint("`reward in / block` → sum of PMT + inflation + last-block fees (ledger); `fee_collector` → `x/bank` module balance (should clear each BeginBlock); `community pool` → `GET /cosmos/distribution/v1beta1/community_pool`; `unclaimed delegator` / `unclaimed commission` → `x/distribution` outstanding totals; `PMT pool` → `x/pmtrewards` pool account; `your commission` → local valoper `…/commission`.")
+	w.Hint("`reward in / block` → derived (PMT + inflation + last-block fees, ledger); `fee_collector` → module x/bank (clears each BeginBlock); `community pool` → REST GET /cosmos/distribution/v1beta1/community_pool; `unclaimed delegator`, `unclaimed commission` → module x/distribution outstanding totals; `PMT pool` → module x/pmtrewards pool account; `your commission` → REST GET …/commission (local valoper).")
 	w.WriteHTML(`<div class="economics-kpi-band">`)
 
 	if total := RewardInPerBlockTotal(d); total != "—" {
@@ -55,6 +55,6 @@ func writeEconomicsLedger(w Writer, d model.Report) {
 		return
 	}
 	w.Subsection("Block reward ledger")
-	w.Hint("`In this block` → per-block rates (mint, PMT, fees); `Balance now` → `x/bank` module balances; `Check` → derived (fee_collector cleared, pool drift); `reward flow` → BeginBlock split via `fee_collector` and `x/distribution` (see table steps).")
+	w.Hint("`In this block` → derived (per-block mint, PMT, fees); `Balance now` → module x/bank balances; `Check` → derived (fee_collector cleared, pool drift); `reward flow` → derived (BeginBlock via fee_collector and x/distribution, see table).")
 	w.Table([]string{"Step", "Where", "In this block", "Balance now", "Check"}, rows)
 }

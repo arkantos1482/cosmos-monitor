@@ -45,7 +45,7 @@ func TestWriterComponents(t *testing.T) {
 func TestHintProvenanceMarkup(t *testing.T) {
 	var b strings.Builder
 	w := newWriter(&b)
-	w.Hint("`moniker`, `node ID`, `version`, `chain ID`, `p2p listen`, `rpc listen` → CometBFT RPC `GET /status` (`node_info`, `sync_info`, `validator_info` not used here).")
+	w.Hint("`moniker`, `node ID`, `version`, `chain ID`, `p2p listen`, `rpc listen` → CometBFT GET /status (node_info only; sync_info and validator_info in Consensus).")
 	w.flush()
 	out := b.String()
 
@@ -56,8 +56,8 @@ func TestHintProvenanceMarkup(t *testing.T) {
 		`class="hint-provenance__arrow"`,
 		`class="hint-provenance__source"`,
 		`<code>moniker</code>`,
-		`<code>GET /status</code>`,
-		`<code>validator_info</code> not used here`,
+		`CometBFT GET /status`,
+		`validator_info in Consensus`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("missing %q in:\n%s", want, out)
@@ -66,7 +66,7 @@ func TestHintProvenanceMarkup(t *testing.T) {
 }
 
 func TestHintProvenanceMultiClause(t *testing.T) {
-	html := hintHTML("`load` → `/proc/loadavg`; `ram` → `/proc/meminfo` (MemTotal, MemAvailable); `disk` → `statfs` on `/`.")
+	html := hintHTML("`load` → proc /proc/loadavg; `ram` → proc /proc/meminfo (MemTotal, MemAvailable); `disk` → fs statfs /.")
 	if strings.Count(html, `hint-provenance__clause`) != 3 {
 		t.Fatalf("expected 3 clauses, got:\n%s", html)
 	}
@@ -125,10 +125,27 @@ func TestHintFallbackChainedArrows(t *testing.T) {
 	}
 }
 
+func TestHintProvenanceSemicolonInsideParens(t *testing.T) {
+	html := hintHTML("`moniker` → CometBFT GET /status (node_info only; sync_info in Consensus).")
+	if !strings.Contains(html, `hint-provenance`) {
+		t.Fatalf("semicolon inside parentheses must not split clauses:\n%s", html)
+	}
+}
+
+func TestHintProvenancePMTRewards(t *testing.T) {
+	html := hintHTML("`status`, `pool address` → REST GET /cosmos/evm/pmtrewards/v1/params; `per-block rate`, `pool balance` → ledger (Block reward ledger above).")
+	if strings.Count(html, `hint-provenance__clause`) != 2 {
+		t.Fatalf("expected 2 provenance clauses for PMT rewards hint, got:\n%s", html)
+	}
+	if !strings.Contains(html, `hint-provenance`) {
+		t.Fatal("PMT rewards hint must use provenance markup, not inline fallback")
+	}
+}
+
 func TestHintProvenanceVerticalClauses(t *testing.T) {
 	var b strings.Builder
 	w := newWriter(&b)
-	w.Hint("`load` → `/proc/loadavg`; `ram` → `/proc/meminfo` (MemTotal, MemAvailable); `disk` → `statfs` on `/`.")
+	w.Hint("`load` → proc /proc/loadavg; `ram` → proc /proc/meminfo (MemTotal, MemAvailable); `disk` → fs statfs /.")
 	w.flush()
 	out := b.String()
 	if !strings.Contains(out, `class="dash-callout dash-callout--hint hint"`) {

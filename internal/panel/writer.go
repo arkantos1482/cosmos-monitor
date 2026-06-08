@@ -403,9 +403,21 @@ func inlineHTML(s string) string {
 	return s
 }
 
-// hintHTML renders data-source hints. When the text matches the common
-// "field list → API/source" pattern it becomes structured provenance markup;
-// otherwise it falls back to inline callout text.
+// Hint source format (right-hand side of each "fields → source" clause):
+//   REST GET /cosmos/...     Cosmos REST (…/path for same-module relatives)
+//   CometBFT GET /status     CometBFT RPC
+//   JSON-RPC eth_blockNumber EVM JSON-RPC method (POST for generic probes)
+//   module x/bank            on-chain module / keeper state
+//   proc /proc/loadavg       host procfs
+//   fs statfs /              host filesystem
+//   docker GET /containers/… Docker Engine API (unix socket)
+//   config app.toml […]      local node config
+//   derived (…)              computed in pmtop or cross-panel
+//   ledger                   Block reward ledger / economics overview
+//
+// hintHTML renders data-source hints. When every semicolon-separated clause
+// has exactly one " → " it becomes structured provenance markup; otherwise
+// it falls back to inline callout text.
 func hintHTML(text string) string {
 	if !isProvenanceHint(text) {
 		return inlineHTML(text)
@@ -437,15 +449,42 @@ func isProvenanceHint(text string) bool {
 }
 
 func splitHintClauses(text string) []string {
-	parts := strings.Split(text, "; ")
+	var parts []string
+	var part strings.Builder
+	depth := 0
+	for i := 0; i < len(text); i++ {
+		c := text[i]
+		switch c {
+		case '(':
+			depth++
+			part.WriteByte(c)
+		case ')':
+			if depth > 0 {
+				depth--
+			}
+			part.WriteByte(c)
+		default:
+			if depth == 0 && c == ';' && i+1 < len(text) && text[i+1] == ' ' {
+				parts = append(parts, part.String())
+				part.Reset()
+				i++ // skip space after semicolon
+				continue
+			}
+			part.WriteByte(c)
+		}
+	}
+	if part.Len() > 0 {
+		parts = append(parts, part.String())
+	}
+
 	var clauses []string
 	var cur strings.Builder
-	for i, part := range parts {
+	for i, p := range parts {
 		if cur.Len() > 0 {
 			cur.WriteString("; ")
 		}
-		cur.WriteString(part)
-		if strings.Contains(part, " → ") || i == len(parts)-1 {
+		cur.WriteString(p)
+		if strings.Contains(p, " → ") || i == len(parts)-1 {
 			clauses = append(clauses, cur.String())
 			cur.Reset()
 		}

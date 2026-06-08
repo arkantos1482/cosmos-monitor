@@ -12,7 +12,7 @@ func writeValidators(w Writer, d model.Report) {
 	w.Em("All validators on the chain — identity and P2P per validator, then stake and security tables.")
 
 	w.Subsection("Network (P2P)")
-	w.Hint("`p2p dial` / `node ID` → CometBFT `/status` (this node) or `/net_info` (peers); `operator` / `consensus` → REST `GET /cosmos/staking/v1beta1/validators` (per validator).")
+	w.Hint("`p2p dial`, `node ID` → CometBFT GET /status (local) or GET /net_info (peers); `operator`, `consensus` → REST GET /cosmos/staking/v1beta1/validators.")
 	for _, v := range d.Validators {
 		hdr := "**" + v.Moniker + "**"
 		if v.IsLocal {
@@ -43,7 +43,7 @@ func writeValidators(w Writer, d model.Report) {
 	w.BlankLine()
 
 	w.Subsection("Stake")
-	w.Hint("`vp%%`, `commission`, `status` → REST `GET /cosmos/staking/v1beta1/validators` (bonded, unbonding, unbonded).")
+	w.Hint("`vp%%`, `commission`, `status` → REST GET /cosmos/staking/v1beta1/validators (bonded, unbonding, unbonded).")
 	stakeRows := make([][]string, 0, len(d.Validators))
 	for _, v := range d.Validators {
 		stakeRows = append(stakeRows, []string{
@@ -57,7 +57,7 @@ func writeValidators(w Writer, d model.Report) {
 	w.Table([]string{"moniker", "vp%", "commission", "status", "local"}, stakeRows)
 
 	w.Subsection("Security")
-	w.Hint("`missed`, `tombstoned` → REST `GET /cosmos/slashing/v1beta1/signing_infos`; `jailed` → `x/staking` validators; `health` → derived (missed vs `min_signed_per_window` from slashing params).")
+	w.Hint("`missed`, `tombstoned` → REST GET /cosmos/slashing/v1beta1/signing_infos; `jailed` → module x/staking validators; `health` → derived (missed vs min_signed_per_window from slashing params).")
 	secRows := make([][]string, 0, len(d.Validators))
 	for _, v := range d.Validators {
 		missed := fmt.Sprintf("%d", v.Missed)
@@ -92,7 +92,7 @@ func writeValidators(w Writer, d model.Report) {
 	w.Table([]string{"moniker", "missed", "jailed", "tombstoned", "health", "local"}, secRows)
 
 	w.Subsection("Summary")
-	w.Hint("`bonded` / `jailed` / `tombstoned` / `below min signed` → counts from §3 tables; `next proposer` → CometBFT `GET /validators` (highest `proposer_priority`).")
+	w.Hint("`bonded`, `jailed`, `tombstoned`, `below min signed` → derived (counts from §3 tables); `next proposer` → CometBFT GET /validators (highest proposer_priority).")
 	w.Row("bonded", fmt.Sprintf("%d", d.BondedCount))
 	w.Row("jailed", fmt.Sprintf("%d", d.JailedCount))
 	w.Row("tombstoned", fmt.Sprintf("%d", d.TombstonedCount))

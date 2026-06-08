@@ -17,14 +17,14 @@ func writeLocalValidator(w Writer, d model.Report) {
 		w.Row("moniker", d.Moniker)
 	} else {
 		w.Subsection("Operator")
-		w.Hint("`operator address`, `moniker` → matched local validator from `x/staking` (consensus address from `/status` `validator_info`).")
+		w.Hint("`operator address`, `moniker` → module x/staking (matched via CometBFT GET /status validator_info consensus address).")
 		if lv.OperatorAddr != "" {
 			w.Row("operator address", lv.OperatorAddr+"  _(staking / rewards — `evmd query/distribution` use this)_")
 		}
 		w.Row("moniker", lv.Moniker)
 
 		w.Subsection("Staking")
-		w.Hint("`status`, `jailed`, `voting power`, `commission` → `x/staking` validators; `outstanding rewards` / `commission earned` → `x/distribution` per-valoper (`…/outstanding_rewards`, `…/commission`).")
+		w.Hint("`status`, `jailed`, `voting power`, `commission` → module x/staking validators; `outstanding rewards`, `commission earned` → REST GET /cosmos/distribution/v1beta1/validators/{valoper}/outstanding_rewards, …/commission.")
 		w.Row("status", lv.Status)
 		if lv.Jailed {
 			w.Row("jailed", "yes")
@@ -46,7 +46,7 @@ func writeLocalValidator(w Writer, d model.Report) {
 		}
 
 		w.Subsection("Block Signing")
-		w.Hint("`signing health`, `missed / window` → `x/slashing` signing_infos + params; `proposer` / `proposer priority` → CometBFT `GET /validators`.")
+		w.Hint("`signing health`, `missed / window` → REST GET /cosmos/slashing/v1beta1/signing_infos + params; `proposer`, `proposer priority` → CometBFT GET /validators.")
 		w.Row("signing health", lv.SigningStatus)
 		if d.SlashWindow != "" && d.SlashWindow != "0" {
 			w.Row("missed / window", fmt.Sprintf("%d / %s blocks  (max allowed: %d)", lv.Missed, d.SlashWindow, lv.MaxMissed))

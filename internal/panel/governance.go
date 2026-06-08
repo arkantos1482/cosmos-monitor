@@ -12,7 +12,7 @@ func writeGovernance(w Writer, d model.Report) {
 
 	if len(d.Proposals) > 0 {
 		w.Subsection(fmt.Sprintf("Active Proposals  (%d)", len(d.Proposals)))
-		w.Hint("`id`, `title`, `tally` → `GET /cosmos/gov/v1beta1/proposals?proposal_status=2` (v1 fallback if empty; per-proposal tally when available).")
+		w.Hint("`id`, `title`, `tally` → REST GET /cosmos/gov/v1beta1/proposals?proposal_status=2 (v1 fallback; per-proposal tally when available).")
 		for _, pr := range d.Proposals {
 			item := fmt.Sprintf("**#%d** %s  _(voting ends %s)_", pr.ID, report.Truncate(pr.Title, 40), pr.End)
 			if pr.HasTally {
@@ -26,7 +26,7 @@ func writeGovernance(w Writer, d model.Report) {
 
 	if len(d.DepositProposals) > 0 {
 		w.Subsection(fmt.Sprintf("Deposit-Period Proposals  (%d)", len(d.DepositProposals)))
-		w.Hint("`id`, `title` → `GET /cosmos/gov/v1beta1/proposals?proposal_status=1` (deposit period).")
+		w.Hint("`id`, `title` → REST GET /cosmos/gov/v1beta1/proposals?proposal_status=1 (deposit period).")
 		for _, pr := range d.DepositProposals {
 			w.ListItem(fmt.Sprintf("**#%d** %s  _(deposit ends %s)_", pr.ID, report.Truncate(pr.Title, 40), pr.End))
 		}
@@ -38,7 +38,7 @@ func writeGovernance(w Writer, d model.Report) {
 	}
 
 	w.Subsection("Voting Params")
-	w.Hint("`voting period` → `GET /cosmos/gov/v1beta1/params/voting`; `quorum`, `threshold`, `veto threshold` → `…/params/tallying`.")
+	w.Hint("`voting period` → REST GET /cosmos/gov/v1beta1/params/voting; `quorum`, `threshold`, `veto threshold` → REST GET …/params/tallying.")
 	w.Row("voting period", d.VotingPeriod)
 	w.Row("quorum", fmt.Sprintf("%.1f%%", d.Quorum))
 	w.Row("threshold", fmt.Sprintf("%.1f%%", d.Threshold))
@@ -47,7 +47,7 @@ func writeGovernance(w Writer, d model.Report) {
 	}
 
 	w.Subsection("Upgrade")
-	w.Hint("`name`, `target height` → `GET /cosmos/upgrade/v1beta1/current_plan` (`plan` null when none pending).")
+	w.Hint("`name`, `target height` → REST GET /cosmos/upgrade/v1beta1/current_plan (plan null when none pending).")
 	if d.UpgradeName == "" {
 		w.Row("pending", "none")
 	} else {
@@ -59,11 +59,11 @@ func writeGovernance(w Writer, d model.Report) {
 	}
 
 	w.Subsection("IBC")
-	w.Hint("`active clients` → count of `GET /ibc/core/client/v1/client_states`.")
+	w.Hint("`active clients` → derived (count of REST GET /ibc/core/client/v1/client_states).")
 	w.Row("active clients", fmt.Sprintf("%d", d.IBCClients))
 
 	w.Subsection(fmt.Sprintf("Token Pairs  (%d)", len(d.TokenPairs)))
-	w.Hint("Each row → `GET /cosmos/evm/erc20/v1/token_pairs` (`denom`, `erc20_address`, `enabled`).")
+	w.Hint("each row → REST GET /cosmos/evm/erc20/v1/token_pairs (denom, erc20_address, enabled).")
 	if len(d.TokenPairs) == 0 {
 		w.WriteString("none registered\n\n")
 	}

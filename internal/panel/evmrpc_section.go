@@ -100,7 +100,7 @@ func writeEVMRPCSection(w Writer, d model.Report) {
 		overall, blockAge, syncLabel, probeSummary, listenLabel))
 
 	w.Subsection("For operators")
-	w.Hint("`HTTP JSON-RPC` → node `app.toml` `[json-rpc]` `address`; `WebSocket` → same section `ws-address`; `enabled APIs` → `[json-rpc]` `api` (PMT default if unset); `chain ID` → `eth_chainId` / genesis EVM config; `native denom` / `client` → genesis + `web3_clientVersion`.")
+	w.Hint("`HTTP JSON-RPC` → config app.toml [json-rpc] address; `WebSocket` → config app.toml [json-rpc] ws-address; `enabled APIs` → config app.toml [json-rpc] api; `chain ID` → JSON-RPC eth_chainId + genesis EVM config; `native denom`, `client` → genesis + JSON-RPC web3_clientVersion.")
 	httpEP := d.EVMHTTPEndpoint
 	if httpEP == "" {
 		httpEP = "http://localhost:8545"
@@ -134,7 +134,7 @@ func writeEVMRPCSection(w Writer, d model.Report) {
 	w.Pre(wallet)
 
 	w.Subsection("Live (JSON-RPC)")
-	w.Hint("`block height` → `eth_blockNumber`; `last block age` → `eth_getBlockByNumber` timestamp; `sync` → `eth_syncing`; `gas price` → `eth_gasPrice` (also feeds §5 fee market); `txpool` → `txpool_status`; `EVM peers` → `net_peerCount`.")
+	w.Hint("`block height` → JSON-RPC eth_blockNumber; `last block age` → JSON-RPC eth_getBlockByNumber timestamp; `sync` → JSON-RPC eth_syncing; `gas price` → JSON-RPC eth_gasPrice (§5 fee market); `txpool` → JSON-RPC txpool_status; `EVM peers` → JSON-RPC net_peerCount.")
 	w.Row("block height", d.EVMBlock+"  _(eth_blockNumber)_")
 	if d.EVMBlockAge != "" {
 		ageStr := d.EVMBlockAge + "  _(eth_getBlockByNumber timestamp)_"
@@ -156,7 +156,7 @@ func writeEVMRPCSection(w Writer, d model.Report) {
 	w.Row("EVM peers", fmt.Sprintf("%d  _(net_peerCount — often 0 on validators)_", d.EVMPeerCount))
 
 	w.Subsection("Probe health")
-	w.Hint("`method`, `status`, `latency` → client-side JSON-RPC 2.0 `POST` on each refresh (request line + response body below).")
+	w.Hint("`method`, `status`, `latency` → JSON-RPC POST (client probe each refresh; request/response below).")
 	writeEVMProbeLog(w, d, httpEP)
 }
 
