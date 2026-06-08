@@ -4,13 +4,19 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>pmtop — {{.Moniker}} · {{.PageTitle}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 <style>{{.CSS}}</style>
 </head>
 <body hx-boost="true">
 <header class="dash-header">
+<div class="dash-header__brand">
+<span class="dash-header__mark" aria-hidden="true"></span>
 <h1>PMT operations</h1>
-<span class="meta">{{.Moniker}} · {{.PageTitle}} · refreshes every 5s</span>
+</div>
+<span class="meta">{{.Moniker}} · {{.PageTitle}} · <span class="meta__live">live · 5s</span></span>
 </header>
 <div class="dash-shell">
 {{.Nav}}
