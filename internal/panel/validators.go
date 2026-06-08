@@ -12,7 +12,7 @@ func writeValidators(w Writer, d model.Report) {
 	w.Em("All validators on the chain — identity and P2P per validator, then stake and security tables.")
 
 	w.Subsection("Network (P2P)")
-	w.Hint("Per validator: `p2p dial` / `node ID` → CometBFT `/status` (this node) or `/net_info` (peers); `operator` / `consensus` → REST `GET /cosmos/staking/v1beta1/validators`.")
+	w.Hint("`p2p dial` / `node ID` → CometBFT `/status` (this node) or `/net_info` (peers); `operator` / `consensus` → REST `GET /cosmos/staking/v1beta1/validators` (per validator).")
 	for _, v := range d.Validators {
 		hdr := "**" + v.Moniker + "**"
 		if v.IsLocal {

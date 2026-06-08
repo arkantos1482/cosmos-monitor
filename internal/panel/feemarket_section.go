@@ -13,14 +13,17 @@ func writeFeemarketSection(w Writer, d model.Report) {
 	writeFeemarketHero(w, ex, d)
 	if len(ex.VariableRows) > 0 {
 		w.Subsection("Variables")
+		w.Hint("`W` → fee-market hero sources; `target` → `x/feemarket` params + `block_gas`; `base_fee` → `GET /cosmos/evm/feemarket/v1/base_fee`; `utilization` → derived from `W` / `target`.")
 		w.Table([]string{"Symbol", "Meaning", "Live value"}, ex.VariableRows)
 	}
 	if len(ex.FormulaBlocks) > 0 {
 		w.Subsection("Formulas")
+		w.Hint("`base fee adjustment` → `x/feemarket` EIP-1559-style formula (constants from params below).")
 		writeFeemarketFormulas(w, ex.FormulaBlocks)
 	}
 	if len(ex.ParamRows) > 0 {
 		w.Subsection("Params")
+		w.Hint("`elasticity`, `base_fee_change_denominator`, `min_gas_price`, … → `GET /cosmos/evm/feemarket/v1/params`.")
 		w.Table([]string{"Setting", "Value", "Meaning"}, ex.ParamRows)
 	}
 }

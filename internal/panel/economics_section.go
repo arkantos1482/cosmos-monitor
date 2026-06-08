@@ -11,7 +11,7 @@ func writeEconomicsOverview(w Writer, d model.Report) {
 
 func writeEconomicsAtAGlance(w Writer, d model.Report) {
 	w.Subsection("At a glance")
-	w.Hint("Live REST balances and per-block rates. `fee_collector` should clear each BeginBlock after distribution.")
+	w.Hint("`reward in / block` → sum of PMT + inflation + last-block fees (ledger); `fee_collector` → `x/bank` module balance (should clear each BeginBlock); `community pool` → `GET /cosmos/distribution/v1beta1/community_pool`; `unclaimed delegator` / `unclaimed commission` → `x/distribution` outstanding totals; `PMT pool` → `x/pmtrewards` pool account; `your commission` → local valoper `…/commission`.")
 	w.WriteHTML(`<div class="economics-kpi-band">`)
 
 	if total := RewardInPerBlockTotal(d); total != "—" {
@@ -55,6 +55,6 @@ func writeEconomicsLedger(w Writer, d model.Report) {
 		return
 	}
 	w.Subsection("Block reward ledger")
-	w.Hint("Follows BeginBlock: sources → `fee_collector` → community tax + validator pool → operators and delegators. **In this block** = rates/estimates; **Balance now** = on-chain balances.")
+	w.Hint("`In this block` → per-block rates (mint, PMT, fees); `Balance now` → `x/bank` module balances; `Check` → derived (fee_collector cleared, pool drift); `reward flow` → BeginBlock split via `fee_collector` and `x/distribution` (see table steps).")
 	w.Table([]string{"Step", "Where", "In this block", "Balance now", "Check"}, rows)
 }

@@ -66,7 +66,7 @@ func writeEconomicsReference(w Writer, d model.Report) {
 	}
 
 	w.Subsection("Distribution params")
-	w.Hint("Live balances and per-block split are in the ledger above; these are static module params.")
+	w.Hint("`community tax` → `GET /cosmos/distribution/v1beta1/params` (live balances and per-block split are in the ledger above).")
 	if d.CommunityTax != "" {
 		w.Row("community tax", d.CommunityTax+"  _(%% of block rewards → community pool)_")
 	}

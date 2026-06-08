@@ -12,7 +12,7 @@ func writeGovernance(w Writer, d model.Report) {
 
 	if len(d.Proposals) > 0 {
 		w.Subsection(fmt.Sprintf("Active Proposals  (%d)", len(d.Proposals)))
-		w.Hint("`GET /cosmos/gov/v1beta1/proposals?proposal_status=2` (v1 fallback if empty); tallies from per-proposal tally queries when available.")
+		w.Hint("`id`, `title`, `tally` → `GET /cosmos/gov/v1beta1/proposals?proposal_status=2` (v1 fallback if empty; per-proposal tally when available).")
 		for _, pr := range d.Proposals {
 			item := fmt.Sprintf("**#%d** %s  _(voting ends %s)_", pr.ID, report.Truncate(pr.Title, 40), pr.End)
 			if pr.HasTally {
@@ -26,7 +26,7 @@ func writeGovernance(w Writer, d model.Report) {
 
 	if len(d.DepositProposals) > 0 {
 		w.Subsection(fmt.Sprintf("Deposit-Period Proposals  (%d)", len(d.DepositProposals)))
-		w.Hint("`GET /cosmos/gov/v1beta1/proposals?proposal_status=1` (deposit period).")
+		w.Hint("`id`, `title` → `GET /cosmos/gov/v1beta1/proposals?proposal_status=1` (deposit period).")
 		for _, pr := range d.DepositProposals {
 			w.ListItem(fmt.Sprintf("**#%d** %s  _(deposit ends %s)_", pr.ID, report.Truncate(pr.Title, 40), pr.End))
 		}

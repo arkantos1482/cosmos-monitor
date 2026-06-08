@@ -413,10 +413,7 @@ func hintHTML(text string) string {
 	clauses := splitHintClauses(text)
 	var b strings.Builder
 	b.WriteString(`<span class="hint-provenance">`)
-	for i, clause := range clauses {
-		if i > 0 {
-			b.WriteString(`<span class="hint-provenance__sep">; </span>`)
-		}
+	for _, clause := range clauses {
 		writeHintClause(&b, strings.TrimSpace(clause))
 	}
 	b.WriteString(`</span>`)

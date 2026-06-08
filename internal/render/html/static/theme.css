@@ -607,17 +607,18 @@ body::after {
 
 .hint-provenance {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem 0.45rem;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.38rem;
   line-height: 1.55;
 }
 
 .hint-provenance__clause {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.3rem 0.4rem;
+  display: grid;
+  grid-template-columns: minmax(7.5rem, auto) auto minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: 0.4rem;
+  row-gap: 0.2rem;
 }
 
 .hint-provenance__fields {
@@ -688,12 +689,6 @@ body::after {
 .hint-provenance__source strong {
   font-family: var(--font);
   font-size: 0.7rem;
-}
-
-.hint-provenance__sep {
-  color: var(--muted);
-  opacity: 0.45;
-  font-size: 0.78rem;
 }
 
 .dash-callout--note {

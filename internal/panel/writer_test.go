@@ -67,11 +67,11 @@ func TestHintProvenanceMarkup(t *testing.T) {
 
 func TestHintProvenanceMultiClause(t *testing.T) {
 	html := hintHTML("`load` → `/proc/loadavg`; `ram` → `/proc/meminfo` (MemTotal, MemAvailable); `disk` → `statfs` on `/`.")
-	if !strings.Contains(html, `hint-provenance__sep`) {
-		t.Fatalf("expected clause separator in:\n%s", html)
-	}
 	if strings.Count(html, `hint-provenance__clause`) != 3 {
 		t.Fatalf("expected 3 clauses, got:\n%s", html)
+	}
+	if strings.Contains(html, `hint-provenance__sep`) {
+		t.Fatal("vertical hints should not use inline clause separators")
 	}
 }
 
@@ -122,5 +122,16 @@ func TestHintFallbackChainedArrows(t *testing.T) {
 	html := hintHTML(text)
 	if strings.Contains(html, "hint-provenance") {
 		t.Fatal("chained-arrow hint should fall back to inline markup")
+	}
+}
+
+func TestHintProvenanceVerticalClauses(t *testing.T) {
+	var b strings.Builder
+	w := newWriter(&b)
+	w.Hint("`load` → `/proc/loadavg`; `ram` → `/proc/meminfo` (MemTotal, MemAvailable); `disk` → `statfs` on `/`.")
+	w.flush()
+	out := b.String()
+	if !strings.Contains(out, `class="dash-callout dash-callout--hint hint"`) {
+		t.Fatalf("expected hint callout wrapper in:\n%s", out)
 	}
 }
