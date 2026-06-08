@@ -2,6 +2,7 @@ package panel
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"cosmossdk.io/math"
@@ -9,6 +10,22 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 	"github.com/arkantos1482/cosmos-monitor/internal/report"
 )
+
+func diagramDenom(d model.Report) string {
+	if d.EVMDenom != "" {
+		return d.EVMDenom
+	}
+	if d.BondDenom != "" {
+		return d.BondDenom
+	}
+	return "apmt"
+}
+
+func parseDiagramUint(s string) uint64 {
+	s = strings.ReplaceAll(s, ",", "")
+	n, _ := strconv.ParseUint(s, 10, 64)
+	return n
+}
 
 // FeemarketExplain holds structured fee-market dashboard data (no LaTeX / Mermaid).
 type FeemarketExplain struct {

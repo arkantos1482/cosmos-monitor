@@ -21,7 +21,6 @@ func TestFullPageHTMXShell(t *testing.T) {
 		`hx-swap="innerHTML show:none scroll:none settle:none"`,
 		`hx-boost="true"`,
 		`htmx.org`,
-		`htmx:afterSwap`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("page missing %q", want)

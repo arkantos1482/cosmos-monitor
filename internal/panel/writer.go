@@ -1,7 +1,6 @@
 package panel
 
 import (
-	"encoding/base64"
 	"fmt"
 	"html"
 	"io"
@@ -23,8 +22,6 @@ type Writer interface {
 	ListItem(text string)
 	Pre(content string)
 	PreBash(content string)
-	Mermaid(src string)
-	MathLatex(parts ...string)
 	WriteString(s string)
 	WriteHTML(s string) // trusted panel markup (not escaped)
 	Details(id, summary string, fn func(Writer))
@@ -170,47 +167,6 @@ func (d *docWriter) PreBash(content string) {
 	d.closeList()
 	d.closeStatGrid()
 	fmt.Fprintf(d.w, `<pre class="code-block"><code class="language-bash">%s</code></pre>`+"\n", html.EscapeString(content))
-}
-
-func (d *docWriter) Mermaid(src string) {
-	d.closeList()
-	d.closeStatGrid()
-	src = strings.TrimSpace(src)
-	fmt.Fprintf(d.w, `<div class="diagram-panel mermaid">%s</div>`+"\n", html.EscapeString(src))
-}
-
-func splitLatexDisplayBlocks(s string) []string {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return nil
-	}
-	var blocks []string
-	for _, chunk := range strings.Split(s, `\]`) {
-		chunk = strings.TrimSpace(chunk)
-		chunk = strings.TrimPrefix(chunk, `\[`)
-		chunk = strings.TrimSpace(chunk)
-		if chunk != "" {
-			blocks = append(blocks, chunk)
-		}
-	}
-	return blocks
-}
-
-func (d *docWriter) MathLatex(parts ...string) {
-	d.closeList()
-	d.closeStatGrid()
-	for _, part := range parts {
-		blocks := splitLatexDisplayBlocks(part)
-		if len(blocks) == 0 {
-			continue
-		}
-		fmt.Fprint(d.w, `<div class="math-panel">`+"\n")
-		for _, block := range blocks {
-			b64 := base64.StdEncoding.EncodeToString([]byte(block))
-			fmt.Fprintf(d.w, `<div class="math-line" data-tex-b64="%s"></div>`+"\n", b64)
-		}
-		fmt.Fprint(d.w, `</div>`+"\n")
-	}
 }
 
 func (d *docWriter) Details(id, summary string, fn func(Writer)) {

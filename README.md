@@ -12,16 +12,15 @@ fetchall.LoadFor(view) → report.Build → model.Report → panel.BuildView (HT
 - **View-scoped fetch**: each page (`/` or `/s/{slug}`) fetches only the data that section needs, with a short (~4s) per-view snapshot cache so polls and boost navigations do not hammer RPC.
 - **Dual-mode HTTP**: same URL serves a full HTML document (direct load or `HX-Boosted` nav) or a fragment when `HX-Request` is set without `HX-Boosted` (5s poll on `#data`).
 - **Boost navigation**: `<body hx-boost>` handles section links and home cards; the server renders the full shell with the correct active nav. No client-side nav sync hacks.
-- **Live updates**: `#data` polls its URL every 5s via HTMX (`innerHTML` swap, no scroll jump). Mermaid/KaTeX re-init after poll swaps.
+- **Live updates**: `#data` polls its URL every 5s via HTMX (`innerHTML` swap, no scroll jump).
 
 ## Output
 
-`pmtop` renders a structured **HTML panel** using dashboard components (cards, stat grids, badges, data tables) plus Mermaid and KaTeX:
+`pmtop` renders a structured **HTML panel** using dashboard components (cards, stat grids, badges, data tables):
 
 - `<section class="dash-section">` / stat grids / status badges
-- `<div class="mermaid">` diagrams (economics, feemarket)
-- `<div class="math-panel">` with per-line `<div class="math-line">` KaTeX (EIP-1559 fee math)
-- Scrollable data tables and code blocks for RPC probe logs
+- `<pre class="fee-formula">` and code blocks for EIP-1559 fee math
+- Scrollable data tables for RPC probe logs
 
 ### Web UI (default)
 
@@ -30,7 +29,7 @@ pmtop                 # serves http://localhost:7777
 pmtop -web :8080      # custom listen address
 ```
 
-Open the URL in a browser. Section navigation uses HTMX boost (full SSR page per section); `#data` polls every 5s for live metrics. Mermaid.js + KaTeX re-init after poll swaps.
+Open the URL in a browser. Section navigation uses HTMX boost (full SSR page per section); `#data` polls every 5s for live metrics.
 
 ### Dump (CI / agents)
 
@@ -48,6 +47,19 @@ pmtop --dump          # HTML fragment to stdout, then exit
 | `-container` | `evmd-node` | Docker container name |
 | `-web` | `:7777` | Web listen address; empty disables (requires `-dump`) |
 | `-dump` | `false` | Fetch once, print HTML fragment, exit |
+
+## Submodule (parent repo)
+
+This directory is a git submodule in the cosmos-evm parent repo:
+
+```bash
+# From parent repo root
+git submodule update --init tools/ops/pmtop
+```
+
+Remote: https://github.com/arkantos1482/cosmos-monitor
+
+**Dev loop:** commit changes here → `git push` → on node4, `make push-deploy` (or `make restart`) pulls `~/cosmos-monitor` and rebuilds.
 
 ## Build
 

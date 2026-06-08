@@ -58,16 +58,6 @@ func TestWriteFeemarketSectionHTML(t *testing.T) {
 	}
 }
 
-func TestWriteFeeMathHTML(t *testing.T) {
-	var b strings.Builder
-	w := newWriter(&b)
-	w.MathLatex(`\[ W_{\text{stored}} = 1 \]`)
-	out := b.String()
-	if !strings.Contains(out, `math-line`) || !strings.Contains(out, `math-panel`) {
-		t.Fatalf("expected math-panel/math-line, got %q", out)
-	}
-}
-
 func TestWriteFeemarketSectionUnlimitedMaxGas(t *testing.T) {
 	var b strings.Builder
 	w := newWriter(&b)

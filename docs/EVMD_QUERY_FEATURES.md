@@ -1,7 +1,7 @@
 # evmd query — Full Feature Inventory
 
 Sourced by running `docker compose exec evmd evmd query <module> --help` on node4.
-Use this list to audit pmtmon coverage (what is monitored vs. what exists).
+Use this list to audit pmtop coverage (what is monitored vs. what exists).
 
 ---
 

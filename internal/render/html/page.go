@@ -140,22 +140,11 @@ body::before{
 .data-table tbody td{padding:.4rem .65rem;border-bottom:1px solid var(--border);white-space:nowrap}
 .data-table tbody tr:last-child td{border-bottom:none}
 .data-table tbody tr:hover td{background:rgba(94,179,255,.06)}
-.code-block,.diagram-panel{
+.code-block{
   background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
   padding:.65rem .85rem;margin:.4rem 0 .55rem;overflow-x:auto;
 }
 .code-block code{font-family:ui-monospace,"Cascadia Code","Fira Code",monospace;font-size:.78rem;color:var(--fg)}
-.diagram-panel.mermaid{text-align:center}
-.diagram-panel.mermaid svg{max-width:100%;height:auto}
-.math-panel{
-  background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
-  padding:.55rem .85rem;margin:.4rem 0 .55rem;overflow-x:auto;
-}
-.math-line{margin:.3rem 0;text-align:center}
-.math-line:first-child{margin-top:0}
-.math-line:last-child{margin-bottom:0}
-.math-line .katex{font-size:1.02em}
-.math-line .katex-display{margin:0;overflow:visible}
 .fee-traffic{margin:.5rem 0 .75rem}
 .fee-badge{
   display:inline-block;padding:.45rem 1rem;border-radius:8px;
