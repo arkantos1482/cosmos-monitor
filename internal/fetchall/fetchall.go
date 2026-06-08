@@ -16,13 +16,27 @@ type Snapshots struct {
 	Docker fetch.DockerSnapshot
 }
 
-const paramsTTL = 5 * time.Minute
+const (
+	paramsTTL    = 5 * time.Minute
+	snapshotTTL  = 4 * time.Second
+)
+
+type viewCacheKey struct {
+	view                        panel.View
+	rpc, rest, evm, container string
+}
+
+type cachedSnapshot struct {
+	snap Snapshots
+	at   time.Time
+}
 
 var cache struct {
 	mu          sync.Mutex
 	params      fetch.ChainParams
 	paramsAt    time.Time
 	lastMoniker string
+	byView      map[viewCacheKey]cachedSnapshot
 }
 
 // Load fetches all sources (full dashboard refresh).
@@ -30,14 +44,29 @@ func Load(rpc, rest, evm, container string) Snapshots {
 	return LoadFor(panel.ViewHome, rpc, rest, evm, container)
 }
 
-// LoadFor fetches what the active section needs (view-scoped, no snapshot cache).
+// LoadFor fetches what the active section needs (view-scoped, short-lived cache).
 func LoadFor(view panel.View, rpc, rest, evm, container string) Snapshots {
-	snap := fetchForView(view, rpc, rest, evm, container)
-	if snap.Chain.Moniker != "" {
-		cache.mu.Lock()
-		cache.lastMoniker = snap.Chain.Moniker
+	key := viewCacheKey{view: view, rpc: rpc, rest: rest, evm: evm, container: container}
+
+	cache.mu.Lock()
+	if entry, ok := cache.byView[key]; ok && time.Since(entry.at) < snapshotTTL {
+		snap := entry.snap
 		cache.mu.Unlock()
+		return snap
 	}
+	cache.mu.Unlock()
+
+	snap := fetchForView(view, rpc, rest, evm, container)
+
+	cache.mu.Lock()
+	if cache.byView == nil {
+		cache.byView = make(map[viewCacheKey]cachedSnapshot)
+	}
+	cache.byView[key] = cachedSnapshot{snap: snap, at: time.Now()}
+	if snap.Chain.Moniker != "" {
+		cache.lastMoniker = snap.Chain.Moniker
+	}
+	cache.mu.Unlock()
 	return snap
 }
 

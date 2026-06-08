@@ -9,9 +9,10 @@ fetchall.LoadFor(view) → report.Build → model.Report → panel.BuildView (HT
                                                               └─ web: html/template shell + HTMX
 ```
 
-- **View-scoped fetch**: each page (`/` or `/s/{slug}`) fetches only the data that section needs. No cross-view snapshot cache (fixes stale data on navigation).
-- **Dual-mode HTTP**: same URL serves a full HTML document (direct load) or a fragment when `HX-Request` is set (HTMX poll / nav).
-- **Live updates**: `#data` polls its URL every 5s via HTMX (`innerHTML` swap, no scroll jump). Open `<details>` are preserved with `hx-preserve`.
+- **View-scoped fetch**: each page (`/` or `/s/{slug}`) fetches only the data that section needs, with a short (~4s) per-view snapshot cache so polls and boost navigations do not hammer RPC.
+- **Dual-mode HTTP**: same URL serves a full HTML document (direct load or `HX-Boosted` nav) or a fragment when `HX-Request` is set without `HX-Boosted` (5s poll on `#data`).
+- **Boost navigation**: `<body hx-boost>` handles section links and home cards; the server renders the full shell with the correct active nav. No client-side nav sync hacks.
+- **Live updates**: `#data` polls its URL every 5s via HTMX (`innerHTML` swap, no scroll jump). Mermaid/KaTeX re-init after poll swaps.
 
 ## Output
 
@@ -29,7 +30,7 @@ pmtop                 # serves http://localhost:7777
 pmtop -web :8080      # custom listen address
 ```
 
-Open the URL in a browser. HTMX partial refresh every 5s (no full-page reload); Mermaid.js + KaTeX re-init on swap.
+Open the URL in a browser. Section navigation uses HTMX boost (full SSR page per section); `#data` polls every 5s for live metrics. Mermaid.js + KaTeX re-init after poll swaps.
 
 ### Dump (CI / agents)
 

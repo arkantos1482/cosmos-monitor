@@ -13,12 +13,13 @@ func TestFullPageHTMXShell(t *testing.T) {
 		`id="dash-nav"`,
 		`dash-nav__link--active`,
 		`href="/s/economics"`,
-		`hx-get="/s/economics"`,
 		`Economics`,
 		`<p>body</p>`,
 		`id="data"`,
+		`hx-get="/s/economics"`,
 		`hx-trigger="every 5s"`,
 		`hx-swap="innerHTML show:none scroll:none settle:none"`,
+		`hx-boost="true"`,
 		`htmx.org`,
 		`htmx:afterSwap`,
 	} {
@@ -27,6 +28,7 @@ func TestFullPageHTMXShell(t *testing.T) {
 		}
 	}
 	for _, bad := range []string{
+		`syncNavActive`,
 		`scheduleAutoRefresh`,
 		`location.reload`,
 		`sessionStorage`,
@@ -34,6 +36,7 @@ func TestFullPageHTMXShell(t *testing.T) {
 		`restoreDashState`,
 		`setInterval`,
 		`/fragment`,
+		`hx-target="#data"`,
 	} {
 		if strings.Contains(out, bad) {
 			t.Fatalf("page should not contain %q", bad)
@@ -41,10 +44,13 @@ func TestFullPageHTMXShell(t *testing.T) {
 	}
 }
 
-func TestNavLinksUseHTMX(t *testing.T) {
+func TestNavLinksPlainHref(t *testing.T) {
 	out := navHTML(panel.ViewInfra)
-	if !strings.Contains(out, `hx-get="/s/infra"`) || !strings.Contains(out, `dash-nav__link--active`) {
-		t.Fatal("nav should use HTMX partial navigation with active class")
+	if !strings.Contains(out, `href="/s/infra"`) || !strings.Contains(out, `dash-nav__link--active`) {
+		t.Fatal("nav should mark active section with plain href links")
+	}
+	if strings.Contains(out, `hx-get=`) || strings.Contains(out, `hx-target=`) {
+		t.Fatal("nav links should rely on body hx-boost, not per-link HTMX attrs")
 	}
 }
 

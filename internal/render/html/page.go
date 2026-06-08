@@ -206,9 +206,8 @@ func navHTML(active panel.View) string {
 		if item.View == active {
 			cls += " dash-nav__link--active"
 		}
-		fmt.Fprintf(&b, `<a class="%s" href="%s" hx-get="%s" hx-target="#data" hx-swap="innerHTML show:none scroll:none settle:none" hx-push-url="%s">%s</a>`,
-			cls, html.EscapeString(item.Path), html.EscapeString(item.Path),
-			html.EscapeString(item.Path), html.EscapeString(item.Label))
+		fmt.Fprintf(&b, `<a class="%s" href="%s">%s</a>`,
+			cls, html.EscapeString(item.Path), html.EscapeString(item.Label))
 	}
 	fmt.Fprint(&b, `</nav>`)
 	return b.String()

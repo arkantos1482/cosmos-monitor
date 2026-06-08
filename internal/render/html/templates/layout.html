@@ -11,7 +11,7 @@
 <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 <style>{{.CSS}}</style>
 </head>
-<body>
+<body hx-boost="true">
 <header class="dash-header">
 <h1>PMT operations</h1>
 <span class="meta">{{.Moniker}} · {{.PageTitle}} · refreshes every 5s</span>
@@ -55,22 +55,11 @@ function renderMath(){
   });
 }
 function renderDiagrams(){renderMermaid();renderMath();}
-function syncNavActive(){
-  var path=location.pathname||'/';
-  document.querySelectorAll('.dash-nav__link').forEach(function(a){
-    a.classList.toggle('dash-nav__link--active',a.getAttribute('href')===path);
-  });
-}
 document.body.addEventListener('htmx:afterSwap',function(evt){
   if(!evt.detail.target||evt.detail.target.id!=='data')return;
-  evt.detail.target.setAttribute('hx-get',location.pathname||'/');
-  syncNavActive();
   renderDiagrams();
 });
-document.addEventListener('DOMContentLoaded',function(){
-  syncNavActive();
-  renderDiagrams();
-});
+document.addEventListener('DOMContentLoaded',function(){renderDiagrams();});
 </script>
 </body>
 </html>

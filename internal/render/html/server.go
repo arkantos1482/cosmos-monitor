@@ -45,7 +45,8 @@ func serveView(w http.ResponseWriter, r *http.Request, v panel.View, render Rend
 	d := render(v)
 	fragment := RenderView(v, d)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if r.Header.Get("HX-Request") != "" {
+	// Poll-only HTMX (#data every 5s): fragment. Boost nav and direct loads: full page.
+	if r.Header.Get("HX-Request") != "" && r.Header.Get("HX-Boosted") == "" {
 		fmt.Fprint(w, fragment)
 		return
 	}
