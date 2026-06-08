@@ -53,8 +53,11 @@ func TestBuildFeeMarketPanel(t *testing.T) {
 	if !strings.Contains(out, `class="fee-traffic"`) {
 		t.Fatal("fee market section should render fee-traffic panel")
 	}
-	if !strings.Contains(out, `fee-key-metrics`) {
-		t.Fatal("fee market hero should include KPI row")
+	if !strings.Contains(out, `class="fee-pipeline"`) {
+		t.Fatal("fee market section should render pipeline diagram")
+	}
+	if !strings.Contains(out, `class="fee-cards"`) {
+		t.Fatal("fee market section should render story cards")
 	}
 	idx := strings.Index(out, "6. FEE MARKET")
 	end := strings.Index(out, "7. GOVERNANCE")
@@ -64,6 +67,12 @@ func TestBuildFeeMarketPanel(t *testing.T) {
 	fee := out[idx:end]
 	if strings.Contains(fee, `math-panel`) {
 		t.Fatal("fee market section should not use KaTeX")
+	}
+	if strings.Contains(fee, `fee-key-metrics`) {
+		t.Fatal("fee market hero should not include legacy KPI row")
+	}
+	if !strings.Contains(fee, `id="feemarket-ref"`) {
+		t.Fatal("fee market should include collapsible reference block")
 	}
 	if !strings.Contains(out, `dash-section--feemarket`) {
 		t.Fatal("fee market section should have feemarket accent class")

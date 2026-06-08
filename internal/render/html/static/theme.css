@@ -997,10 +997,18 @@ body::after {
   transition: width 0.35s ease;
 }
 
+.fee-hero-summary {
+  margin: 0 0 0.35rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--fg);
+}
+
 .fee-hero-line {
-  margin: 0.35rem 0 0.5rem;
-  font-size: 0.88rem;
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
   line-height: 1.45;
+  color: var(--muted);
 }
 
 .fee-key-metrics {
@@ -1040,6 +1048,83 @@ body::after {
   color: var(--fg);
 }
 
+/* ── Fee market pipeline ──────────────────────────────────────── */
+
+.fee-pipeline {
+  display: flex;
+  align-items: stretch;
+  gap: 0.35rem;
+  margin: 0.65rem 0 0.75rem;
+  padding: 0.65rem 0.75rem;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-x: auto;
+}
+
+.fee-pipeline__step {
+  flex: 1 1 0;
+  min-width: 7.5rem;
+  padding: 0.5rem 0.6rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.fee-pipeline__connector {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  font-size: 1.1rem;
+  color: var(--muted);
+  padding: 0 0.1rem;
+}
+
+.fee-pipeline__label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  margin-bottom: 0.2rem;
+}
+
+.fee-pipeline__title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+.fee-pipeline__values {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.fee-pipeline__value {
+  font-size: 0.78rem;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+  color: var(--fg);
+}
+
+@media (max-width: 720px) {
+  .fee-pipeline {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .fee-pipeline__connector {
+    justify-content: center;
+    transform: rotate(90deg);
+    padding: 0.15rem 0;
+  }
+}
+
+/* ── Fee market story cards ───────────────────────────────────── */
+
 .fee-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -1051,7 +1136,24 @@ body::after {
   padding: 0.65rem 0.75rem;
   background: var(--surface-2);
   border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
   border-radius: 8px;
+}
+
+.fee-card--demand {
+  border-left-color: var(--accent);
+}
+
+.fee-card--adjust {
+  border-left-color: #e8b86d;
+}
+
+.fee-card--network {
+  border-left-color: var(--accent-2);
+}
+
+.fee-card--wallet {
+  border-left-color: var(--ok);
 }
 
 .fee-card__title {
@@ -1061,6 +1163,47 @@ body::after {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin: 0 0 0.45rem;
+}
+
+.fee-card__primary {
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  margin-bottom: 0.4rem;
+  color: var(--fg);
+}
+
+.fee-card--demand .fee-card__primary,
+.fee-card--adjust .fee-card__primary {
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.fee-card__lines {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.fee-card__lines li {
+  margin-bottom: 0.25rem;
+}
+
+.fee-card__caption {
+  margin: 0.4rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.fee-formula--inline {
+  margin: 0.35rem 0 0.25rem;
+  font-size: 0.72rem;
 }
 
 .fee-formula {
