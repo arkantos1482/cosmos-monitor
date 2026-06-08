@@ -38,8 +38,8 @@ func TestBuildHomeSummaryCards(t *testing.T) {
 func TestBuildViewSingleSection(t *testing.T) {
 	d := model.Report{Moniker: "node1", Synced: true, BlockHeight: "1"}
 	out := BuildView(ViewNode, d)
-	if !strings.Contains(out, `class="dash-status"`) {
-		t.Fatal("node view should include status strip")
+	if strings.Contains(out, `class="dash-status"`) {
+		t.Fatal("node view should not include status strip")
 	}
 	if !strings.Contains(out, `class="dash-heading">2. NODE</h2>`) {
 		t.Fatal("node view should only render node section")
@@ -52,13 +52,17 @@ func TestBuildViewSingleSection(t *testing.T) {
 	}
 }
 
-func TestStatusStripOnAllViews(t *testing.T) {
+func TestStatusStripOnlyOnHome(t *testing.T) {
 	d := model.Report{Moniker: "n", Synced: true, BlockHeight: "1", BaseFee: "1000"}
-	views := []View{ViewHome, ViewInfra, ViewNode, ViewValidators, ViewLocalValidator, ViewEconomics, ViewGovernance, ViewEVM}
-	for _, v := range views {
+	out := BuildView(ViewHome, d)
+	if !strings.Contains(out, `class="dash-status"`) {
+		t.Fatal("home view should include status strip")
+	}
+	sections := []View{ViewInfra, ViewNode, ViewValidators, ViewLocalValidator, ViewEconomics, ViewGovernance, ViewEVM}
+	for _, v := range sections {
 		out := BuildView(v, d)
-		if !strings.Contains(out, `class="dash-status"`) {
-			t.Fatalf("view %s missing status strip", v)
+		if strings.Contains(out, `class="dash-status"`) {
+			t.Fatalf("view %s should not include status strip", v)
 		}
 	}
 }

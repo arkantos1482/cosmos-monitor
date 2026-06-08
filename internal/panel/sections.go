@@ -46,7 +46,6 @@ func ParseView(s string) View {
 }
 
 func writeView(w Writer, v View, d model.Report) {
-	writeStatusStrip(w, d)
 	switch v {
 	case ViewInfra:
 		writeInfra(w, d)
@@ -63,6 +62,7 @@ func writeView(w Writer, v View, d model.Report) {
 	case ViewEVM:
 		writeEVMSection(w, d)
 	default:
+		writeStatusStrip(w, d)
 		writeHome(w, d)
 	}
 }
