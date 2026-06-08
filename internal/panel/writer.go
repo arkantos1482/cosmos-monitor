@@ -144,14 +144,78 @@ func (d *docWriter) Subsection(title string) {
 	d.inSubsection = true
 }
 
-var pctInValueRE = regexp.MustCompile(`\((\d+(?:\.\d+)?)%\)`)
+var (
+	pctInValueRE  = regexp.MustCompile(`\((\d+(?:\.\d+)?)%\)`)
+	longHexValueRE = regexp.MustCompile(`^[0-9a-fA-F]{32,}$`)
+)
 
 func (d *docWriter) Row(label, value string) {
 	d.openStatGrid()
-	valHTML := formatValue(value)
+	tileClass, valHTML := kpiValueHTML(value)
 	barHTML := kpiBarHTML(value)
-	fmt.Fprintf(d.w, `<div class="kpi-tile"><div class="kpi-tile__label">%s</div><div class="kpi-tile__value">%s</div>%s</div>`+"\n",
-		html.EscapeString(label), valHTML, barHTML)
+	fmt.Fprintf(d.w, `<div class="kpi-tile%s"><div class="kpi-tile__label">%s</div><div class="kpi-tile__value">%s</div>%s</div>`+"\n",
+		tileClass, html.EscapeString(label), valHTML, barHTML)
+}
+
+// kpiValueHTML structures long identifiers and _(caption)_ suffixes into
+// detail/hash tile layouts; short plain values keep the inline format.
+func kpiValueHTML(value string) (tileClass string, htmlOut string) {
+	primary, caption := splitKPICaption(value)
+	if caption == "" && !isLongKPIPrimary(primary) {
+		return "", formatValue(value)
+	}
+	var classes []string
+	if caption != "" {
+		classes = append(classes, "kpi-tile--detail")
+	}
+	if isLongKPIPrimary(primary) {
+		classes = append(classes, "kpi-tile--hash")
+	}
+	body := formatValue(primary)
+	if isLongKPIPrimary(primary) {
+		body = `<span class="kpi-tile__primary">` + body + `</span>`
+	}
+	if caption != "" {
+		body += `<div class="kpi-tile__caption">` + inlineHTML(caption) + `</div>`
+	}
+	if len(classes) == 0 {
+		return "", body
+	}
+	return " " + strings.Join(classes, " "), body
+}
+
+func splitKPICaption(s string) (primary, caption string) {
+	loc := inlineEmRE.FindStringSubmatchIndex(s)
+	if loc == nil {
+		return s, ""
+	}
+	primary = strings.TrimSpace(s[:loc[0]])
+	caption = s[loc[2]:loc[3]]
+	return primary, caption
+}
+
+func isLongKPIPrimary(s string) bool {
+	plain := strings.TrimSpace(stripInlineMarkup(s))
+	if plain == "" {
+		return false
+	}
+	if longHexValueRE.MatchString(plain) {
+		return true
+	}
+	if strings.HasPrefix(plain, "tcp://") || strings.HasPrefix(plain, "http://") {
+		return true
+	}
+	if strings.Contains(plain, "@") || (strings.Count(plain, ":") >= 2 && len(plain) > 28) {
+		return true
+	}
+	return len(plain) >= 40
+}
+
+func stripInlineMarkup(s string) string {
+	s = inlineCodeRE.ReplaceAllString(s, "$1")
+	s = inlineBoldRE.ReplaceAllString(s, "$1")
+	s = inlineEmRE.ReplaceAllString(s, "$1")
+	return s
 }
 
 func kpiBarHTML(value string) string {

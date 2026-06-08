@@ -523,6 +523,48 @@ body::after {
   font-size: 0.8rem;
 }
 
+.kpi-tile--hash {
+  grid-column: span 2;
+}
+
+.kpi-tile--detail .kpi-tile__value {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.kpi-tile__primary {
+  display: block;
+  padding: 0.28rem 0.45rem;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  word-break: break-all;
+  letter-spacing: -0.01em;
+}
+
+.kpi-tile__caption {
+  font-family: var(--font);
+  font-size: 0.68rem;
+  font-weight: 400;
+  font-style: normal;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.kpi-tile__caption code {
+  font-size: 0.66rem;
+  color: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .kpi-tile--hash {
+    grid-column: span 1;
+  }
+}
+
 .kpi-bar {
   height: 4px;
   margin-top: 0.35rem;

@@ -86,6 +86,37 @@ func TestHintFallbackNoArrow(t *testing.T) {
 	}
 }
 
+func TestKPIHashDetailTile(t *testing.T) {
+	var b strings.Builder
+	w := newWriter(&b)
+	w.Row("node ID", "3381ddd6b06ec766400d3bdbddcfaaa2305f4984  _(CometBFT P2P peer ID)_")
+	w.flush()
+	out := b.String()
+
+	for _, want := range []string{
+		`class="kpi-tile kpi-tile--detail kpi-tile--hash"`,
+		`class="kpi-tile__primary"`,
+		`class="kpi-tile__caption"`,
+		`3381ddd6b06ec766400d3bdbddcfaaa2305f4984`,
+		`CometBFT P2P peer ID`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("missing %q in:\n%s", want, out)
+		}
+	}
+}
+
+func TestKPIPlainTileUnchanged(t *testing.T) {
+	var b strings.Builder
+	w := newWriter(&b)
+	w.Row("height", "482,160")
+	w.flush()
+	out := b.String()
+	if strings.Contains(out, "kpi-tile--detail") || strings.Contains(out, "kpi-tile--hash") {
+		t.Fatalf("short plain value should not use detail/hash classes:\n%s", out)
+	}
+}
+
 func TestHintFallbackChainedArrows(t *testing.T) {
 	text := "Follows BeginBlock: sources → `fee_collector` → community tax + validator pool → operators and delegators."
 	html := hintHTML(text)
