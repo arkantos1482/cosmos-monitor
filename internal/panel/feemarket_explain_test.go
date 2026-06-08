@@ -38,11 +38,11 @@ func TestBuildFeemarketExplain(t *testing.T) {
 	if len(ex.VariableRows) < 4 {
 		t.Fatalf("expected variable rows, got %d", len(ex.VariableRows))
 	}
-	if ex.VariableRows[0][0] != "W" || !strings.Contains(ex.VariableRows[0][1], "Stored gas wanted") {
-		t.Fatalf("W row should define stored gas wanted: %v", ex.VariableRows[0])
+	if ex.VariableRows[0][0] != "W" || ex.VariableRows[0][1] != "21,000" {
+		t.Fatalf("W row value: got %v", ex.VariableRows[0])
 	}
-	if ex.VariableRows[0][2] != "21,000" {
-		t.Fatalf("W live value: got %q", ex.VariableRows[0][2])
+	if !strings.Contains(ex.VariableRows[0][2], "Stored gas wanted") {
+		t.Fatalf("W row should define stored gas wanted: %v", ex.VariableRows[0])
 	}
 	formula := strings.Join(ex.FormulaBlocks, "\n")
 	if !strings.Contains(formula, "50,000,000") || strings.Contains(formula, "MaxUint64") {

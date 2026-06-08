@@ -869,6 +869,53 @@ body::after {
   background: rgba(94, 179, 255, 0.07);
 }
 
+/* Reference / glossary tables: reference | value | meaning */
+.data-table--reference {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.data-table--reference thead th,
+.data-table--reference tbody td {
+  white-space: normal;
+  vertical-align: top;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.data-table--reference .data-table__key {
+  width: 16%;
+  min-width: 7rem;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--section-accent, var(--accent-feemarket));
+}
+
+.data-table--reference .data-table__val {
+  width: 26%;
+  min-width: 9rem;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  word-break: break-word;
+}
+
+.data-table--reference .data-table__desc {
+  width: 58%;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.data-table--reference .data-table__key code,
+.data-table--reference .data-table__val code {
+  font-size: inherit;
+  color: inherit;
+  font-weight: inherit;
+}
+
 /* Ledger step connectors */
 .data-table--ledger tbody td.data-table__step {
   position: relative;

@@ -5,6 +5,47 @@ import (
 	"testing"
 )
 
+func TestReferenceTableAlignment(t *testing.T) {
+	var b strings.Builder
+	w := newWriter(&b)
+	w.Table([]string{"Setting", "Value", "Meaning"}, [][]string{
+		{"elasticity_multiplier", "2", "Target = gasLimit ÷ elasticity"},
+		{"no_base_fee", "no", "EIP-1559 auto-adjust enabled"},
+	})
+	// legacy column order is normalized to reference | value | meaning
+	w.Table([]string{"Symbol", "Meaning", "Live value"}, [][]string{
+		{"base", "Base fee this block", "0.000000000000000007 PMT"},
+	})
+	w.Table([]string{"Parameter", "Description", "Current"}, [][]string{
+		{"min_gas_multiplier", "mempool gas × multiplier", "0.5"},
+	})
+	out := b.String()
+	for _, want := range []string{
+		`data-table--reference`,
+		`class="data-table__val"`,
+		`class="data-table__desc"`,
+		`class="data-table__key"`,
+		`<th class="data-table__key">Symbol</th>`,
+		`<th class="data-table__val">Value</th>`,
+		`<th class="data-table__desc">Meaning</th>`,
+		`<th class="data-table__key">Parameter</th>`,
+		`<td class="data-table__val">0.000000000000000007 PMT</td>`,
+		`<td class="data-table__desc">Base fee this block</td>`,
+		`<td class="data-table__val">0.5</td>`,
+		`<td class="data-table__desc">mempool gas × multiplier</td>`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("missing %q in:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, `Live value`) {
+		t.Fatal("reference tables should use canonical Value header")
+	}
+	if strings.Contains(out, `data-table__num`) {
+		t.Fatalf("reference tables must not use numeric right-align:\n%s", out)
+	}
+}
+
 func TestWriterComponents(t *testing.T) {
 	var b strings.Builder
 	w := newWriter(&b)

@@ -509,6 +509,10 @@ func FormatFeeAmount(raw, denom string) string {
 		return "0"
 	}
 	if !strings.Contains(raw, ".") {
+		displayVal, _ := coinToDisplay(raw, denom)
+		if denom != "" && displayVal > 0 && displayVal < 1e-6 {
+			return raw + " " + denom
+		}
 		return FormatCoin(raw, denom)
 	}
 	if v >= 1 {

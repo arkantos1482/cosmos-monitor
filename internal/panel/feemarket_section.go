@@ -142,7 +142,7 @@ func writeFeemarketReference(w Writer, ex FeemarketExplain) {
 		w.Hint("`gas_used`, W → CometBFT GET /block_results (H−1); W fallback → REST GET /cosmos/evm/feemarket/v1/block_gas; `base_fee` → REST GET …/base_fee; params → REST GET …/params; `eth_gasPrice` → JSON-RPC eth_gasPrice.")
 		if len(ex.VariableRows) > 0 {
 			w.Subsection("Symbols")
-			w.Table([]string{"Symbol", "Meaning", "Live value"}, ex.VariableRows)
+			w.Table([]string{"Symbol", "Value", "Meaning"}, ex.VariableRows)
 		}
 		if len(ex.ParamRows) > 0 {
 			w.Subsection("Chain parameters")

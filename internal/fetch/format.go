@@ -55,8 +55,12 @@ func formatAmountAbs(v float64) string {
 	if v >= 1e-4 {
 		return trimTrailingZeros(fmt.Sprintf("%.6f", v))
 	}
-	if v >= 1e-7 {
-		return trimTrailingZeros(fmt.Sprintf("%.9f", v))
+	if v > 0 && v < 1e-4 {
+		dec := int(math.Ceil(-math.Log10(v))) + 2
+		if dec > 21 {
+			dec = 21
+		}
+		return trimTrailingZeros(fmt.Sprintf("%.*f", dec, v))
 	}
 	return fmt.Sprintf("%.2e", v)
 }

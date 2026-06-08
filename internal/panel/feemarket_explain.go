@@ -328,13 +328,13 @@ func buildFeemarketParamRows(d model.Report) [][]string {
 
 func buildFeemarketVariableRows(d model.Report, ld feemarketLoad) [][]string {
 	var rows [][]string
-	rows = append(rows, []string{"W", feemarketWMeaning(d), formatUint(ld.wanted)})
-	rows = append(rows, []string{"gas_used", "Gas consumed in block N−1", formatUint(ld.gasUsed)})
+	rows = append(rows, []string{"W", formatUint(ld.wanted), feemarketWMeaning(d)})
+	rows = append(rows, []string{"gas_used", formatUint(ld.gasUsed), "Gas consumed in block N−1"})
 	if ld.hasTarget || ld.unlimitedBlockGas {
 		rows = append(rows, []string{
 			"target",
-			feemarketTargetMeaning(d, ld),
 			feemarketTargetLiveValue(d, ld),
+			feemarketTargetMeaning(d, ld),
 		})
 	}
 	if d.BlockGasLimit > 0 {
@@ -344,7 +344,7 @@ func buildFeemarketVariableRows(d model.Report, ld feemarketLoad) [][]string {
 			gasLimitVal = "unlimited (−1 → MaxUint64)"
 			gasLimitMeaning = "Consensus max_gas = −1; keeper gasLimit = MaxUint64"
 		}
-		rows = append(rows, []string{"gasLimit", gasLimitMeaning, gasLimitVal})
+		rows = append(rows, []string{"gasLimit", gasLimitVal, gasLimitMeaning})
 	}
 	baseLabel := "base"
 	baseMeaning := "Base fee this block (BeginBlock)"
@@ -356,20 +356,20 @@ func buildFeemarketVariableRows(d model.Report, ld feemarketLoad) [][]string {
 	if baseVal == "" {
 		baseVal = "—"
 	}
-	rows = append(rows, []string{baseLabel, baseMeaning, baseVal})
+	rows = append(rows, []string{baseLabel, baseVal, baseMeaning})
 	if d.BaseFeeChangeDenominator > 0 && !d.NoBaseFee {
 		rows = append(rows, []string{
 			"denom",
-			"base_fee_change_denominator",
 			fmt.Sprintf("%d", d.BaseFeeChangeDenominator),
+			"base_fee_change_denominator",
 		})
 	}
 	if gp := formatGasPriceStat(d); gp != "—" {
-		rows = append(rows, []string{"eth_gasPrice", "EVM JSON-RPC gas price quote", gp})
+		rows = append(rows, []string{"eth_gasPrice", gp, "EVM JSON-RPC gas price quote"})
 	}
 	if !d.NoBaseFee && ld.hasTarget && d.BaseFeeChangeDenominator > 0 {
 		if verify := feemarketVerifyRow(d, ld); verify != "" {
-			rows = append(rows, []string{"verify", "Recomputed base fee vs chain", verify})
+			rows = append(rows, []string{"verify", verify, "Recomputed base fee vs chain"})
 		}
 	}
 	return rows

@@ -314,14 +314,24 @@ func (d *docWriter) Table(headers []string, rows [][]string) {
 	d.closeList()
 	d.closeStatGrid()
 	ledger := len(headers) > 0 && headers[0] == "Step"
+	if isReferenceTable(headers) {
+		headers, rows = normalizeReferenceTable(headers, rows)
+	}
+	reference := isReferenceTable(headers)
 	tableCls := "data-table"
 	if ledger {
 		tableCls += " data-table--ledger"
 	}
+	if reference {
+		tableCls += " data-table--reference"
+	}
 	fmt.Fprintf(d.w, `<div class="table-scroll"><table class="%s"><thead><tr>`, tableCls)
 	for i, h := range headers {
 		thCls := ""
-		if i > 0 && isNumericHeader(h) {
+		switch {
+		case reference:
+			thCls = referenceCellClass(h)
+		case i > 0 && isNumericHeader(h):
 			thCls = ` class="data-table__num"`
 		}
 		fmt.Fprintf(d.w, "<th%s>%s</th>", thCls, html.EscapeString(h))
@@ -336,7 +346,10 @@ func (d *docWriter) Table(headers []string, rows [][]string) {
 				continue
 			}
 			tdCls := ""
-			if i > 0 && looksNumeric(cell) {
+			switch {
+			case reference:
+				tdCls = referenceCellClass(headers[i])
+			case i > 0 && isNumericHeader(headers[i]) && looksNumeric(cell):
 				tdCls = ` class="data-table__num"`
 			}
 			fmt.Fprintf(d.w, "<td%s>%s</td>", tdCls, formatValue(cell))
@@ -346,11 +359,100 @@ func (d *docWriter) Table(headers []string, rows [][]string) {
 	fmt.Fprint(d.w, "</tbody></table></div>\n")
 }
 
+type refColRole int
+
+const (
+	refColUnknown refColRole = iota
+	refColKey
+	refColVal
+	refColDesc
+)
+
+// isReferenceTable marks 3-column glossary tables: reference | value | meaning.
+func isReferenceTable(headers []string) bool {
+	if len(headers) != 3 {
+		return false
+	}
+	seen := [3]bool{}
+	for _, h := range headers {
+		switch referenceColumnRole(h) {
+		case refColKey:
+			seen[0] = true
+		case refColVal:
+			seen[1] = true
+		case refColDesc:
+			seen[2] = true
+		}
+	}
+	return seen[0] && seen[1] && seen[2]
+}
+
+func referenceColumnRole(h string) refColRole {
+	switch strings.ToLower(strings.TrimSpace(h)) {
+	case "symbol", "setting", "reference", "parameter", "param", "name", "key":
+		return refColKey
+	case "value", "live value", "live", "current":
+		return refColVal
+	case "meaning", "description", "desc", "detail":
+		return refColDesc
+	default:
+		return refColUnknown
+	}
+}
+
+func referenceColumnIndex(headers []string, want refColRole) int {
+	for i, h := range headers {
+		if referenceColumnRole(h) == want {
+			return i
+		}
+	}
+	return -1
+}
+
+// normalizeReferenceTable reorders headers and rows to reference | value | meaning.
+func normalizeReferenceTable(headers []string, rows [][]string) ([]string, [][]string) {
+	keyI := referenceColumnIndex(headers, refColKey)
+	valI := referenceColumnIndex(headers, refColVal)
+	descI := referenceColumnIndex(headers, refColDesc)
+	if keyI < 0 || valI < 0 || descI < 0 {
+		return headers, rows
+	}
+	keyLabel := strings.TrimSpace(headers[keyI])
+	if keyLabel == "" {
+		keyLabel = "Reference"
+	}
+	outHeaders := []string{keyLabel, "Value", "Meaning"}
+	outRows := make([][]string, 0, len(rows))
+	for _, row := range rows {
+		if len(row) < 3 {
+			outRows = append(outRows, row)
+			continue
+		}
+		outRows = append(outRows, []string{row[keyI], row[valI], row[descI]})
+	}
+	return outHeaders, outRows
+}
+
+func referenceCellClass(header string) string {
+	switch referenceColumnRole(header) {
+	case refColKey:
+		return ` class="data-table__key"`
+	case refColVal:
+		return ` class="data-table__val"`
+	case refColDesc:
+		return ` class="data-table__desc"`
+	default:
+		return ""
+	}
+}
+
 func isNumericHeader(h string) bool {
-	lower := strings.ToLower(h)
-	return strings.Contains(lower, "balance") ||
-		strings.Contains(lower, "block") && !strings.Contains(lower, "where") ||
-		lower == "value" || lower == "check"
+	switch strings.ToLower(strings.TrimSpace(h)) {
+	case "in this block", "balance now", "balance", "amount", "check":
+		return true
+	default:
+		return false
+	}
 }
 
 func looksNumeric(s string) bool {
