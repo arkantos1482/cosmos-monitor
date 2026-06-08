@@ -205,10 +205,20 @@ func isLongKPIPrimary(s string) bool {
 	if strings.HasPrefix(plain, "tcp://") || strings.HasPrefix(plain, "http://") {
 		return true
 	}
-	if strings.Contains(plain, "@") || (strings.Count(plain, ":") >= 2 && len(plain) > 28) {
+	if strings.HasPrefix(plain, "cosmos") || strings.HasPrefix(plain, "0x") {
+		return len(plain) >= 20
+	}
+	if strings.Contains(plain, "@") {
 		return true
 	}
-	return len(plain) >= 40
+	if strings.Count(plain, ":") >= 2 && len(plain) > 28 {
+		return true
+	}
+	// opaque ids (no spaces); skip prose sentences
+	if !strings.Contains(plain, " ") && len(plain) >= 40 {
+		return true
+	}
+	return false
 }
 
 func stripInlineMarkup(s string) string {
