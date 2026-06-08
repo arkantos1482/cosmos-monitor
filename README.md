@@ -59,7 +59,7 @@ git submodule update --init tools/ops/pmtop
 
 Remote: https://github.com/arkantos1482/cosmos-monitor
 
-**Dev loop:** commit changes here → `git push` → on node4, `make push-deploy` (or `make restart`) pulls `~/cosmos-monitor` and rebuilds.
+**Dev loop:** commit → `make remote-dev-release` (push + reload on node4).
 
 ## Build
 
@@ -77,14 +77,21 @@ make serve    # web UI on http://localhost:7777
 make dump     # HTML fragment to stdout (one shot)
 ```
 
-## Makefile (node4 ops)
+## Makefile (remote ops)
 
-Remote targets SSH to node4 (`tools/ops/pmtop/Makefile`). Typical flow: `make push-deploy`, then `make start` and `make tunnel` to open http://localhost:7777.
+`NODE4_HOST` is node4 today (change at top of `Makefile` to point elsewhere). Fleet SSH uses `SSH_USER` / `SSH_KEY`. Run `make help`.
 
-| Target | Description |
-|--------|-------------|
-| `run` | Foreground web UI on node4 (`~/pmtop`, port 7777) |
-| `start` / `stop` | Background tmux session on node4 |
-| `tunnel` | Forward node4 :7777 to localhost |
-| `deploy` | Pull, build, smoke-test `--dump` on node4 |
-| `logs` / `status` / `evmd` / `shell` | Validator logs, RPC status, `evmd` CLI, container shell |
+**Remote pmtop:** `remote-pull`, `remote-build`, `remote-smoke`, `remote-stop`, `remote-start`, `remote-verify`, …
+
+**Remote validator** (docker/evmd, not pmtop): `remote-logs`, `remote-status`, `remote-evmd`, `remote-shell`
+
+**Integration** (atomics only, one layer):
+
+| Target | Atomics |
+|--------|---------|
+| `remote-deploy` | remote-pull + remote-build + remote-smoke |
+| `remote-restart` | remote-stop + remote-start |
+| `remote-reload` | remote-pull + remote-build + remote-smoke + remote-stop + remote-start + remote-verify |
+| `remote-dev-release` | push + remote-pull + remote-build + remote-smoke + remote-stop + remote-start + remote-verify |
+
+Typical flow: `make remote-dev-release`, then `make tunnel` → http://localhost:7777
