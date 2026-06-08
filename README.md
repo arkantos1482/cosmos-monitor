@@ -5,9 +5,13 @@ Live operations dashboard for PMT / Cosmos EVM nodes.
 ## Architecture
 
 ```
-fetch → report.Build → model.Report → panel.Build (HTML fragment)
-                                              └─ web: HTMX shell + panel HTML
+fetchall.LoadFor(view) → report.Build → model.Report → panel.BuildView (HTML fragment)
+                                                              └─ web: html/template shell + HTMX
 ```
+
+- **View-scoped fetch**: each page (`/` or `/s/{slug}`) fetches only the data that section needs. No cross-view snapshot cache (fixes stale data on navigation).
+- **Dual-mode HTTP**: same URL serves a full HTML document (direct load) or a fragment when `HX-Request` is set (HTMX poll / nav).
+- **Live updates**: `#data` polls its URL every 5s via HTMX (`innerHTML` swap, no scroll jump). Open `<details>` are preserved with `hx-preserve`.
 
 ## Output
 
@@ -25,7 +29,7 @@ pmtop                 # serves http://localhost:7777
 pmtop -web :8080      # custom listen address
 ```
 
-Open the URL in a browser. HTMX refresh every 5s; Mermaid.js + KaTeX in the browser.
+Open the URL in a browser. HTMX partial refresh every 5s (no full-page reload); Mermaid.js + KaTeX re-init on swap.
 
 ### Dump (CI / agents)
 

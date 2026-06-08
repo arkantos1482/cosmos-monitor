@@ -16,15 +16,10 @@ type Snapshots struct {
 	Docker fetch.DockerSnapshot
 }
 
-const (
-	snapshotTTL = 4 * time.Second
-	paramsTTL   = 5 * time.Minute
-)
+const paramsTTL = 5 * time.Minute
 
 var cache struct {
 	mu          sync.Mutex
-	snap        Snapshots
-	snapAt      time.Time
 	params      fetch.ChainParams
 	paramsAt    time.Time
 	lastMoniker string
@@ -35,25 +30,14 @@ func Load(rpc, rest, evm, container string) Snapshots {
 	return LoadFor(panel.ViewHome, rpc, rest, evm, container)
 }
 
-// LoadFor fetches what the active section needs, reusing a short-lived snapshot cache between navigations and HTMX polls.
+// LoadFor fetches what the active section needs (view-scoped, no snapshot cache).
 func LoadFor(view panel.View, rpc, rest, evm, container string) Snapshots {
-	cache.mu.Lock()
-	if !cache.snapAt.IsZero() && time.Since(cache.snapAt) < snapshotTTL {
-		snap := cache.snap
-		cache.mu.Unlock()
-		return snap
-	}
-	cache.mu.Unlock()
-
 	snap := fetchForView(view, rpc, rest, evm, container)
-
-	cache.mu.Lock()
-	cache.snap = snap
-	cache.snapAt = time.Now()
 	if snap.Chain.Moniker != "" {
+		cache.mu.Lock()
 		cache.lastMoniker = snap.Chain.Moniker
+		cache.mu.Unlock()
 	}
-	cache.mu.Unlock()
 	return snap
 }
 

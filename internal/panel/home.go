@@ -3,7 +3,6 @@ package panel
 import (
 	"fmt"
 	"html"
-	"strings"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
@@ -149,9 +148,8 @@ func badgeKind(v string) string {
 }
 
 func writeSummaryCard(w Writer, href, title string, lines []string, badges []struct{ text, kind string }) {
-	view := strings.TrimPrefix(href, "/s/")
-	w.WriteHTML(fmt.Sprintf(`<a class="dash-card" href="%s" hx-get="/fragment?view=%s" hx-target="#data" hx-swap="innerHTML scroll:none show:none settle:none" hx-push-url="%s">`,
-		html.EscapeString(href), html.EscapeString(view), html.EscapeString(href)))
+	w.WriteHTML(fmt.Sprintf(`<a class="dash-card" href="%s" hx-get="%s" hx-target="#data" hx-swap="innerHTML show:none scroll:none settle:none" hx-push-url="%s">`,
+		html.EscapeString(href), html.EscapeString(href), html.EscapeString(href)))
 	w.WriteHTML(fmt.Sprintf(`<h2 class="dash-card__title">%s</h2>`, html.EscapeString(title)))
 	if len(badges) > 0 {
 		w.WriteHTML(`<div class="dash-card__badges">`)

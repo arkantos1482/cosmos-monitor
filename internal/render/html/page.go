@@ -1,12 +1,20 @@
 package html
 
 import (
+	"bytes"
+	_ "embed"
 	"fmt"
 	"html"
+	"html/template"
 	"strings"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/panel"
 )
+
+//go:embed templates/layout.html
+var layoutHTML string
+
+var layoutTmpl = template.Must(template.New("layout").Parse(layoutHTML))
 
 const pageCSS = `
 :root{
@@ -180,6 +188,15 @@ body::before{
 code{font-family:ui-monospace,"Cascadia Code","Fira Code",monospace;font-size:.82em;color:var(--accent)}
 `
 
+type pageData struct {
+	Moniker   string
+	PageTitle string
+	Nav       template.HTML
+	Content   template.HTML
+	DataURL   string
+	CSS       template.CSS
+}
+
 func navHTML(active panel.View) string {
 	var b strings.Builder
 	fmt.Fprint(&b, `<nav id="dash-nav" class="dash-nav" aria-label="Sections">`)
@@ -189,124 +206,40 @@ func navHTML(active panel.View) string {
 		if item.View == active {
 			cls += " dash-nav__link--active"
 		}
-		fmt.Fprintf(&b, `<a class="%s" href="%s">%s</a>`,
-			cls, html.EscapeString(item.Path), html.EscapeString(item.Label))
+		fmt.Fprintf(&b, `<a class="%s" href="%s" hx-get="%s" hx-target="#data" hx-swap="innerHTML show:none scroll:none settle:none" hx-push-url="%s">%s</a>`,
+			cls, html.EscapeString(item.Path), html.EscapeString(item.Path),
+			html.EscapeString(item.Path), html.EscapeString(item.Label))
 	}
 	fmt.Fprint(&b, `</nav>`)
 	return b.String()
 }
 
-// FullPage wraps an HTML fragment in the dashboard document shell.
-func FullPage(moniker string, active panel.View, fragment string) string {
-	pageTitle := "Overview"
+func pageTitle(active panel.View) string {
 	for _, item := range panel.Nav {
 		if item.View == active {
-			pageTitle = item.Label
-			break
+			return item.Label
 		}
 	}
-	return fmt.Sprintf(`<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>pmtop — %s · %s</title>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"/>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
-<style>%s</style>
-</head>
-<body>
-<header class="dash-header">
-<h1>PMT operations</h1>
-<span class="meta">%s · %s · refreshes every 5s</span>
-</header>
-<div class="dash-shell">
-%s
-<main class="dash-main" id="data">
-%s
-</main>
-</div>
-<script>
-mermaid.initialize({startOnLoad:false,theme:'dark',securityLevel:'loose'});
-function renderMermaid(){
-  mermaid.run({querySelector:'#data .mermaid'});
+	return "Overview"
 }
-function renderMathDisplays(){
-  if(typeof katex==='undefined')return;
-  document.querySelectorAll('#data .math-line[data-tex-b64]').forEach(function(el){
-    if(el.dataset.rendered)return;
-    var b64=el.getAttribute('data-tex-b64');
-    if(!b64)return;
-    try{
-      var tex=decodeURIComponent(escape(atob(b64)));
-      katex.render(tex,el,{displayMode:true,throwOnError:false});
-      el.dataset.rendered='1';
-    }catch(e){}
-  });
+
+func dataURL(active panel.View) string {
+	if active == panel.ViewHome {
+		return "/"
+	}
+	return "/s/" + string(active)
 }
-function renderMath(){
-  renderMathDisplays();
-  if(typeof renderMathInElement!=='function')return;
-  renderMathInElement(document.getElementById('data'),{
-    delimiters:[
-      {left:'\\(',right:'\\)',display:false},
-      {left:'\\[',right:'\\]',display:true}
-    ],
-    ignoredTags:['script','noscript','style','textarea','pre','code'],
-    ignoredClasses:['math-line','math-panel'],
-    throwOnError:false
-  });
-}
-function renderDiagrams(){renderMermaid();renderMath();}
-var dashStateKey='pmtop-dash:'+location.pathname;
-function snapshotDashState(){
-  var openDetails=[];
-  document.querySelectorAll('#data details.dash-details[open]').forEach(function(el){
-    var key=el.id||el.getAttribute('data-details-key');
-    if(key)openDetails.push(key);
-  });
-  try{
-    sessionStorage.setItem(dashStateKey,JSON.stringify({scrollY:window.scrollY,openDetails:openDetails}));
-  }catch(e){}
-}
-function restoreDashState(){
-  var raw;
-  try{raw=sessionStorage.getItem(dashStateKey);}catch(e){return;}
-  if(!raw)return;
-  var state;
-  try{state=JSON.parse(raw);}catch(e){return;}
-  if(!state||!Array.isArray(state.openDetails))return;
-  state.openDetails.forEach(function(key){
-    var el=document.getElementById(key);
-    if(!el&&typeof CSS!=='undefined'&&CSS.escape){
-      el=document.querySelector('#data details[data-details-key="'+CSS.escape(key)+'"]');
-    }
-    if(el)el.setAttribute('open','');
-  });
-  if(typeof state.scrollY==='number'){
-    window.scrollTo(0,state.scrollY);
-    requestAnimationFrame(function(){
-      window.scrollTo(0,state.scrollY);
-      setTimeout(function(){window.scrollTo(0,state.scrollY);},80);
-    });
-  }
-}
-function scheduleAutoRefresh(){
-  setInterval(function(){
-    snapshotDashState();
-    location.reload();
-  },5000);
-}
-document.addEventListener('DOMContentLoaded',function(){
-  restoreDashState();
-  renderDiagrams();
-  scheduleAutoRefresh();
-});
-</script>
-</body>
-</html>`, html.EscapeString(moniker), pageTitle, pageCSS,
-		html.EscapeString(moniker), html.EscapeString(pageTitle),
-		navHTML(active), fragment)
+
+// FullPage wraps an HTML fragment in the dashboard document shell.
+func FullPage(moniker string, active panel.View, fragment string) string {
+	var buf bytes.Buffer
+	_ = layoutTmpl.Execute(&buf, pageData{
+		Moniker:   html.EscapeString(moniker),
+		PageTitle: html.EscapeString(pageTitle(active)),
+		Nav:       template.HTML(navHTML(active)),
+		Content:   template.HTML(fragment),
+		DataURL:   dataURL(active),
+		CSS:       pageCSS,
+	})
+	return buf.String()
 }

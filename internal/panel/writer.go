@@ -217,10 +217,10 @@ func (d *docWriter) Details(id, summary string, fn func(Writer)) {
 	d.closeList()
 	d.closeStatGrid()
 	if id != "" {
-		fmt.Fprintf(d.w, `<details class="dash-details" id="%s" data-details-key="%s"><summary class="dash-details__summary">%s</summary><div class="dash-details__body">`+"\n",
+		fmt.Fprintf(d.w, `<details class="dash-details" id="%s" data-details-key="%s" hx-preserve><summary class="dash-details__summary">%s</summary><div class="dash-details__body">`+"\n",
 			html.EscapeString(id), html.EscapeString(id), html.EscapeString(summary))
 	} else {
-		fmt.Fprintf(d.w, `<details class="dash-details"><summary class="dash-details__summary">%s</summary><div class="dash-details__body">`+"\n",
+		fmt.Fprintf(d.w, `<details class="dash-details" hx-preserve><summary class="dash-details__summary">%s</summary><div class="dash-details__body">`+"\n",
 			html.EscapeString(summary))
 	}
 	if fn != nil {

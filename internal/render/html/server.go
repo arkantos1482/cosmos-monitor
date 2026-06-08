@@ -24,9 +24,7 @@ func Start(addr string, evmEndpoint string, render RenderFunc) {
 			http.Redirect(w, r, "/", http.StatusFound)
 			return
 		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		d := render(v)
-		fmt.Fprint(w, FullPage(pageMoniker(d), v, RenderView(v, d)))
+		serveView(w, r, v, render)
 	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -34,16 +32,24 @@ func Start(addr string, evmEndpoint string, render RenderFunc) {
 			http.NotFound(w, r)
 			return
 		}
-		v := panel.ViewHome
-		d := render(v)
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprint(w, FullPage(pageMoniker(d), v, RenderView(v, d)))
+		serveView(w, r, panel.ViewHome, render)
 	})
 
 	log.Printf("web UI → http://localhost%s", addr)
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Fatalf("web server: %v", err)
 	}
+}
+
+func serveView(w http.ResponseWriter, r *http.Request, v panel.View, render RenderFunc) {
+	d := render(v)
+	fragment := RenderView(v, d)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if r.Header.Get("HX-Request") != "" {
+		fmt.Fprint(w, fragment)
+		return
+	}
+	fmt.Fprint(w, FullPage(pageMoniker(d), v, fragment))
 }
 
 func pageMoniker(d model.Report) string {

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>pmtop — {{.Moniker}} · {{.PageTitle}}</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"/>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+<style>{{.CSS}}</style>
+</head>
+<body>
+<header class="dash-header">
+<h1>PMT operations</h1>
+<span class="meta">{{.Moniker}} · {{.PageTitle}} · refreshes every 5s</span>
+</header>
+<div class="dash-shell">
+{{.Nav}}
+<main class="dash-main" id="data"
+  hx-get="{{.DataURL}}"
+  hx-trigger="every 5s"
+  hx-swap="innerHTML show:none scroll:none settle:none">{{.Content}}</main>
+</div>
+<script>
+mermaid.initialize({startOnLoad:false,theme:'dark',securityLevel:'loose'});
+function renderMermaid(){
+  mermaid.run({querySelector:'#data .mermaid'});
+}
+function renderMathDisplays(){
+  if(typeof katex==='undefined')return;
+  document.querySelectorAll('#data .math-line[data-tex-b64]').forEach(function(el){
+    if(el.dataset.rendered)return;
+    var b64=el.getAttribute('data-tex-b64');
+    if(!b64)return;
+    try{
+      var tex=decodeURIComponent(escape(atob(b64)));
+      katex.render(tex,el,{displayMode:true,throwOnError:false});
+      el.dataset.rendered='1';
+    }catch(e){}
+  });
+}
+function renderMath(){
+  renderMathDisplays();
+  if(typeof renderMathInElement!=='function')return;
+  renderMathInElement(document.getElementById('data'),{
+    delimiters:[
+      {left:'\\(',right:'\\)',display:false},
+      {left:'\\[',right:'\\]',display:true}
+    ],
+    ignoredTags:['script','noscript','style','textarea','pre','code'],
+    ignoredClasses:['math-line','math-panel'],
+    throwOnError:false
+  });
+}
+function renderDiagrams(){renderMermaid();renderMath();}
+function syncNavActive(){
+  var path=location.pathname||'/';
+  document.querySelectorAll('.dash-nav__link').forEach(function(a){
+    a.classList.toggle('dash-nav__link--active',a.getAttribute('href')===path);
+  });
+}
+document.body.addEventListener('htmx:afterSwap',function(evt){
+  if(!evt.detail.target||evt.detail.target.id!=='data')return;
+  evt.detail.target.setAttribute('hx-get',location.pathname||'/');
+  syncNavActive();
+  renderDiagrams();
+});
+document.addEventListener('DOMContentLoaded',function(){
+  syncNavActive();
+  renderDiagrams();
+});
+</script>
+</body>
+</html>
