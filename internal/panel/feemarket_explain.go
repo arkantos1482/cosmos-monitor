@@ -446,6 +446,24 @@ func formatGasPriceStat(d model.Report) string {
 	return "—"
 }
 
+// flowFeeAmount compacts fee strings for narrow flow cards.
+func flowFeeAmount(d model.Report, display, raw string) string {
+	if display == "" || display == "—" {
+		return "—"
+	}
+	denom := diagramDenom(d)
+	if raw != "" {
+		return fetch.FormatFeeAmount(raw, denom)
+	}
+	if strings.Contains(display, " ") {
+		parts := strings.SplitN(display, " ", 2)
+		if v, err := strconv.ParseFloat(parts[0], 64); err == nil {
+			return fetch.FormatAmountUnit(v, parts[1])
+		}
+	}
+	return fetch.FormatFeeAmount(display, denom)
+}
+
 func buildFeemarketSummaryLine(ex FeemarketExplain, d model.Report) string {
 	if ex.NoBaseFee {
 		return "Fixed minimum gas price — congestion does not change the base fee."
@@ -465,10 +483,7 @@ func buildFeemarketSummaryLine(ex FeemarketExplain, d model.Report) string {
 }
 
 func buildFeemarketFlow(d model.Report, ex FeemarketExplain, ld feemarketLoad) []FeemarketFlowStep {
-	baseFee := d.BaseFee
-	if baseFee == "" {
-		baseFee = "—"
-	}
+	baseFee := flowFeeAmount(d, d.BaseFee, d.BaseFeeRaw)
 	gp := formatGasPriceStat(d)
 
 	if ex.NoBaseFee {
@@ -525,10 +540,7 @@ func buildFeemarketFlow(d model.Report, ex FeemarketExplain, ld feemarketLoad) [
 	if verify := feemarketVerifyRow(d, ld); verify != "" {
 		values3 = append(values3, fmt.Sprintf("verify: %s _(recomputed vs chain)_", verify))
 	}
-	minFloor := d.MinGasPrice
-	if minFloor == "" {
-		minFloor = "—"
-	}
+	minFloor := flowFeeAmount(d, d.MinGasPrice, d.MinGasPriceRaw)
 	values3 = append(values3, fmt.Sprintf("floor: %s _(min_gas_price)_", minFloor))
 	if len(values3) > 2 {
 		values3 = values3[:2]

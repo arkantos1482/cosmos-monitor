@@ -60,9 +60,17 @@ func formatAmountAbs(v float64) string {
 		if dec > 21 {
 			dec = 21
 		}
-		return trimTrailingZeros(fmt.Sprintf("%.*f", dec, v))
+		s := trimTrailingZeros(fmt.Sprintf("%.*f", dec, v))
+		if len(s) > 12 {
+			return formatSci(v)
+		}
+		return s
 	}
-	return fmt.Sprintf("%.2e", v)
+	return formatSci(v)
+}
+
+func formatSci(v float64) string {
+	return strconv.FormatFloat(v, 'g', -1, 64)
 }
 
 func trimTrailingZeros(s string) string {

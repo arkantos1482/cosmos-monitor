@@ -881,11 +881,14 @@ body::after {
   vertical-align: top;
   line-height: 1.5;
   text-align: left;
+  min-width: 0; /* override generic td min-width; fixed layout owns column widths */
 }
 
 .data-table--reference .data-table__key {
-  width: 16%;
-  min-width: 7rem;
+  width: 34%;
+  min-width: 11rem;
+  overflow-wrap: anywhere;
+  word-break: break-all;
   font-family: var(--mono);
   font-size: 0.78rem;
   font-weight: 600;
@@ -893,8 +896,8 @@ body::after {
 }
 
 .data-table--reference .data-table__val {
-  width: 26%;
-  min-width: 9rem;
+  width: 22%;
+  min-width: 4.5rem;
   font-family: var(--mono);
   font-size: 0.78rem;
   font-weight: 500;
@@ -904,7 +907,7 @@ body::after {
 }
 
 .data-table--reference .data-table__desc {
-  width: 58%;
+  width: 44%;
   color: var(--muted);
   font-size: var(--text-sm);
 }
@@ -1148,6 +1151,8 @@ body::after {
   flex-direction: column;
   flex: 1 1 0;
   min-width: 9.5rem;
+  overflow: hidden;
+  container-type: inline-size;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-left: 3px solid var(--border);
@@ -1216,6 +1221,7 @@ body::after {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-width: 0;
   padding: 0.55rem 0.65rem 0.65rem;
 }
 
@@ -1227,6 +1233,14 @@ body::after {
   line-height: 1.4;
   margin-bottom: 0.4rem;
   color: var(--fg);
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+.fee-flow__step--network .fee-flow__headline,
+.fee-flow__step--wallet .fee-flow__headline {
+  font-size: clamp(0.64rem, 8cqi, 0.92rem);
 }
 
 .fee-flow__step--demand .fee-flow__headline,
@@ -1269,6 +1283,8 @@ body::after {
 .fee-flow__kv dd {
   margin: 0;
   color: var(--fg);
+  min-width: 0;
+  overflow-wrap: anywhere;
   word-break: break-word;
 }
 
@@ -1279,6 +1295,7 @@ body::after {
   color: var(--muted);
   font-style: italic;
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .fee-flow__caption:empty {

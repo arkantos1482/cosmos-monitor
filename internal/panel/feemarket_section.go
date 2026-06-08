@@ -98,12 +98,17 @@ func feeFlowValuesHTML(values []string) string {
 			b.WriteString(inlineHTML(val))
 		}
 		if caption != "" {
-			fmt.Fprintf(&b, `<span class="fee-flow__caption">%s</span>`, inlineHTML(caption))
+			fmt.Fprintf(&b, `<span class="fee-flow__caption">%s</span>`, flowCaptionHTML(caption))
 		}
 		b.WriteString(`</dd></div>`)
 	}
 	b.WriteString(`</dl>`)
 	return b.String()
+}
+
+// flowCaptionHTML allows line breaks at underscores in flow captions.
+func flowCaptionHTML(s string) string {
+	return inlineHTML(strings.ReplaceAll(s, "_", "_\u200b"))
 }
 
 // splitFlowValue parses "key: value _(caption)_" or bare "_(caption)_" flow lines.
