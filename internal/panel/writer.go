@@ -172,7 +172,7 @@ func kpiBarHTML(value string) string {
 func (d *docWriter) Hint(text string) {
 	d.closeList()
 	d.closeStatGrid()
-	fmt.Fprintf(d.w, `<p class="dash-callout dash-callout--hint hint">%s</p>`+"\n", inlineHTML(text))
+	fmt.Fprintf(d.w, `<p class="dash-callout dash-callout--hint hint">%s</p>`+"\n", hintHTML(text))
 }
 
 func (d *docWriter) Em(text string) {
@@ -327,4 +327,150 @@ func inlineHTML(s string) string {
 	s = inlineBoldRE.ReplaceAllString(s, `<strong>$1</strong>`)
 	s = inlineEmRE.ReplaceAllString(s, `<em>$1</em>`)
 	return s
+}
+
+// hintHTML renders data-source hints. When the text matches the common
+// "field list → API/source" pattern it becomes structured provenance markup;
+// otherwise it falls back to inline callout text.
+func hintHTML(text string) string {
+	if !isProvenanceHint(text) {
+		return inlineHTML(text)
+	}
+	clauses := splitHintClauses(text)
+	var b strings.Builder
+	b.WriteString(`<span class="hint-provenance">`)
+	for i, clause := range clauses {
+		if i > 0 {
+			b.WriteString(`<span class="hint-provenance__sep">; </span>`)
+		}
+		writeHintClause(&b, strings.TrimSpace(clause))
+	}
+	b.WriteString(`</span>`)
+	return b.String()
+}
+
+func isProvenanceHint(text string) bool {
+	if !strings.Contains(text, " → ") {
+		return false
+	}
+	for _, clause := range splitHintClauses(text) {
+		idx := strings.Index(clause, " → ")
+		if idx < 0 {
+			return false
+		}
+		if strings.Contains(clause[idx+len(" → "):], " → ") {
+			return false
+		}
+	}
+	return true
+}
+
+func splitHintClauses(text string) []string {
+	parts := strings.Split(text, "; ")
+	var clauses []string
+	var cur strings.Builder
+	for i, part := range parts {
+		if cur.Len() > 0 {
+			cur.WriteString("; ")
+		}
+		cur.WriteString(part)
+		if strings.Contains(part, " → ") || i == len(parts)-1 {
+			clauses = append(clauses, cur.String())
+			cur.Reset()
+		}
+	}
+	if cur.Len() > 0 {
+		clauses = append(clauses, cur.String())
+	}
+	return clauses
+}
+
+func writeHintClause(b *strings.Builder, clause string) {
+	idx := strings.Index(clause, " → ")
+	if idx < 0 {
+		b.WriteString(inlineHTML(clause))
+		return
+	}
+	left := strings.TrimSpace(clause[:idx])
+	right := strings.TrimSpace(clause[idx+len(" → "):])
+	b.WriteString(`<span class="hint-provenance__clause">`)
+	b.WriteString(`<span class="hint-provenance__fields">`)
+	writeHintFields(b, left)
+	b.WriteString(`</span>`)
+	b.WriteString(`<span class="hint-provenance__arrow" aria-hidden="true">→</span>`)
+	b.WriteString(`<span class="hint-provenance__source">`)
+	b.WriteString(inlineHTML(right))
+	b.WriteString(`</span></span>`)
+}
+
+func writeHintFields(b *strings.Builder, left string) {
+	fields := extractBacktickFields(left)
+	if len(fields) > 0 {
+		if prefix := hintFieldPrefix(left, fields); prefix != "" {
+			fmt.Fprintf(b, `<span class="hint-provenance__prefix">%s</span>`, inlineHTML(prefix))
+		}
+		for _, f := range fields {
+			fmt.Fprintf(b, `<span class="hint-provenance__chip"><code>%s</code></span>`, html.EscapeString(f))
+		}
+		return
+	}
+	trimmed := strings.TrimSpace(left)
+	if trimmed == "" {
+		return
+	}
+	parts := splitPlainFieldList(trimmed)
+	if len(parts) > 1 {
+		for _, p := range parts {
+			fmt.Fprintf(b, `<span class="hint-provenance__chip"><code>%s</code></span>`, html.EscapeString(p))
+		}
+		return
+	}
+	fmt.Fprintf(b, `<span class="hint-provenance__prefix">%s</span>`, inlineHTML(trimmed))
+}
+
+func extractBacktickFields(s string) []string {
+	var fields []string
+	for _, m := range inlineCodeRE.FindAllStringSubmatch(s, -1) {
+		fields = append(fields, m[1])
+	}
+	return fields
+}
+
+func hintFieldPrefix(left string, fields []string) string {
+	s := left
+	for _, f := range fields {
+		s = strings.Replace(s, "`"+f+"`", "", 1)
+	}
+	s = strings.TrimSpace(s)
+	s = strings.Trim(s, "/,&, ")
+	s = strings.TrimSpace(strings.TrimSuffix(s, ":"))
+	if s == "" {
+		return ""
+	}
+	if !strings.HasSuffix(s, ":") {
+		s += ":"
+	}
+	return s + " "
+}
+
+func splitPlainFieldList(s string) []string {
+	if strings.Contains(s, " / ") {
+		var parts []string
+		for _, p := range strings.Split(s, " / ") {
+			if t := strings.TrimSpace(p); t != "" {
+				parts = append(parts, t)
+			}
+		}
+		return parts
+	}
+	if strings.Contains(s, ", ") {
+		var parts []string
+		for _, p := range strings.Split(s, ", ") {
+			if t := strings.TrimSpace(p); t != "" {
+				parts = append(parts, t)
+			}
+		}
+		return parts
+	}
+	return nil
 }
