@@ -50,8 +50,8 @@ func TestBuildFeeMarketPanel(t *testing.T) {
 	if !strings.Contains(out, `class="fee-hero"`) {
 		t.Fatal("fee market section should render fee-hero panel")
 	}
-	if !strings.Contains(out, `class="fee-traffic"`) {
-		t.Fatal("fee market section should render fee-traffic panel")
+	if !strings.Contains(out, `class="fee-hero__top"`) {
+		t.Fatal("fee market section should render fee-hero header row")
 	}
 	if !strings.Contains(out, `class="fee-flow"`) {
 		t.Fatal("fee market section should render merged flow")

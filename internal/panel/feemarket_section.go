@@ -10,7 +10,7 @@ import (
 
 func writeFeemarket(w Writer, d model.Report) {
 	w.Section("6. FEE MARKET")
-	w.Em("Base fee adjusts each block from prior-block gas demand vs the network target (EIP-1559-style `x/feemarket`).")
+	w.Hint("Base fee adjusts each block from prior-block gas demand vs the network target (EIP-1559-style `x/feemarket`).")
 	writeFeemarketSection(w, d)
 	w.BlankLine()
 }
@@ -27,17 +27,22 @@ func writeFeemarketHero(w Writer, ex FeemarketExplain) {
 	if summary == "" {
 		summary = "—"
 	}
+	heroMeta := ex.HeroLine
+	if heroMeta == "" {
+		heroMeta = "—"
+	}
 	w.WriteHTML(fmt.Sprintf(
 		`<div class="fee-hero">`+
-			`<div class="fee-traffic">`+
+			`<div class="fee-hero__top">`+
 			`<div class="fee-badge fee-badge--%s">%s</div>`+
+			`<span class="fee-hero-meta">%s</span>`+
+			`</div>`+
 			`<p class="fee-hero-summary">%s</p>`+
-			`<p class="fee-hero-line">%s</p>`+
-			`</div></div>`,
+			`</div>`,
 		html.EscapeString(ex.TrafficClass),
 		html.EscapeString(ex.TrafficLabel),
+		inlineHTML(heroMeta),
 		inlineHTML(summary),
-		inlineHTML(ex.HeroLine),
 	))
 }
 
@@ -55,7 +60,11 @@ func writeFeemarketFlow(w Writer, ex FeemarketExplain) {
 		if accent == "" {
 			accent = "default"
 		}
-		fmt.Fprintf(&b, `<div class="fee-flow__step fee-flow__step--%s" role="listitem">`, html.EscapeString(accent))
+		stepCls := fmt.Sprintf("fee-flow__step fee-flow__step--%s", html.EscapeString(accent))
+		if step.Headline == "—" && accent == "wallet" {
+			stepCls += " fee-flow__step--empty"
+		}
+		fmt.Fprintf(&b, `<div class="%s" role="listitem">`, stepCls)
 		b.WriteString(`<div class="fee-flow__header">`)
 		fmt.Fprintf(&b, `<div class="fee-flow__label">%s</div>`, html.EscapeString(step.Label))
 		fmt.Fprintf(&b, `<div class="fee-flow__title">%s</div>`, html.EscapeString(step.Title))
@@ -66,22 +75,48 @@ func writeFeemarketFlow(w Writer, ex FeemarketExplain) {
 		if step.ShowMeter {
 			b.WriteString(feemarketDemandMeter(ex))
 		}
-		if step.FormulaBlock != "" {
-			b.WriteString(`<pre class="fee-formula fee-formula--inline"><code>`)
-			b.WriteString(html.EscapeString(step.FormulaBlock))
-			b.WriteString(`</code></pre>`)
-		}
 		if len(step.Values) > 0 {
-			b.WriteString(`<ul class="fee-flow__values">`)
-			for _, v := range step.Values {
-				fmt.Fprintf(&b, `<li>%s</li>`, inlineHTML(v))
-			}
-			b.WriteString(`</ul>`)
+			b.WriteString(feeFlowValuesHTML(step.Values))
 		}
 		b.WriteString(`</div></div>`)
 	}
 	b.WriteString(`</div>`)
 	w.WriteHTML(b.String())
+}
+
+func feeFlowValuesHTML(values []string) string {
+	var b strings.Builder
+	b.WriteString(`<dl class="fee-flow__kv">`)
+	for _, v := range values {
+		key, val, caption := splitFlowValue(v)
+		b.WriteString(`<div class="fee-flow__kv-row">`)
+		if key != "" {
+			fmt.Fprintf(&b, `<dt>%s</dt>`, html.EscapeString(key))
+		}
+		b.WriteString(`<dd>`)
+		if val != "" {
+			b.WriteString(inlineHTML(val))
+		}
+		if caption != "" {
+			fmt.Fprintf(&b, `<span class="fee-flow__caption">%s</span>`, inlineHTML(caption))
+		}
+		b.WriteString(`</dd></div>`)
+	}
+	b.WriteString(`</dl>`)
+	return b.String()
+}
+
+// splitFlowValue parses "key: value _(caption)_" or bare "_(caption)_" flow lines.
+func splitFlowValue(s string) (key, val, caption string) {
+	loc := inlineEmRE.FindStringSubmatchIndex(s)
+	if loc != nil {
+		caption = s[loc[2]:loc[3]]
+		s = strings.TrimSpace(s[:loc[0]])
+	}
+	if idx := strings.Index(s, ": "); idx >= 0 {
+		return strings.TrimSpace(s[:idx]), strings.TrimSpace(s[idx+2:]), caption
+	}
+	return "", s, caption
 }
 
 func feemarketDemandMeter(ex FeemarketExplain) string {

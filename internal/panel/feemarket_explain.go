@@ -30,11 +30,10 @@ func parseDiagramUint(s string) uint64 {
 // FeemarketFlowStep is one node in the merged fee-market flow (pipeline + card body).
 type FeemarketFlowStep struct {
 	Label, Title string
-	Headline     string
-	Values       []string
-	ShowMeter    bool
-	FormulaBlock string
-	Accent       string
+	Headline  string
+	Values    []string
+	ShowMeter bool
+	Accent    string
 }
 
 // FeemarketExplain holds structured fee-market dashboard data (no LaTeX / Mermaid).
@@ -202,6 +201,20 @@ func feemarketCompareArrow(wanted, target uint64, hasTarget bool) string {
 		return "↓"
 	default:
 		return "="
+	}
+}
+
+func feemarketDecisionHeadline(wanted, target uint64, hasTarget bool) string {
+	if !hasTarget {
+		return "Target unknown"
+	}
+	switch {
+	case wanted > target:
+		return "Above target"
+	case wanted < target:
+		return "Below target"
+	default:
+		return "At target"
 	}
 }
 
@@ -451,19 +464,6 @@ func buildFeemarketSummaryLine(ex FeemarketExplain, d model.Report) string {
 	}
 }
 
-func feemarketAdjustmentFormulaBlock(d model.Report, ld feemarketLoad) string {
-	blocks := buildFeemarketFormulaBlocks(d, ld)
-	for _, b := range blocks {
-		if strings.Contains(b, "|Δbase|") {
-			return b
-		}
-	}
-	if len(blocks) > 0 {
-		return blocks[len(blocks)-1]
-	}
-	return ""
-}
-
 func buildFeemarketFlow(d model.Report, ex FeemarketExplain, ld feemarketLoad) []FeemarketFlowStep {
 	baseFee := d.BaseFee
 	if baseFee == "" {
@@ -503,7 +503,7 @@ func buildFeemarketFlow(d model.Report, ex FeemarketExplain, ld feemarketLoad) [
 	}
 
 	values2 := []string{
-		fmt.Sprintf("target: %s _(%s)_", feemarketTargetLiveValue(d, ld), feemarketTargetMeaning(d, ld)),
+		fmt.Sprintf("target: %s", feemarketTargetLiveValue(d, ld)),
 	}
 	if d.BaseFeeChangeDenominator > 0 {
 		values2 = append(values2, fmt.Sprintf("denom: %d _(base_fee_change_denominator)_", d.BaseFeeChangeDenominator))
@@ -512,12 +512,13 @@ func buildFeemarketFlow(d model.Report, ex FeemarketExplain, ld feemarketLoad) [
 		values2 = values2[:2]
 	}
 	node2 := FeemarketFlowStep{
-		Label:        "vs target",
-		Title:        "Decision",
-		Headline:     fmt.Sprintf("W %s target", arrow),
-		Values:       values2,
-		FormulaBlock: feemarketAdjustmentFormulaBlock(d, ld),
-		Accent:       "adjust",
+		Label:    "vs target",
+		Title:    "Decision",
+		Headline: feemarketDecisionHeadline(ld.wanted, ld.target, ld.hasTarget),
+		Values: append([]string{
+			fmt.Sprintf("compare: W %s target", arrow),
+		}, values2...),
+		Accent: "adjust",
 	}
 
 	values3 := []string{}

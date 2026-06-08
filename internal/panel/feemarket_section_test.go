@@ -49,6 +49,7 @@ func TestWriteFeemarketStoryLayout(t *testing.T) {
 		"BeginBlock",
 		"Wallet RPC",
 		"Demand vs capacity",
+		"Below target",
 		"|Δbase|",
 		`id="feemarket-ref"`,
 		`class="dash-details"`,
@@ -73,8 +74,8 @@ func TestWriteFeemarketStoryLayout(t *testing.T) {
 	if strings.Count(aboveRef, `class="fee-flow__step `) != 4 {
 		t.Fatalf("expected 4 flow steps above reference, got %d", strings.Count(aboveRef, `class="fee-flow__step `))
 	}
-	if strings.Count(aboveRef, "gas_used:") != 1 {
-		t.Fatalf("gas_used should appear once above reference, got %d", strings.Count(aboveRef, "gas_used:"))
+	if strings.Count(aboveRef, ">gas_used<") != 1 {
+		t.Fatalf("gas_used should appear once above reference, got %d", strings.Count(aboveRef, ">gas_used<"))
 	}
 	ex := buildFeemarketExplain(d)
 	if ex.SummaryLine != "" && strings.Contains(aboveRef, ex.SummaryLine) {
