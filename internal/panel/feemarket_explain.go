@@ -27,21 +27,13 @@ func parseDiagramUint(s string) uint64 {
 	return n
 }
 
-// FeemarketPipelineStep is one node in the fee-market lifecycle diagram.
-type FeemarketPipelineStep struct {
-	Label  string
-	Title  string
-	Values []string
-}
-
-// FeemarketCard is a story card expanding one pipeline stage.
-type FeemarketCard struct {
-	Title        string
-	Primary      string
-	Caption      string
-	Lines        []string
-	FormulaBlock string
+// FeemarketFlowStep is one node in the merged fee-market flow (pipeline + card body).
+type FeemarketFlowStep struct {
+	Label, Title string
+	Headline     string
+	Values       []string
 	ShowMeter    bool
+	FormulaBlock string
 	Accent       string
 }
 
@@ -55,8 +47,7 @@ type FeemarketExplain struct {
 	LoadBarPct        float64
 	HideLoadMeter     bool
 	NextAdj           string
-	PipelineSteps     []FeemarketPipelineStep
-	Cards             []FeemarketCard
+	FlowSteps         []FeemarketFlowStep
 	VariableRows      [][]string
 	FormulaBlocks     []string
 	ParamRows         [][]string
@@ -460,21 +451,6 @@ func buildFeemarketSummaryLine(ex FeemarketExplain, d model.Report) string {
 	}
 }
 
-func feemarketCauseEffect(ld feemarketLoad) string {
-	if !ld.hasTarget && !ld.unlimitedBlockGas {
-		return "Target unknown — fee adjustment direction cannot be determined."
-	}
-	arrow := feemarketCompareArrow(ld.wanted, ld.target, ld.hasTarget)
-	switch arrow {
-	case "↑":
-		return "Demand above target → base fee increases at next BeginBlock"
-	case "↓":
-		return "Demand below target → base fee decreases at next BeginBlock"
-	default:
-		return "Demand matched target → base fee unchanged at next BeginBlock"
-	}
-}
-
 func feemarketAdjustmentFormulaBlock(d model.Report, ld feemarketLoad) string {
 	blocks := buildFeemarketFormulaBlocks(d, ld)
 	for _, b := range blocks {
@@ -488,7 +464,7 @@ func feemarketAdjustmentFormulaBlock(d model.Report, ld feemarketLoad) string {
 	return ""
 }
 
-func buildFeemarketPipeline(d model.Report, ex FeemarketExplain, ld feemarketLoad) []FeemarketPipelineStep {
+func buildFeemarketFlow(d model.Report, ex FeemarketExplain, ld feemarketLoad) []FeemarketFlowStep {
 	baseFee := d.BaseFee
 	if baseFee == "" {
 		baseFee = "—"
@@ -496,150 +472,87 @@ func buildFeemarketPipeline(d model.Report, ex FeemarketExplain, ld feemarketLoa
 	gp := formatGasPriceStat(d)
 
 	if ex.NoBaseFee {
-		return []FeemarketPipelineStep{
+		return []FeemarketFlowStep{
 			{
-				Label:  "Block N",
-				Title:  "Fixed fee",
-				Values: []string{fmt.Sprintf("base_fee: %s", baseFee)},
+				Label:    "Block N",
+				Title:    "Fixed fee",
+				Headline: baseFee,
+				Accent:   "network",
 			},
 			{
-				Label:  "Wallet RPC",
-				Title:  "Quote",
-				Values: []string{fmt.Sprintf("eth_gasPrice: %s", gp)},
+				Label:    "Wallet RPC",
+				Title:    "Quote",
+				Headline: gp,
+				Values:   []string{"_(JSON-RPC eth_gasPrice · fixed chain minimum)_"},
+				Accent:   "wallet",
 			},
 		}
 	}
 
 	arrow := feemarketCompareArrow(ld.wanted, ld.target, ld.hasTarget)
-	return []FeemarketPipelineStep{
-		{
-			Label: "Block N−1",
-			Title: "Demand",
-			Values: []string{
-				fmt.Sprintf("gas_used: %s", formatUint(ld.gasUsed)),
-				fmt.Sprintf("W: %s", formatUint(ld.wanted)),
-			},
-		},
-		{
-			Label: "vs target",
-			Title: "Decision",
-			Values: []string{
-				fmt.Sprintf("W %s target", arrow),
-				fmt.Sprintf("target: %s", feemarketTargetLiveValue(d, ld)),
-			},
-		},
-		{
-			Label:  "Block N",
-			Title:  "BeginBlock",
-			Values: []string{fmt.Sprintf("base_fee: %s", baseFee)},
-		},
-		{
-			Label:  "Wallet RPC",
-			Title:  "Quote",
-			Values: []string{fmt.Sprintf("eth_gasPrice: %s", gp)},
-		},
-	}
-}
 
-func buildFeemarketCards(d model.Report, ex FeemarketExplain, ld feemarketLoad) []FeemarketCard {
-	baseFee := d.BaseFee
-	if baseFee == "" {
-		baseFee = "—"
-	}
-	gp := formatGasPriceStat(d)
-
-	if ex.NoBaseFee {
-		return []FeemarketCard{
-			{
-				Title:   "Network fee now (block N)",
-				Primary: baseFee,
-				Caption: "_(Fixed base fee · no_base_fee enabled)_",
-				Accent:  "network",
-				Lines: []string{
-					fmt.Sprintf("block height: %s", d.BlockHeight),
-				},
-			},
-			{
-				Title:   "Wallet quote",
-				Primary: gp,
-				Caption: "_(JSON-RPC eth_gasPrice)_",
-				Accent:  "wallet",
-				Lines: []string{
-					"eth_gasPrice reports the node's gas price quote; with no_base_fee it reflects the fixed chain minimum.",
-				},
-			},
-		}
-	}
-
-	util := ex.UtilizationPct
-	if util == "" {
-		util = "—"
-	}
-	primaryDemand := fmt.Sprintf("Parent block used %s of the fee-market target.", util)
-	if ex.HideLoadMeter {
-		primaryDemand = "Unlimited max_gas — target uses MaxUint64 ÷ elasticity sentinel; utilization meter hidden."
-	}
-
-	card1 := FeemarketCard{
-		Title:     "Block demand (block N−1)",
-		Primary:   primaryDemand,
+	node1 := FeemarketFlowStep{
+		Label:     "Block N−1",
+		Title:     "Demand",
 		ShowMeter: !ex.HideLoadMeter,
 		Accent:    "demand",
-		Lines: []string{
-			fmt.Sprintf("gas_used: %s _(block N−1 · CometBFT block_results)_", formatUint(ld.gasUsed)),
-			fmt.Sprintf("W: %s _(stored gas wanted · %s)_", formatUint(ld.wanted), feemarketWMeaning(d)),
-			fmt.Sprintf("target: %s _(%s)_", feemarketTargetLiveValue(d, ld), feemarketTargetMeaning(d, ld)),
+		Values: []string{
+			fmt.Sprintf("gas_used: %s _(CometBFT block_results)_", formatUint(ld.gasUsed)),
+			fmt.Sprintf("W: %s _(stored gas wanted)_", formatUint(ld.wanted)),
 		},
 	}
 
-	adjLines := []string{
-		fmt.Sprintf("W %s target _(block N−1 inputs)_", feemarketCompareArrow(ld.wanted, ld.target, ld.hasTarget)),
-		"Adjustment uses parent block data, applied at start of block N (BeginBlock).",
+	values2 := []string{
+		fmt.Sprintf("target: %s _(%s)_", feemarketTargetLiveValue(d, ld), feemarketTargetMeaning(d, ld)),
 	}
 	if d.BaseFeeChangeDenominator > 0 {
-		adjLines = append(adjLines, fmt.Sprintf("base_fee_change_denominator: %d", d.BaseFeeChangeDenominator))
+		values2 = append(values2, fmt.Sprintf("denom: %d _(base_fee_change_denominator)_", d.BaseFeeChangeDenominator))
 	}
-	if d.AdjCap != "" {
-		adjLines = append(adjLines, fmt.Sprintf("AdjCap: %s", d.AdjCap))
+	if len(values2) > 2 {
+		values2 = values2[:2]
 	}
-	card2 := FeemarketCard{
-		Title:        "Fee adjustment",
-		Primary:      feemarketCauseEffect(ld),
-		Accent:       "adjust",
-		Lines:        adjLines,
+	node2 := FeemarketFlowStep{
+		Label:        "vs target",
+		Title:        "Decision",
+		Headline:     fmt.Sprintf("W %s target", arrow),
+		Values:       values2,
 		FormulaBlock: feemarketAdjustmentFormulaBlock(d, ld),
+		Accent:       "adjust",
 	}
 
-	verify := feemarketVerifyRow(d, ld)
-	networkLines := []string{fmt.Sprintf("block height: %s", d.BlockHeight)}
-	if verify != "" {
-		networkLines = append(networkLines, fmt.Sprintf("verify: %s _(recomputed base fee vs chain)_", verify))
+	values3 := []string{}
+	if verify := feemarketVerifyRow(d, ld); verify != "" {
+		values3 = append(values3, fmt.Sprintf("verify: %s _(recomputed vs chain)_", verify))
 	}
 	minFloor := d.MinGasPrice
 	if minFloor == "" {
 		minFloor = "—"
 	}
-	card3 := FeemarketCard{
-		Title:   "Network fee now (block N)",
-		Primary: baseFee,
-		Caption: fmt.Sprintf("_(Set in BeginBlock · floor: %s)_", minFloor),
-		Accent:  "network",
-		Lines:   networkLines,
+	values3 = append(values3, fmt.Sprintf("floor: %s _(min_gas_price)_", minFloor))
+	if len(values3) > 2 {
+		values3 = values3[:2]
+	}
+	node3 := FeemarketFlowStep{
+		Label:    "Block N",
+		Title:    "BeginBlock",
+		Headline: baseFee,
+		Values:   values3,
+		Accent:   "network",
 	}
 
-	walletRel := "eth_gasPrice is the JSON-RPC gas price quote; it tracks the active feemarket base_fee for this chain."
+	walletRel := "_(Tracks active feemarket base_fee via JSON-RPC)_"
 	if gp == "—" {
-		walletRel = "eth_gasPrice unavailable — JSON-RPC endpoint may be down or not configured."
+		walletRel = "_(JSON-RPC unavailable)_"
 	}
-	card4 := FeemarketCard{
-		Title:   "Wallet quote",
-		Primary: gp,
-		Caption: "_(JSON-RPC eth_gasPrice)_",
-		Accent:  "wallet",
-		Lines:   []string{walletRel},
+	node4 := FeemarketFlowStep{
+		Label:    "Wallet RPC",
+		Title:    "Quote",
+		Headline: gp,
+		Values:   []string{walletRel},
+		Accent:   "wallet",
 	}
 
-	return []FeemarketCard{card1, card2, card3, card4}
+	return []FeemarketFlowStep{node1, node2, node3, node4}
 }
 
 func buildFeemarketExplain(d model.Report) FeemarketExplain {
@@ -656,8 +569,7 @@ func buildFeemarketExplain(d model.Report) FeemarketExplain {
 		ex.NextAdj = "—"
 		ex.HeroLine = feemarketHeroLine(d, true)
 		ex.SummaryLine = buildFeemarketSummaryLine(ex, d)
-		ex.PipelineSteps = buildFeemarketPipeline(d, ex, ld)
-		ex.Cards = buildFeemarketCards(d, ex, ld)
+		ex.FlowSteps = buildFeemarketFlow(d, ex, ld)
 		return ex
 	}
 
@@ -669,7 +581,6 @@ func buildFeemarketExplain(d model.Report) FeemarketExplain {
 	ex.HeroLine = feemarketHeroLine(d, false)
 	ex.FormulaBlocks = buildFeemarketFormulaBlocks(d, ld)
 	ex.SummaryLine = buildFeemarketSummaryLine(ex, d)
-	ex.PipelineSteps = buildFeemarketPipeline(d, ex, ld)
-	ex.Cards = buildFeemarketCards(d, ex, ld)
+	ex.FlowSteps = buildFeemarketFlow(d, ex, ld)
 	return ex
 }

@@ -18,8 +18,7 @@ func writeFeemarket(w Writer, d model.Report) {
 func writeFeemarketSection(w Writer, d model.Report) {
 	ex := buildFeemarketExplain(d)
 	writeFeemarketHero(w, ex)
-	writeFeemarketPipeline(w, ex)
-	writeFeemarketCards(w, ex)
+	writeFeemarketFlow(w, ex)
 	writeFeemarketReference(w, ex)
 }
 
@@ -42,62 +41,44 @@ func writeFeemarketHero(w Writer, ex FeemarketExplain) {
 	))
 }
 
-func writeFeemarketPipeline(w Writer, ex FeemarketExplain) {
-	if len(ex.PipelineSteps) == 0 {
+func writeFeemarketFlow(w Writer, ex FeemarketExplain) {
+	if len(ex.FlowSteps) == 0 {
 		return
 	}
 	var b strings.Builder
-	b.WriteString(`<div class="fee-pipeline" role="list">`)
-	for i, step := range ex.PipelineSteps {
+	b.WriteString(`<div class="fee-flow" role="list">`)
+	for i, step := range ex.FlowSteps {
 		if i > 0 {
-			b.WriteString(`<div class="fee-pipeline__connector" aria-hidden="true">→</div>`)
+			b.WriteString(`<div class="fee-flow__connector" aria-hidden="true">→</div>`)
 		}
-		b.WriteString(`<div class="fee-pipeline__step" role="listitem">`)
-		fmt.Fprintf(&b, `<div class="fee-pipeline__label">%s</div>`, html.EscapeString(step.Label))
-		fmt.Fprintf(&b, `<div class="fee-pipeline__title">%s</div>`, html.EscapeString(step.Title))
-		b.WriteString(`<div class="fee-pipeline__values">`)
-		for _, v := range step.Values {
-			fmt.Fprintf(&b, `<div class="fee-pipeline__value">%s</div>`, inlineHTML(v))
-		}
-		b.WriteString(`</div></div>`)
-	}
-	b.WriteString(`</div>`)
-	w.WriteHTML(b.String())
-}
-
-func writeFeemarketCards(w Writer, ex FeemarketExplain) {
-	if len(ex.Cards) == 0 {
-		return
-	}
-	var b strings.Builder
-	b.WriteString(`<div class="fee-cards">`)
-	for _, card := range ex.Cards {
-		accent := card.Accent
+		accent := step.Accent
 		if accent == "" {
 			accent = "default"
 		}
-		fmt.Fprintf(&b, `<div class="fee-card fee-card--%s">`, html.EscapeString(accent))
-		fmt.Fprintf(&b, `<h4 class="fee-card__title">%s</h4>`, html.EscapeString(card.Title))
-		fmt.Fprintf(&b, `<div class="fee-card__primary">%s</div>`, inlineHTML(card.Primary))
-		if card.ShowMeter {
+		fmt.Fprintf(&b, `<div class="fee-flow__step fee-flow__step--%s" role="listitem">`, html.EscapeString(accent))
+		b.WriteString(`<div class="fee-flow__header">`)
+		fmt.Fprintf(&b, `<div class="fee-flow__label">%s</div>`, html.EscapeString(step.Label))
+		fmt.Fprintf(&b, `<div class="fee-flow__title">%s</div>`, html.EscapeString(step.Title))
+		b.WriteString(`</div><div class="fee-flow__body">`)
+		if step.Headline != "" {
+			fmt.Fprintf(&b, `<div class="fee-flow__headline">%s</div>`, inlineHTML(step.Headline))
+		}
+		if step.ShowMeter {
 			b.WriteString(feemarketDemandMeter(ex))
 		}
-		if card.FormulaBlock != "" {
+		if step.FormulaBlock != "" {
 			b.WriteString(`<pre class="fee-formula fee-formula--inline"><code>`)
-			b.WriteString(html.EscapeString(card.FormulaBlock))
+			b.WriteString(html.EscapeString(step.FormulaBlock))
 			b.WriteString(`</code></pre>`)
 		}
-		if len(card.Lines) > 0 {
-			b.WriteString(`<ul class="fee-card__lines">`)
-			for _, line := range card.Lines {
-				fmt.Fprintf(&b, `<li>%s</li>`, inlineHTML(line))
+		if len(step.Values) > 0 {
+			b.WriteString(`<ul class="fee-flow__values">`)
+			for _, v := range step.Values {
+				fmt.Fprintf(&b, `<li>%s</li>`, inlineHTML(v))
 			}
 			b.WriteString(`</ul>`)
 		}
-		if card.Caption != "" {
-			fmt.Fprintf(&b, `<p class="fee-card__caption">%s</p>`, inlineHTML(card.Caption))
-		}
-		b.WriteString(`</div>`)
+		b.WriteString(`</div></div>`)
 	}
 	b.WriteString(`</div>`)
 	w.WriteHTML(b.String())

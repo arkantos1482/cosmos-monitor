@@ -53,11 +53,8 @@ func TestBuildFeeMarketPanel(t *testing.T) {
 	if !strings.Contains(out, `class="fee-traffic"`) {
 		t.Fatal("fee market section should render fee-traffic panel")
 	}
-	if !strings.Contains(out, `class="fee-pipeline"`) {
-		t.Fatal("fee market section should render pipeline diagram")
-	}
-	if !strings.Contains(out, `class="fee-cards"`) {
-		t.Fatal("fee market section should render story cards")
+	if !strings.Contains(out, `class="fee-flow"`) {
+		t.Fatal("fee market section should render merged flow")
 	}
 	idx := strings.Index(out, "6. FEE MARKET")
 	end := strings.Index(out, "7. GOVERNANCE")
