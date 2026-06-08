@@ -92,10 +92,10 @@ func writeHome(w Writer, d model.Report) {
 			lines: []string{
 				fmt.Sprintf("bonded %.2f%% · inflation %.2f%%", d.BondedPct, d.Inflation),
 				fmt.Sprintf("PMT rewards %s", pmtStatus),
-				fmt.Sprintf("base fee %s", d.BaseFee),
 			},
 			badges: []struct{ text, kind string }{{pmtStatus, badgeKind(pmtStatus)}},
 		},
+		feemarketCard(d),
 		{
 			href: "/s/governance", slug: "governance", title: "Governance",
 			lines: []string{
@@ -119,6 +119,49 @@ func writeHome(w Writer, d model.Report) {
 		writeSummaryCard(w, c.href, c.slug, c.title, c.span2, c.gauges, d, c.lines, c.badges)
 	}
 	w.WriteHTML(`</div></div>`)
+}
+
+func feemarketCard(d model.Report) struct {
+	href    string
+	slug    string
+	title   string
+	span2   bool
+	gauges  bool
+	lines   []string
+	badges  []struct{ text, kind string }
+} {
+	ex := buildFeemarketExplain(d)
+	baseFee := d.BaseFee
+	if baseFee == "" {
+		baseFee = "—"
+	}
+	util := ex.UtilizationPct
+	if util == "" {
+		util = "—"
+	}
+	nextAdj := ex.NextAdj
+	if nextAdj == "" {
+		nextAdj = "—"
+	}
+	return struct {
+		href    string
+		slug    string
+		title   string
+		span2   bool
+		gauges  bool
+		lines   []string
+		badges  []struct{ text, kind string }
+	}{
+		href: "/s/feemarket", slug: "feemarket", title: "Fee market",
+		lines: []string{
+			fmt.Sprintf("base fee %s", baseFee),
+			fmt.Sprintf("utilization %s", util),
+			fmt.Sprintf("next adjustment %s", nextAdj),
+		},
+		badges: []struct{ text, kind string }{
+			{ex.TrafficLabel, badgeKind(ex.TrafficLabel)},
+		},
+	}
 }
 
 func localBadges(d model.Report) []struct{ text, kind string } {

@@ -71,9 +71,6 @@ func writeEconomicsReference(w Writer, d model.Report) {
 		w.Row("community tax", d.CommunityTax+"  _(%% of block rewards → community pool)_")
 	}
 
-	w.Subsection("Fee market (x/feemarket)")
-	writeFeemarketSection(w, d)
-
 	w.Subsection("PMT Rewards  (x/pmtrewards)")
 	w.Hint("`status`, `pool address` → REST GET /cosmos/evm/pmtrewards/v1/params; `per-block rate`, `pool balance` → ledger (Block reward ledger above).")
 	w.Row("status", pmtStatus(d))
@@ -91,7 +88,7 @@ func writeEconomicsReference(w Writer, d model.Report) {
 }
 
 func writeEVMSection(w Writer, d model.Report) {
-	w.Section("7. EVM JSON-RPC")
+	w.Section("8. EVM JSON-RPC")
 	w.Em("Wallet and dApp connectivity (`eth_*`, `net_*`, `txpool_*`) on this node's JSON-RPC.")
 	writeEVMRPCSection(w, d)
 	w.BlankLine()

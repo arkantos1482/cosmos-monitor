@@ -16,6 +16,7 @@
   --accent-validators: #a78bfa;
   --accent-local: #f0abfc;
   --accent-economics: #fbbf24;
+  --accent-feemarket: #2dd4bf;
   --accent-governance: #fb923c;
   --accent-evm: #38bdf8;
   --sidebar-w: 220px;
@@ -194,6 +195,7 @@ body::after {
 .dash-nav__link--validators { --nav-accent: var(--accent-validators); }
 .dash-nav__link--local { --nav-accent: var(--accent-local); }
 .dash-nav__link--economics { --nav-accent: var(--accent-economics); }
+.dash-nav__link--feemarket { --nav-accent: var(--accent-feemarket); }
 .dash-nav__link--governance { --nav-accent: var(--accent-governance); }
 .dash-nav__link--evm { --nav-accent: var(--accent-evm); }
 .dash-nav__link--home { --nav-accent: var(--accent); }
@@ -347,6 +349,7 @@ body::after {
 .dash-card--validators { --card-accent: var(--accent-validators); }
 .dash-card--local { --card-accent: var(--accent-local); }
 .dash-card--economics { --card-accent: var(--accent-economics); }
+.dash-card--feemarket { --card-accent: var(--accent-feemarket); }
 .dash-card--governance { --card-accent: var(--accent-governance); }
 .dash-card--evm { --card-accent: var(--accent-evm); }
 
@@ -447,6 +450,7 @@ body::after {
 .dash-section--validators { --section-accent: var(--accent-validators); }
 .dash-section--local { --section-accent: var(--accent-local); }
 .dash-section--economics { --section-accent: var(--accent-economics); }
+.dash-section--feemarket { --section-accent: var(--accent-feemarket); }
 .dash-section--governance { --section-accent: var(--accent-governance); }
 .dash-section--evm { --section-accent: var(--accent-evm); }
 

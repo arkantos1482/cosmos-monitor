@@ -2,7 +2,7 @@ package panel
 
 import "github.com/arkantos1482/cosmos-monitor/internal/model"
 
-// View identifies a dashboard page (home or one of seven sections).
+// View identifies a dashboard page (home or one of eight sections).
 type View string
 
 const (
@@ -12,6 +12,7 @@ const (
 	ViewValidators    View = "validators"
 	ViewLocalValidator View = "local"
 	ViewEconomics     View = "economics"
+	ViewFeemarket     View = "feemarket"
 	ViewGovernance    View = "governance"
 	ViewEVM           View = "evm"
 )
@@ -23,7 +24,7 @@ type NavItem struct {
 	Path  string
 }
 
-// Nav lists home plus the seven monitoring sections (display order).
+// Nav lists home plus the eight monitoring sections (display order).
 var Nav = []NavItem{
 	{ViewHome, "Overview", "/"},
 	{ViewInfra, "Infrastructure", "/s/infra"},
@@ -31,6 +32,7 @@ var Nav = []NavItem{
 	{ViewValidators, "Validator set", "/s/validators"},
 	{ViewLocalValidator, "This validator", "/s/local"},
 	{ViewEconomics, "Economics", "/s/economics"},
+	{ViewFeemarket, "Fee market", "/s/feemarket"},
 	{ViewGovernance, "Governance", "/s/governance"},
 	{ViewEVM, "EVM JSON-RPC", "/s/evm"},
 }
@@ -38,7 +40,7 @@ var Nav = []NavItem{
 // ParseView maps a URL segment or query value to a View. Unknown values become ViewHome.
 func ParseView(s string) View {
 	switch View(s) {
-	case ViewHome, ViewInfra, ViewNode, ViewValidators, ViewLocalValidator, ViewEconomics, ViewGovernance, ViewEVM:
+	case ViewHome, ViewInfra, ViewNode, ViewValidators, ViewLocalValidator, ViewEconomics, ViewFeemarket, ViewGovernance, ViewEVM:
 		return View(s)
 	default:
 		return ViewHome
@@ -57,6 +59,8 @@ func writeView(w Writer, v View, d model.Report) {
 		writeLocalValidator(w, d)
 	case ViewEconomics:
 		writeEconomics(w, d)
+	case ViewFeemarket:
+		writeFeemarket(w, d)
 	case ViewGovernance:
 		writeGovernance(w, d)
 	case ViewEVM:

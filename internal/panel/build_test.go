@@ -16,7 +16,7 @@ func TestBuildEconomicsUsesTablesNotMermaid(t *testing.T) {
 	}
 	out := Build(d)
 	idx := strings.Index(out, "5. ECONOMICS")
-	end := strings.Index(out, "6. GOVERNANCE")
+	end := strings.Index(out, "6. FEE MARKET")
 	if idx < 0 || end < 0 {
 		t.Fatal("expected economics and governance sections")
 	}
@@ -56,15 +56,17 @@ func TestBuildFeeMarketPanel(t *testing.T) {
 	if !strings.Contains(out, `fee-key-metrics`) {
 		t.Fatal("fee market hero should include KPI row")
 	}
-	if strings.Contains(out, `Fee market (x/feemarket)`) {
-		idx := strings.Index(out, `Fee market (x/feemarket)`)
-		chunk := out[idx:]
-		if end := strings.Index(chunk, `PMT Rewards`); end > 0 {
-			chunk = chunk[:end]
-		}
-		if strings.Contains(chunk, `math-panel`) {
-			t.Fatal("fee market subsection should not use KaTeX")
-		}
+	idx := strings.Index(out, "6. FEE MARKET")
+	end := strings.Index(out, "7. GOVERNANCE")
+	if idx < 0 || end < 0 {
+		t.Fatal("expected fee market and governance sections")
+	}
+	fee := out[idx:end]
+	if strings.Contains(fee, `math-panel`) {
+		t.Fatal("fee market section should not use KaTeX")
+	}
+	if !strings.Contains(out, `dash-section--feemarket`) {
+		t.Fatal("fee market section should have feemarket accent class")
 	}
 }
 
@@ -80,7 +82,7 @@ func TestBuildGoldenMinimal(t *testing.T) {
 	if !strings.Contains(out, `dash-section--infra`) {
 		t.Fatal("expected infrastructure section accent")
 	}
-	if !strings.Contains(out, `class="dash-heading">7. EVM JSON-RPC</h2>`) {
+	if !strings.Contains(out, `class="dash-heading">8. EVM JSON-RPC</h2>`) {
 		t.Fatal("expected EVM section")
 	}
 }
@@ -99,8 +101,9 @@ func TestContentInventory(t *testing.T) {
 		`class="dash-heading">3. VALIDATOR SET</h2>`,
 		`class="dash-heading">4. THIS VALIDATOR</h2>`,
 		`class="dash-heading">5. ECONOMICS</h2>`,
-		`class="dash-heading">6. GOVERNANCE</h2>`,
-		`class="dash-heading">7. EVM JSON-RPC</h2>`,
+		`class="dash-heading">6. FEE MARKET</h2>`,
+		`class="dash-heading">7. GOVERNANCE</h2>`,
+		`class="dash-heading">8. EVM JSON-RPC</h2>`,
 		`class="dash-subheading">For operators</h3>`,
 		`class="dash-subheading">Probe health</h3>`,
 		`class="kpi-grid"`,
@@ -109,7 +112,7 @@ func TestContentInventory(t *testing.T) {
 		"At a glance",
 		"Block reward ledger",
 		`class="dash-subheading">Chain parameters (reference)</h3>`,
-		"Fee market (x/feemarket)",
+		`dash-section--feemarket`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("HTML inventory missing %q", want)

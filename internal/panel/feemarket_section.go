@@ -7,6 +7,13 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
+func writeFeemarket(w Writer, d model.Report) {
+	w.Section("6. FEE MARKET")
+	w.Em("EIP-1559-style `x/feemarket`: `base_fee` adjusts from prior-block gas utilization vs target.")
+	writeFeemarketSection(w, d)
+	w.BlankLine()
+}
+
 func writeFeemarketSection(w Writer, d model.Report) {
 	ex := buildFeemarketExplain(d)
 	w.Hint("`gas_used`, W → CometBFT GET /block_results (H−1); W fallback → REST GET /cosmos/evm/feemarket/v1/block_gas; `base_fee` → REST GET …/base_fee; params → REST GET …/params; `eth_gasPrice` → JSON-RPC eth_gasPrice.")

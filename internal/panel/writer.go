@@ -116,6 +116,8 @@ func sectionSlug(title string) string {
 		return "local"
 	case strings.Contains(upper, "ECONOMICS"):
 		return "economics"
+	case strings.Contains(upper, "FEE MARKET"):
+		return "feemarket"
 	case strings.Contains(upper, "GOVERNANCE"):
 		return "governance"
 	case strings.Contains(upper, "EVM"):

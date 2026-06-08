@@ -58,7 +58,7 @@ func TestStatusStripOnlyOnHome(t *testing.T) {
 	if !strings.Contains(out, `class="dash-status"`) {
 		t.Fatal("home view should include status strip")
 	}
-	sections := []View{ViewInfra, ViewNode, ViewValidators, ViewLocalValidator, ViewEconomics, ViewGovernance, ViewEVM}
+	sections := []View{ViewInfra, ViewNode, ViewValidators, ViewLocalValidator, ViewEconomics, ViewFeemarket, ViewGovernance, ViewEVM}
 	for _, v := range sections {
 		out := BuildView(v, d)
 		if strings.Contains(out, `class="dash-status"`) {
