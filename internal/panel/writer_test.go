@@ -5,6 +5,27 @@ import (
 	"testing"
 )
 
+func TestReferenceTableSoftWrap(t *testing.T) {
+	var b strings.Builder
+	w := newWriter(&b)
+	w.Table([]string{"Symbol", "Value", "Meaning"}, [][]string{
+		{
+			"target",
+			"MaxUint64 ÷ 2 (sentinel)",
+			"gasLimit ÷ elasticity; max_gas = −1 → gasLimit = MaxUint64",
+		},
+	})
+	out := b.String()
+	if !strings.Contains(out, `<td class="data-table__val">MaxUint64 ÷ 2 (sentinel)</td>`) {
+		t.Fatalf("value cell should stay intact on one line:\n%s", out)
+	}
+	for _, frag := range []string{";\u200b ", " →\u200b ", " ÷\u200b "} {
+		if !strings.Contains(out, frag) {
+			t.Fatalf("meaning cell missing soft-break %q in:\n%s", frag, out)
+		}
+	}
+}
+
 func TestReferenceTableAlignment(t *testing.T) {
 	var b strings.Builder
 	w := newWriter(&b)
@@ -32,7 +53,7 @@ func TestReferenceTableAlignment(t *testing.T) {
 		`<td class="data-table__val">0.000000000000000007 PMT</td>`,
 		`<td class="data-table__desc">Base fee this block</td>`,
 		`<td class="data-table__val">0.5</td>`,
-		`<td class="data-table__desc">mempool gas × multiplier</td>`,
+		`<td class="data-table__desc">mempool gas ×​ multiplier</td>`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("missing %q in:\n%s", want, out)

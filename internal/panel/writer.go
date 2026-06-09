@@ -346,13 +346,20 @@ func (d *docWriter) Table(headers []string, rows [][]string) {
 				continue
 			}
 			tdCls := ""
+			cellHTML := formatValue(cell)
 			switch {
 			case reference:
 				tdCls = referenceCellClass(headers[i])
+				switch referenceColumnRole(headers[i]) {
+				case refColKey:
+					cellHTML = referenceKeyHTML(cell)
+				case refColDesc:
+					cellHTML = referenceDescHTML(cell)
+				}
 			case i > 0 && isNumericHeader(headers[i]) && looksNumeric(cell):
 				tdCls = ` class="data-table__num"`
 			}
-			fmt.Fprintf(d.w, "<td%s>%s</td>", tdCls, formatValue(cell))
+			fmt.Fprintf(d.w, "<td%s>%s</td>", tdCls, cellHTML)
 		}
 		fmt.Fprint(d.w, "</tr>")
 	}
@@ -472,6 +479,34 @@ func formatValue(s string) string {
 		return fmt.Sprintf(`<span class="badge %s">%s</span>`, cls, inlineHTML(s))
 	}
 	return inlineHTML(s)
+}
+
+// referenceKeyHTML soft-wraps long parameter names at underscores.
+func referenceKeyHTML(s string) string {
+	return inlineHTML(strings.ReplaceAll(s, "_", "_\u200b"))
+}
+
+// referenceDescHTML allows wrapping only at clause / operator boundaries.
+func referenceDescHTML(s string) string {
+	return inlineHTML(insertReferenceBreaks(s))
+}
+
+// softWrapHTML is the shared break policy for glossary text and flow captions.
+func softWrapHTML(s string) string {
+	return inlineHTML(insertReferenceBreaks(s))
+}
+
+func insertReferenceBreaks(s string) string {
+	for _, r := range []struct{ from, to string }{
+		{"; ", ";\u200b "},
+		{" → ", " →\u200b "},
+		{" ÷ ", " ÷\u200b "},
+		{" (", "\u200b ("},
+		{"× ", "×\u200b "},
+	} {
+		s = strings.ReplaceAll(s, r.from, r.to)
+	}
+	return s
 }
 
 func badgeClass(value string) string {

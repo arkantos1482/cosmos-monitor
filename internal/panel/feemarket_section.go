@@ -99,7 +99,7 @@ func feeFlowValuesHTML(values []string) string {
 		}
 		b.WriteString(`<dd>`)
 		if val != "" {
-			b.WriteString(inlineHTML(val))
+			b.WriteString(softWrapHTML(val))
 		}
 		if caption != "" {
 			fmt.Fprintf(&b, `<span class="fee-flow__caption">%s</span>`, flowCaptionHTML(caption))

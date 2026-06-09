@@ -871,7 +871,7 @@ body::after {
 
 /* Reference / glossary tables: reference | value | meaning */
 .data-table--reference {
-  table-layout: fixed;
+  table-layout: auto;
   width: 100%;
 }
 
@@ -881,14 +881,15 @@ body::after {
   vertical-align: top;
   line-height: 1.5;
   text-align: left;
-  min-width: 0; /* override generic td min-width; fixed layout owns column widths */
+  min-width: 0; /* override generic td min-width */
 }
 
 .data-table--reference .data-table__key {
-  width: 34%;
-  min-width: 11rem;
-  overflow-wrap: anywhere;
-  word-break: break-all;
+  width: 24%;
+  min-width: 9rem;
+  max-width: 16rem;
+  overflow-wrap: break-word;
+  word-break: normal;
   font-family: var(--mono);
   font-size: 0.78rem;
   font-weight: 600;
@@ -896,18 +897,24 @@ body::after {
 }
 
 .data-table--reference .data-table__val {
-  width: 22%;
-  min-width: 4.5rem;
+  width: 1%;
+  min-width: 6.5rem;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
   font-family: var(--mono);
   font-size: 0.78rem;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1, "zero" 1;
-  word-break: break-word;
 }
 
 .data-table--reference .data-table__desc {
-  width: 44%;
+  width: auto;
+  min-width: 14rem;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: none;
   color: var(--muted);
   font-size: var(--text-sm);
 }
@@ -1234,8 +1241,8 @@ body::after {
   margin-bottom: 0.4rem;
   color: var(--fg);
   max-width: 100%;
-  overflow-wrap: anywhere;
-  word-break: break-all;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .fee-flow__step--network .fee-flow__headline,
@@ -1284,8 +1291,8 @@ body::after {
   margin: 0;
   color: var(--fg);
   min-width: 0;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .fee-flow__caption {
