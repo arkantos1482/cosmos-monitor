@@ -44,7 +44,7 @@ func TestWriteFeemarketStoryLayout(t *testing.T) {
 		`fee-flow__step--adjust`,
 		`fee-flow__step--network`,
 		`fee-flow__step--wallet`,
-		"Block N−1",
+		"Block 99",
 		"vs target",
 		"BeginBlock",
 		"Wallet RPC",

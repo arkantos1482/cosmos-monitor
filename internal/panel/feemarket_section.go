@@ -10,7 +10,11 @@ import (
 
 func writeFeemarket(w Writer, d model.Report) {
 	w.Section("6. FEE MARKET")
-	w.Hint("Base fee adjusts each block from prior-block gas demand vs the network target (EIP-1559-style `x/feemarket`).")
+	cur, parent := feemarketCurrentBlock(d), feemarketParentBlock(d)
+	w.Hint(fmt.Sprintf(
+		"Base fee at block %s adjusts from block %s gas demand vs the network target (EIP-1559-style `x/feemarket`).",
+		cur, parent,
+	))
 	writeFeemarketSection(w, d)
 	w.BlankLine()
 }
@@ -144,7 +148,17 @@ func feemarketDemandMeter(ex FeemarketExplain) string {
 
 func writeFeemarketReference(w Writer, ex FeemarketExplain) {
 	w.Details("feemarket-ref", "Parameters, formulas & data sources", func(w Writer) {
-		w.Hint("`gas_used`, W → CometBFT GET /block_results (H−1); W fallback → REST GET /cosmos/evm/feemarket/v1/block_gas; `base_fee` → REST GET …/base_fee; params → REST GET …/params; `eth_gasPrice` → JSON-RPC eth_gasPrice.")
+		parent, cur := ex.ParentBlock, ex.CurrentBlock
+		if parent == "" {
+			parent = "—"
+		}
+		if cur == "" {
+			cur = "—"
+		}
+		w.Hint(fmt.Sprintf(
+			"`gas_used`, W → CometBFT GET /block_results (block %s); W fallback → REST GET /cosmos/evm/feemarket/v1/block_gas; `base_fee` → REST GET …/base_fee (block %s); params → REST GET …/params; `eth_gasPrice` → JSON-RPC eth_gasPrice.",
+			parent, cur,
+		))
 		if len(ex.VariableRows) > 0 {
 			w.Subsection("Symbols")
 			w.Table([]string{"Symbol", "Value", "Meaning"}, ex.VariableRows)

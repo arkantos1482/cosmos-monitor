@@ -27,6 +27,27 @@ func parseDiagramUint(s string) uint64 {
 	return n
 }
 
+func parseBlockHeight(s string) int64 {
+	s = strings.ReplaceAll(s, ",", "")
+	n, _ := strconv.ParseInt(s, 10, 64)
+	return n
+}
+
+func feemarketCurrentBlock(d model.Report) string {
+	if d.BlockHeight != "" {
+		return d.BlockHeight
+	}
+	return "—"
+}
+
+func feemarketParentBlock(d model.Report) string {
+	h := parseBlockHeight(d.BlockHeight)
+	if h > 0 {
+		return report.FormatInt(h - 1)
+	}
+	return "—"
+}
+
 // FeemarketFlowStep is one node in the merged fee-market flow (pipeline + card body).
 type FeemarketFlowStep struct {
 	Label, Title string
@@ -38,6 +59,8 @@ type FeemarketFlowStep struct {
 
 // FeemarketExplain holds structured fee-market dashboard data (no LaTeX / Mermaid).
 type FeemarketExplain struct {
+	CurrentBlock      string
+	ParentBlock       string
 	HeroLine          string
 	SummaryLine       string
 	TrafficLabel      string
@@ -233,10 +256,11 @@ func feemarketTraffic(wanted, target uint64, hasTarget bool) (label, class, next
 }
 
 func feemarketHeroLine(d model.Report, noBaseFee bool) string {
+	cur := feemarketCurrentBlock(d)
 	if noBaseFee {
-		return fmt.Sprintf("Block %s · no_base_fee", d.BlockHeight)
+		return fmt.Sprintf("Block %s · no_base_fee", cur)
 	}
-	return fmt.Sprintf("Block %s", d.BlockHeight)
+	return fmt.Sprintf("Block %s", cur)
 }
 
 func feemarketWMeaning(d model.Report) string {
@@ -329,7 +353,11 @@ func buildFeemarketParamRows(d model.Report) [][]string {
 func buildFeemarketVariableRows(d model.Report, ld feemarketLoad) [][]string {
 	var rows [][]string
 	rows = append(rows, []string{"W", formatUint(ld.wanted), feemarketWMeaning(d)})
-	rows = append(rows, []string{"gas_used", formatUint(ld.gasUsed), "Gas consumed in block N−1"})
+	rows = append(rows, []string{
+		"gas_used",
+		formatUint(ld.gasUsed),
+		fmt.Sprintf("Gas consumed in block %s", feemarketParentBlock(d)),
+	})
 	if ld.hasTarget || ld.unlimitedBlockGas {
 		rows = append(rows, []string{
 			"target",
@@ -347,10 +375,10 @@ func buildFeemarketVariableRows(d model.Report, ld feemarketLoad) [][]string {
 		rows = append(rows, []string{"gasLimit", gasLimitVal, gasLimitMeaning})
 	}
 	baseLabel := "base"
-	baseMeaning := "Base fee this block (BeginBlock)"
+	baseMeaning := fmt.Sprintf("Base fee at block %s BeginBlock", feemarketCurrentBlock(d))
 	if d.NoBaseFee {
 		baseLabel = "base (fixed)"
-		baseMeaning = "Fixed base fee (no_base_fee)"
+		baseMeaning = fmt.Sprintf("Fixed base fee at block %s (no_base_fee)", feemarketCurrentBlock(d))
 	}
 	baseVal := d.BaseFee
 	if baseVal == "" {
@@ -472,13 +500,15 @@ func buildFeemarketSummaryLine(ex FeemarketExplain, d model.Report) string {
 	if adj == "" {
 		adj = "?"
 	}
+	parent := feemarketParentBlock(d)
+	cur := feemarketCurrentBlock(d)
 	switch ex.TrafficClass {
 	case "rising":
-		return fmt.Sprintf("Demand above target on block N−1 (%s) → base fee rises at BeginBlock of block %s.", adj, d.BlockHeight)
+		return fmt.Sprintf("Demand above target on block %s (%s) → base fee rises at BeginBlock of block %s.", parent, adj, cur)
 	case "falling":
-		return fmt.Sprintf("Demand below target on block N−1 (%s) → base fee falls at BeginBlock of block %s.", adj, d.BlockHeight)
+		return fmt.Sprintf("Demand below target on block %s (%s) → base fee falls at BeginBlock of block %s.", parent, adj, cur)
 	default:
-		return fmt.Sprintf("Demand matched target on block N−1 (%s) → base fee stable at BeginBlock of block %s.", adj, d.BlockHeight)
+		return fmt.Sprintf("Demand matched target on block %s (%s) → base fee stable at BeginBlock of block %s.", parent, adj, cur)
 	}
 }
 
@@ -486,10 +516,11 @@ func buildFeemarketFlow(d model.Report, ex FeemarketExplain, ld feemarketLoad) [
 	baseFee := flowFeeAmount(d, d.BaseFee, d.BaseFeeRaw)
 	gp := formatGasPriceStat(d)
 
+	cur := feemarketCurrentBlock(d)
 	if ex.NoBaseFee {
 		return []FeemarketFlowStep{
 			{
-				Label:    "Block N",
+				Label:    fmt.Sprintf("Block %s", cur),
 				Title:    "Fixed fee",
 				Headline: baseFee,
 				Accent:   "network",
@@ -506,14 +537,15 @@ func buildFeemarketFlow(d model.Report, ex FeemarketExplain, ld feemarketLoad) [
 
 	arrow := feemarketCompareArrow(ld.wanted, ld.target, ld.hasTarget)
 
+	parent := feemarketParentBlock(d)
 	node1 := FeemarketFlowStep{
-		Label:     "Block N−1",
+		Label:     fmt.Sprintf("Block %s", parent),
 		Title:     "Demand",
 		ShowMeter: !ex.HideLoadMeter,
 		Accent:    "demand",
 		Values: []string{
-			fmt.Sprintf("gas_used: %s _(CometBFT block_results)_", formatUint(ld.gasUsed)),
-			fmt.Sprintf("W: %s _(stored gas wanted)_", formatUint(ld.wanted)),
+			fmt.Sprintf("gas_used: %s _(CometBFT block_results · block %s)_", formatUint(ld.gasUsed), parent),
+			fmt.Sprintf("W: %s _(stored gas wanted · block %s)_", formatUint(ld.wanted), parent),
 		},
 	}
 
@@ -526,12 +558,13 @@ func buildFeemarketFlow(d model.Report, ex FeemarketExplain, ld feemarketLoad) [
 	if len(values2) > 2 {
 		values2 = values2[:2]
 	}
+	targetVal := feemarketTargetLiveValue(d, ld)
 	node2 := FeemarketFlowStep{
 		Label:    "vs target",
 		Title:    "Decision",
 		Headline: feemarketDecisionHeadline(ld.wanted, ld.target, ld.hasTarget),
 		Values: append([]string{
-			fmt.Sprintf("compare: W %s target", arrow),
+			fmt.Sprintf("compare: %s %s %s", formatUint(ld.wanted), arrow, targetVal),
 		}, values2...),
 		Accent: "adjust",
 	}
@@ -546,7 +579,7 @@ func buildFeemarketFlow(d model.Report, ex FeemarketExplain, ld feemarketLoad) [
 		values3 = values3[:2]
 	}
 	node3 := FeemarketFlowStep{
-		Label:    "Block N",
+		Label:    fmt.Sprintf("Block %s", cur),
 		Title:    "BeginBlock",
 		Headline: baseFee,
 		Values:   values3,
@@ -569,7 +602,10 @@ func buildFeemarketFlow(d model.Report, ex FeemarketExplain, ld feemarketLoad) [
 }
 
 func buildFeemarketExplain(d model.Report) FeemarketExplain {
-	ex := FeemarketExplain{}
+	ex := FeemarketExplain{
+		CurrentBlock: feemarketCurrentBlock(d),
+		ParentBlock:  feemarketParentBlock(d),
+	}
 	ld := feemarketLoadContext(d)
 
 	ex.NoBaseFee = d.NoBaseFee
