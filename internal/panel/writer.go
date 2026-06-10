@@ -34,6 +34,7 @@ type docWriter struct {
 	inSubsection bool
 	inStatGrid   bool
 	inList       bool
+	sectionHints []string
 }
 
 func newWriter(w io.Writer) *docWriter {
@@ -75,11 +76,26 @@ func (d *docWriter) closeSubsection() {
 
 func (d *docWriter) closeSection() {
 	d.closeSubsection()
+	d.flushSectionHints()
 	if !d.inSection {
 		return
 	}
 	fmt.Fprint(d.w, "</section>\n")
 	d.inSection = false
+}
+
+func (d *docWriter) flushSectionHints() {
+	if len(d.sectionHints) == 0 {
+		return
+	}
+	d.closeList()
+	d.closeStatGrid()
+	combined := strings.Join(d.sectionHints, "; ")
+	d.sectionHints = nil
+	fmt.Fprint(d.w, `<div class="dash-sources">`+"\n")
+	fmt.Fprint(d.w, `<h3 class="dash-subheading">Data sources</h3>`+"\n")
+	fmt.Fprintf(d.w, `<p class="dash-callout dash-callout--hint hint">%s</p>`+"\n", hintHTML(combined))
+	fmt.Fprint(d.w, `</div>`+"\n")
 }
 
 func (d *docWriter) openStatGrid() {
@@ -248,6 +264,14 @@ func kpiBarHTML(value string) string {
 }
 
 func (d *docWriter) Hint(text string) {
+	if !d.inSection {
+		d.writeHintCallout(text)
+		return
+	}
+	d.sectionHints = append(d.sectionHints, text)
+}
+
+func (d *docWriter) writeHintCallout(text string) {
 	d.closeList()
 	d.closeStatGrid()
 	fmt.Fprintf(d.w, `<p class="dash-callout dash-callout--hint hint">%s</p>`+"\n", hintHTML(text))

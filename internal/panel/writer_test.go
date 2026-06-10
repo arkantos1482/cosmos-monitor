@@ -214,3 +214,26 @@ func TestHintProvenanceVerticalClauses(t *testing.T) {
 		t.Fatalf("expected hint callout wrapper in:\n%s", out)
 	}
 }
+
+func TestHintDeferredToSectionBottom(t *testing.T) {
+	var b strings.Builder
+	w := newWriter(&b)
+	w.Section("1. TEST")
+	w.Subsection("Metrics")
+	w.Hint("`status` → docker GET /containers/{name}/json.")
+	w.Row("status", "running")
+	w.flush()
+	out := b.String()
+
+	hintIdx := strings.Index(out, `class="dash-sources"`)
+	rowIdx := strings.Index(out, `class="kpi-tile`)
+	if hintIdx < 0 || rowIdx < 0 {
+		t.Fatalf("expected deferred sources footer and KPI row in:\n%s", out)
+	}
+	if hintIdx < rowIdx {
+		t.Fatal("data sources hint should render after section content")
+	}
+	if !strings.Contains(out, `>Data sources</h3>`) {
+		t.Fatal("deferred hints should use Data sources heading")
+	}
+}

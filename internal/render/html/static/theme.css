@@ -498,6 +498,23 @@ body::after {
   margin: 0;
 }
 
+.dash-sources {
+  margin-top: 1.1rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--border);
+}
+
+.dash-sources .dash-subheading {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+.dash-sources .hint {
+  margin-bottom: 0;
+}
+
 /* ── KPI tiles ────────────────────────────────────────────────── */
 
 .kpi-grid {
