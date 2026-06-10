@@ -69,12 +69,8 @@ func writeHome(w Writer, d model.Report) {
 		},
 		{
 			href: "/s/node", slug: "node", title: "Validator", span2: true, gauges: true,
-			lines: []string{
-				d.Moniker,
-				fmt.Sprintf("height %s · %s", d.BlockHeight, d.TimeSinceBlock),
-				fmt.Sprintf("peers %d cosmos · %d evm", d.PeerCount, d.EVMPeerCount),
-			},
-			badges: []struct{ text, kind string }{{syncStr, badgeKind(syncStr)}},
+			lines: validatorCardLines(d, localRole),
+			badges: validatorCardBadges(d, syncStr),
 		},
 		{
 			href: "/s/validators", slug: "validators", title: "Validator set",
@@ -82,11 +78,6 @@ func writeHome(w Writer, d model.Report) {
 				fmt.Sprintf("%d bonded", d.BondedCount),
 				fmt.Sprintf("%d jailed · %d tombstoned", d.JailedCount, d.TombstonedCount),
 			},
-		},
-		{
-			href: "/s/local", slug: "local", title: "This validator",
-			lines: []string{localRole},
-			badges: localBadges(d),
 		},
 		{
 			href: "/s/economics", slug: "economics", title: "Economics",
@@ -167,6 +158,26 @@ func feemarketBadgeKind(b feemarket.Badge) string {
 	default:
 		return ""
 	}
+}
+
+func validatorCardLines(d model.Report, localRole string) []string {
+	lines := []string{
+		d.Moniker,
+		fmt.Sprintf("height %s · %s", d.BlockHeight, d.TimeSinceBlock),
+	}
+	if d.Local.IsValidator {
+		lines = append(lines, localRole)
+	}
+	lines = append(lines, fmt.Sprintf("peers %d cosmos · %d evm", d.PeerCount, d.EVMPeerCount))
+	return lines
+}
+
+func validatorCardBadges(d model.Report, syncStr string) []struct{ text, kind string } {
+	b := []struct{ text, kind string }{{syncStr, badgeKind(syncStr)}}
+	if lb := localBadges(d); len(lb) > 0 {
+		b = append(b, lb...)
+	}
+	return b
 }
 
 func localBadges(d model.Report) []struct{ text, kind string } {

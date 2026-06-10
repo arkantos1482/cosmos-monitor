@@ -8,7 +8,7 @@ import (
 )
 
 func writeGovernance(w Writer, d model.Report) {
-	w.Section("7. GOVERNANCE")
+	w.Section("6. GOVERNANCE")
 
 	if len(d.Proposals) > 0 {
 		w.Subsection(fmt.Sprintf("Active Proposals  (%d)", len(d.Proposals)))

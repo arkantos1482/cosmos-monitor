@@ -38,7 +38,7 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		},
 	}
 	out := Build(d)
-	idx := strings.Index(out, "5. ECONOMICS")
+	idx := strings.Index(out, "4. ECONOMICS")
 	end := strings.Index(out, `class="dash-heading">Fee market</h2>`)
 	if idx < 0 || end < 0 {
 		t.Fatal("expected economics and governance sections")

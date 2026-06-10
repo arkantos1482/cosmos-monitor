@@ -153,7 +153,7 @@ func fetchForView(view panel.View, rpc, rest, evm, container string) Snapshots {
 
 func chainOptsFor(view panel.View) fetch.ChainOpts {
 	switch view {
-	case panel.ViewNode, panel.ViewLocalValidator:
+	case panel.ViewNode:
 		return fetch.ChainOpts{
 			SkipValidatorRewards: true,
 			SkipGovernance:       true,

@@ -10,7 +10,7 @@ import (
 func feemarketChunk(t *testing.T, out string) string {
 	t.Helper()
 	idx := strings.Index(out, `class="dash-heading">Fee market</h2>`)
-	end := strings.Index(out, "7. GOVERNANCE")
+	end := strings.Index(out, "6. GOVERNANCE")
 	if idx < 0 || end < 0 {
 		t.Fatal("expected fee market and governance sections")
 	}

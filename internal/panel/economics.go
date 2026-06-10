@@ -7,7 +7,7 @@ import (
 )
 
 func writeEconomics(w Writer, d model.Report) {
-	w.Section("5. ECONOMICS")
+	w.Section("4. ECONOMICS")
 	w.Em("Block rewards: PMT pool and inflation mint into `fee_collector`; tx fees join there; `x/distribution` splits each BeginBlock to the community pool and validators.")
 
 	writeEconomicsOverview(w, d)
@@ -88,7 +88,7 @@ func writeEconomicsReference(w Writer, d model.Report) {
 }
 
 func writeEVMSection(w Writer, d model.Report) {
-	w.Section("8. EVM JSON-RPC")
+	w.Section("7. EVM JSON-RPC")
 	w.Em("Wallet and dApp connectivity (`eth_*`, `net_*`, `txpool_*`) on this node's JSON-RPC.")
 	writeEVMRPCSection(w, d)
 	w.BlankLine()

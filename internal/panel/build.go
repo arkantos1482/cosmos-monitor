@@ -6,7 +6,7 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-// Build renders all eight sections as one HTML fragment (used by --dump).
+// Build renders all seven sections as one HTML fragment (used by --dump).
 func Build(d model.Report) string {
 	var b strings.Builder
 	w := newWriter(&b)
@@ -28,7 +28,6 @@ func writeAll(w Writer, d model.Report) {
 	writeInfra(w, d)
 	writeNode(w, d)
 	writeValidators(w, d)
-	writeLocalValidator(w, d)
 	writeEconomics(w, d)
 	writeFeemarket(w, d)
 	writeGovernance(w, d)

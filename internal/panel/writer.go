@@ -130,8 +130,6 @@ func sectionSlug(title string) string {
 		return "node"
 	case strings.Contains(upper, "VALIDATOR SET"):
 		return "validators"
-	case strings.Contains(upper, "THIS VALIDATOR"):
-		return "local"
 	case strings.Contains(upper, "ECONOMICS"):
 		return "economics"
 	case strings.Contains(upper, "FEE MARKET"):

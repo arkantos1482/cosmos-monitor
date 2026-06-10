@@ -36,13 +36,24 @@ func TestBuildHomeSummaryCards(t *testing.T) {
 }
 
 func TestBuildViewSingleSection(t *testing.T) {
-	d := model.Report{Moniker: "node1", Synced: true, BlockHeight: "1"}
+	d := model.Report{
+		Moniker: "node1", Synced: true, BlockHeight: "1",
+		Local: model.LocalValidator{IsValidator: true, Moniker: "node1", Status: "BOND_STATUS_BONDED"},
+	}
 	out := BuildView(ViewNode, d)
 	if strings.Contains(out, `class="dash-status"`) {
 		t.Fatal("node view should not include status strip")
 	}
 	if !strings.Contains(out, `class="dash-heading">2. VALIDATOR</h2>`) {
 		t.Fatal("node view should only render validator section")
+	}
+	for _, sub := range []string{"Staking", "Block Signing", "Operator", "Consensus", "Node"} {
+		if !strings.Contains(out, sub) {
+			t.Fatalf("node view missing subsection %q", sub)
+		}
+	}
+	if strings.Contains(out, `THIS VALIDATOR`) {
+		t.Fatal("node view should not include legacy this-validator section")
 	}
 	if !strings.Contains(out, `dash-section--node`) {
 		t.Fatal("node view should have section accent class")
@@ -58,7 +69,7 @@ func TestStatusStripOnlyOnHome(t *testing.T) {
 	if !strings.Contains(out, `class="dash-status"`) {
 		t.Fatal("home view should include status strip")
 	}
-	sections := []View{ViewInfra, ViewNode, ViewValidators, ViewLocalValidator, ViewEconomics, ViewFeemarket, ViewGovernance, ViewEVM}
+	sections := []View{ViewInfra, ViewNode, ViewValidators, ViewEconomics, ViewFeemarket, ViewGovernance, ViewEVM}
 	for _, v := range sections {
 		out := BuildView(v, d)
 		if strings.Contains(out, `class="dash-status"`) {
