@@ -26,7 +26,6 @@ type EVMSnapshot struct {
 	BlockNumber       uint64
 	ChainID           uint64
 	Syncing           bool
-	GasPrice          string
 	PendingTx         uint64
 	QueuedTx          uint64
 	PeerCount         uint64
@@ -157,7 +156,6 @@ func FetchEVM(endpoint string) EVMSnapshot {
 		{"eth_blockNumber", nil},
 		{"eth_chainId", nil},
 		{"eth_syncing", nil},
-		{"eth_gasPrice", nil},
 		{"txpool_status", nil},
 		{"net_peerCount", nil},
 		{"net_listening", nil},
@@ -205,16 +203,6 @@ func FetchEVM(endpoint string) EVMSnapshot {
 	var syncRaw json.RawMessage
 	if probeResult(byMethod["eth_syncing"], &syncRaw) {
 		snap.Syncing = string(syncRaw) != "false"
-	}
-
-	var gasPriceHex string
-	if probeResult(byMethod["eth_gasPrice"], &gasPriceHex) {
-		gp := hexToUint64(gasPriceHex)
-		if gp == 0 {
-			snap.GasPrice = "0"
-		} else {
-			snap.GasPrice = FormatCoin(fmt.Sprintf("%d", gp), "apmt")
-		}
 	}
 
 	var txpool struct {

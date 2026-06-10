@@ -23,7 +23,7 @@ func TestWriteFeemarketLadderLayout(t *testing.T) {
 		BlockGas: "21000", ParentBlockGasWanted: 21000, ParentBlockGasUsed: 18000,
 		BlockGasLimit: 100_000_000, Elasticity: 2,
 		BaseFeeChangeDenominator: 8, MinGasMultiplier: "0.5", MinGasPrice: "0.01",
-		ParentBlockResultsOK: true, GasPrice: "1000", EVMDenom: "apmt",
+		ParentBlockResultsOK: true, EVMDenom: "apmt",
 	}
 	chunk := feemarketChunk(t, Build(d))
 
@@ -40,7 +40,7 @@ func TestWriteFeemarketLadderLayout(t *testing.T) {
 		"What the chain measured",
 		"When each value is written",
 		"Formula, parameters",
-		"When W ≠ gas_used",
+		"Illustrative example: when W ≠ gas_used",
 		"Three pools",
 		"In-block accumulator",
 	} {
@@ -102,7 +102,6 @@ func TestWriteFeemarketAtFloorBadge(t *testing.T) {
 func TestWriteFeemarketNoBaseFee(t *testing.T) {
 	d := model.Report{
 		BlockHeight: "50", BaseFee: "0.5", NoBaseFee: true,
-		GasPrice: "500",
 	}
 	chunk := feemarketChunk(t, Build(d))
 	if !strings.Contains(chunk, "FIXED PRICING") {
@@ -172,6 +171,9 @@ func TestWriteFeemarketL5NodeAppToml(t *testing.T) {
 		`class="dash-callout dash-callout--hint hint"`,
 		`class="hint-provenance"`,
 		`CometBFT GET /block_results`,
+		"consensus_params",
+		"local app.toml",
+		"vm/v1/config",
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("L5 missing %q", want)

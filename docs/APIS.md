@@ -115,7 +115,6 @@ All calls use `POST` with body `{"jsonrpc":"2.0","method":"<method>","params":[]
 | `eth_blockNumber` | latest EVM block (sanity / EVM sync) | hex string |
 | `eth_chainId` | EVM chain ID | hex string |
 | `eth_syncing` | sync status | `false` or object |
-| `eth_gasPrice` | current gas price (wei) | hex string |
 | `txpool_status` | pending/queued tx counts | `{pending: hex, queued: hex}` |
 | `net_peerCount` | EVM peer count | hex string |
 

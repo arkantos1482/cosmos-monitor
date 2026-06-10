@@ -291,7 +291,6 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 	if d.ParentBlockGasWanted == 0 && chain.BlockGas > 0 {
 		d.ParentBlockGasWanted = chain.BlockGas
 	}
-	d.GasPrice = ev.GasPrice
 	d.BaseFeeChangeDenominator = p.BaseFeeChangeDenominator
 	if p.MinGasPriceRaw != "" {
 		d.MinGasPriceRaw = p.MinGasPriceRaw

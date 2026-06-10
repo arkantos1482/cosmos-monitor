@@ -81,7 +81,6 @@ type Report struct {
 	BaseFeeRaw               string
 	BlockGas                 string
 	BlockGasLimit            uint64
-	GasPrice                 string
 	MinGasPrice              string
 	MinGasPriceRaw           string
 	MinGasMultiplier         string

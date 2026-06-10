@@ -134,7 +134,7 @@ func writeEVMRPCSection(w Writer, d model.Report) {
 	w.Pre(wallet)
 
 	w.Subsection("Live (JSON-RPC)")
-	w.Hint("`block height` → JSON-RPC eth_blockNumber; `last block age` → JSON-RPC eth_getBlockByNumber timestamp; `sync` → JSON-RPC eth_syncing; `gas price` → JSON-RPC eth_gasPrice (§5 fee market); `txpool` → JSON-RPC txpool_status; `EVM peers` → JSON-RPC net_peerCount.")
+	w.Hint("`block height` → JSON-RPC eth_blockNumber; `last block age` → JSON-RPC eth_getBlockByNumber timestamp; `sync` → JSON-RPC eth_syncing; `txpool` → JSON-RPC txpool_status; `EVM peers` → JSON-RPC net_peerCount. EIP-1559 fees: use REST feemarket base_fee (§5), not eth_gasPrice (Cosmos EVM stub).")
 	w.Row("block height", d.EVMBlock+"  _(eth_blockNumber)_")
 	if d.EVMBlockAge != "" {
 		ageStr := d.EVMBlockAge + "  _(eth_getBlockByNumber timestamp)_"
@@ -146,9 +146,6 @@ func writeEVMRPCSection(w Writer, d model.Report) {
 		w.Row("last block age", ageStr)
 	}
 	w.Row("sync", syncLabel+"  _(eth_syncing)_")
-	if d.GasPrice != "" {
-		w.Row("gas price", d.GasPrice+"  _(eth_gasPrice)_")
-	}
 	txpool := fmt.Sprintf("pending %s · queued %s  _(txpool_status)_",
 		formatTxpoolCount(d.PendingTx, d.TxpoolGlobalSlots),
 		formatTxpoolCount(d.QueuedTx, d.TxpoolGlobalQueue))

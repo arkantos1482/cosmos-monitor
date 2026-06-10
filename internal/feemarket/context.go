@@ -32,7 +32,6 @@ type Context struct {
 
 	BaseFee    string
 	BaseFeeRaw string
-	GasPrice   string
 	Denom      string
 
 	Badge        Badge
@@ -76,7 +75,6 @@ func LoadContext(d model.Report) Context {
 		CurrentHeight:         parseHeight(d.BlockHeight),
 		BaseFee:               d.BaseFee,
 		BaseFeeRaw:            d.BaseFeeRaw,
-		GasPrice:              d.GasPrice,
 		Denom:                 denom(d),
 		NoBaseFee:             d.NoBaseFee,
 		MinGasMultiplier:      d.MinGasMultiplier,

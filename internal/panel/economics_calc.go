@@ -316,13 +316,13 @@ func economicsLedgerRows(d model.Report) [][]string {
 			"—",
 			"gas used × base fee",
 		})
-	} else if d.MempoolTxs > 0 || d.GasPrice != "" {
+	} else if d.MempoolTxs > 0 {
 		rows = append(rows, []string{
 			"3",
 			"tx fees",
 			"—",
 			"—",
-			fmt.Sprintf("mempool %d · gas %s", d.MempoolTxs, fetch.FormatFeeAmount(d.GasPrice, economicsDenom(d))),
+			fmt.Sprintf("mempool %d pending", d.MempoolTxs),
 		})
 	}
 

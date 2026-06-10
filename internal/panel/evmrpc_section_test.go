@@ -13,11 +13,11 @@ func TestBuildEVMRPCSection(t *testing.T) {
 		EVMRPCOk: true, EVMSynced: true, EVMListening: true,
 		EVMBlockAge: "4.2s", EVMBlock: "100", EVMChainID: 290290,
 		Network: "pmt", EVMHTTPEndpoint: "http://localhost:8545",
-		RPCProbeOK: 9, RPCProbeTotal: 9,
+		RPCProbeOK: 8, RPCProbeTotal: 8,
 		RPCProbes: []model.RPCProbe{
 			{Method: "eth_blockNumber", OK: true, Latency: "12ms"},
 		},
-		GasPrice: "1 apmt", PendingTx: 2, QueuedTx: 1,
+		PendingTx: 2, QueuedTx: 1,
 	}
 	out := Build(d)
 	if !strings.Contains(out, "<strong>RPC: OK</strong>") {

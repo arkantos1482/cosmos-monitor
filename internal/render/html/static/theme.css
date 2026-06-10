@@ -1247,6 +1247,13 @@ body::after {
   margin-bottom: 0.45rem;
 }
 
+.fee-example__note {
+  margin: 0 0 0.5rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
 .fee-timeline {
   margin: 0;
   padding: 0;

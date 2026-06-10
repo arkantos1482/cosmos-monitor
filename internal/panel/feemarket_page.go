@@ -49,15 +49,6 @@ func buildFeeLevels(c feemarket.Context, d model.Report) []feeLevel {
 
 func buildFeeL1(c feemarket.Context, d model.Report) feeLevel {
 	transfer := feemarket.TransferCost(c.BaseFeeRaw, c.Denom)
-	gp := formatGasPriceStat(d)
-	walletNote := "JSON-RPC eth_gasPrice"
-	if gp == "—" {
-		walletNote = "JSON-RPC unavailable"
-	} else if c.BaseFeeRaw != "" && d.GasPrice != "" && d.GasPrice == c.BaseFeeRaw {
-		walletNote += " · ✓ matches REST base_fee"
-	} else if gp != "—" && c.BaseFee != "" {
-		walletNote += " · compare to REST base_fee"
-	}
 
 	lv := feeLevel{
 		ID:      "fee-L1",
@@ -68,7 +59,6 @@ func buildFeeL1(c feemarket.Context, d model.Report) feeLevel {
 		Rows: [][]string{
 			{fmt.Sprintf("Base fee (block %s)", c.CurrentBlock), feeAmount(d, c.BaseFee, c.BaseFeeRaw)},
 			{"Simple transfer (21,000 gas)", transfer},
-			{"Wallet (eth_gasPrice)", gp + "  _(" + walletNote + ")_"},
 		},
 	}
 	if c.FeesDisabled {
@@ -137,7 +127,7 @@ func buildFeeL2(c feemarket.Context, d model.Report) feeLevel {
 	return feeLevel{
 		ID:      "fee-L2",
 		Title:   "L2 · Why the fee moved",
-		Concept: "Fees move because last-block demand was above, below, or at the network target (thermostat). Adjustment lags one block.",
+		Concept: "Fees move because last-block demand was above, below, or at the network target. Adjustment lags one block.",
 		Rows:    rows,
 		Extra:   extra.String(),
 	}
@@ -150,7 +140,8 @@ func buildFeeL3(c feemarket.Context, d model.Report) feeLevel {
 	}
 	example := fmt.Sprintf(
 		`<div class="fee-example">`+
-			`<div class="fee-example__title">When W ≠ gas_used (worked example, always shown)</div>`+
+			`<div class="fee-example__title">Illustrative example: when W ≠ gas_used</div>`+
+			`<p class="fee-example__note">Hypothetical numbers — not live chain data for this block.</p>`+
 			`<table class="fee-table"><tbody>`+
 			`<tr><th>In-block accumulator</th><td>42,000 gas</td><td class="fee-table__note">sum of tx gas limits in block</td></tr>`+
 			`<tr><th>× min_gas_multiplier %s</th><td>21,000 gas</td><td></td></tr>`+
@@ -308,13 +299,20 @@ func maxGasL5(c feemarket.Context) string {
 }
 
 func feemarketDataSourcesHint(c feemarket.Context) string {
+	appToml := "local app.toml (APPTOML_PATH or ~/.evmd/config/app.toml)"
 	return provenanceCalloutHTML(fmt.Sprintf(
-		"`gas_used`, `W` → CometBFT GET /block_results (block %s); "+
-			"`W` → REST GET /cosmos/evm/feemarket/v1/block_gas (fallback); "+
-			"`base_fee` → REST GET /cosmos/evm/feemarket/v1/base_fee (block %s); "+
-			"`params` → REST GET /cosmos/evm/feemarket/v1/params; "+
-			"`eth_gasPrice` → JSON-RPC eth_gasPrice.",
-		c.ParentBlock, c.CurrentBlock,
+		"`head height` → CometBFT GET /status; "+
+			"`max_gas`, `max_bytes` → CometBFT GET /consensus_params; "+
+			"`gas_used`, `W` → CometBFT GET /block_results?height=%s; "+
+			"`base_fee` (BeginBlock) → CometBFT GET /block_results?height=%s; "+
+			"`block interval` → CometBFT GET /block; "+
+			"`base_fee` → REST GET /cosmos/evm/feemarket/v1/base_fee; "+
+			"`W` (fallback) → REST GET /cosmos/evm/feemarket/v1/block_gas; "+
+			"`no_base_fee`, `elasticity`, `min_gas_*`, … → REST GET /cosmos/evm/feemarket/v1/params; "+
+			"`evm_denom` → REST GET /cosmos/evm/vm/v1/params; "+
+			"`london_block` → REST GET /cosmos/evm/vm/v1/config; "+
+			"`minimum-gas-prices`, `evm.min-tip`, `price-limit`, `max-tx-gas-wanted` → %s.",
+		c.ParentBlock, c.CurrentBlock, appToml,
 	))
 }
 
@@ -375,14 +373,6 @@ func feeAmount(d model.Report, display, raw string) string {
 		return fetch.FormatFeeAmount(raw, denom)
 	}
 	return display
-}
-
-func formatGasPriceStat(d model.Report) string {
-	denom := feemarket.LoadContext(d).Denom
-	if d.GasPrice != "" {
-		return fetch.FormatFeeAmount(d.GasPrice, denom)
-	}
-	return "—"
 }
 
 func feeDemandMeter(barPct float64, label string) string {

@@ -48,9 +48,12 @@ tunnel: ## atomic local — forward node4 :7777 to localhost:7777
 # Atomic — remote pmtop (on node4)
 # ══════════════════════════════════════════════════════════════════════════════
 
-.PHONY: remote-pull remote-build remote-smoke remote-stop remote-start remote-verify remote-run
+.PHONY: remote-pull remote-pull-reset remote-build remote-smoke remote-stop remote-start remote-verify remote-run
 remote-pull: ## atomic remote pmtop — git pull on node4
 	$(SSH_NODE4) 'cd $(REMOTE_REPO) && git pull'
+
+remote-pull-reset: ## atomic remote pmtop — fetch + reset --hard origin/main (after force-push)
+	$(SSH_NODE4) 'cd $(REMOTE_REPO) && git fetch origin && git reset --hard origin/main'
 
 remote-build: ## atomic remote pmtop — go build on node4 (no pull)
 	$(SSH_NODE4) 'cd $(REMOTE_REPO) && $(REMOTE_GO) build -o $(REMOTE_PMTOP) ./cmd/pmtop'

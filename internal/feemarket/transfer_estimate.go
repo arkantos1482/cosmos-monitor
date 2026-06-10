@@ -1,8 +1,6 @@
 package feemarket
 
 import (
-	"strconv"
-
 	"github.com/arkantos1482/cosmos-monitor/internal/fetch"
 )
 
@@ -11,10 +9,10 @@ func TransferCost(baseFeeRaw, denom string) string {
 	if baseFeeRaw == "" || baseFeeRaw == "0" {
 		return "—"
 	}
-	v, err := strconv.ParseFloat(baseFeeRaw, 64)
-	if err != nil || v <= 0 {
+	d, ok := ParseLegacyDec(baseFeeRaw)
+	if !ok || !d.IsPositive() {
 		return "—"
 	}
-	total := v * float64(StandardTransferGas)
-	return fetch.FormatFeeAmount(strconv.FormatFloat(total, 'f', 0, 64), denom)
+	total := d.MulInt64(StandardTransferGas)
+	return fetch.FormatFeeDec(total, denom)
 }
