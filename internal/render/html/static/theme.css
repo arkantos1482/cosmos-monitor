@@ -478,6 +478,21 @@ body::after {
   border-bottom: 1px solid var(--border);
 }
 
+.dash-layer + .dash-layer {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.dash-layer__title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted, var(--fg-muted));
+  margin: 0 0 0.75rem;
+}
+
 .dash-block + .dash-block {
   margin-top: 1rem;
   padding-top: 1rem;

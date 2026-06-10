@@ -120,6 +120,7 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 			Operator:        v.OperatorAddr,
 			NodeID:          v.NodeID,
 			ConsensusAddr:   strings.ToUpper(v.ConsensusAddr),
+			ConsensusBech32: v.ConsensusBech32,
 			P2PDial:         p2p,
 			P2PConnected:    v.P2PConnected,
 			VPFloat:         v.VotingPowerPercent,
@@ -417,9 +418,15 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 
 func buildLocalValidator(chain fetch.ChainSnapshot, v *fetch.ValidatorInfo, maxMissed int64) model.LocalValidator {
 	lv := model.LocalValidator{
-		Moniker:       chain.Moniker,
-		NodeID:        chain.NodeID,
-		ConsensusAddr: chain.LocalConsensusAddr,
+		Moniker:         chain.Moniker,
+		NodeID:          chain.NodeID,
+		ConsensusAddr:   chain.LocalConsensusAddr,
+		ConsensusBech32: chain.LocalConsensusBech32,
+		AccountAddr:     chain.LocalAccountAddr,
+		P2PDial:         chain.LocalP2PDial,
+	}
+	if lv.AccountAddr != "" {
+		lv.EVMAddr = fetch.AccBech32ToEVM(lv.AccountAddr)
 	}
 	if v == nil {
 		if chain.LocalVotingPower > 0 || chain.LocalConsensusAddr != "" {
@@ -436,6 +443,12 @@ func buildLocalValidator(chain fetch.ChainSnapshot, v *fetch.ValidatorInfo, maxM
 	lv.OperatorAddr = v.OperatorAddr
 	if lv.ConsensusAddr == "" {
 		lv.ConsensusAddr = v.ConsensusAddr
+	}
+	if lv.ConsensusBech32 == "" {
+		lv.ConsensusBech32 = v.ConsensusBech32
+	}
+	if lv.P2PDial == "" {
+		lv.P2PDial = v.P2PDial
 	}
 	lv.VotingPower = fetch.FormatCoin(v.VotingPowerTokens, chain.Params.BondDenom)
 	lv.VPPercent = v.VotingPowerPercent

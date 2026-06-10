@@ -93,7 +93,9 @@ func writeValidators(w Writer, d model.Report) {
 		} else {
 			w.Row("node ID", "—")
 		}
-		if v.ConsensusAddr != "" {
+		if v.ConsensusBech32 != "" {
+			w.Row("consensus", "`"+v.ConsensusBech32+"`")
+		} else if v.ConsensusAddr != "" {
 			w.Row("consensus", "`"+v.ConsensusAddr+"`")
 		} else {
 			w.Row("consensus", "—")

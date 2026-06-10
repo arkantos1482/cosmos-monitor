@@ -30,8 +30,11 @@ type ChainSnapshot struct {
 	NextProposerMoniker string
 
 	// This node's validator identity from /status (empty if full node).
-	LocalConsensusAddr string
-	LocalVotingPower   int64
+	LocalConsensusAddr   string
+	LocalConsensusBech32 string
+	LocalAccountAddr     string
+	LocalP2PDial         string
+	LocalVotingPower     int64
 
 	Validators []ValidatorInfo
 
@@ -88,6 +91,8 @@ type ValidatorInfo struct {
 	Moniker                 string
 	OperatorAddr            string
 	ConsensusAddr           string
+	ConsensusBech32         string
+	AccountAddr             string
 	NodeID                  string // CometBFT peer ID (from /net_info or /status for this node)
 	P2PDial                 string // node_id@listen_addr when known from chain RPC
 	P2PConnected            bool   // peer visible in this node's /net_info (or is this node)
@@ -368,6 +373,10 @@ type validatorCommissionResp struct {
 			Amount string `json:"amount"`
 		} `json:"commission"`
 	} `json:"commission"`
+}
+
+type validatorAccountResp struct {
+	AccountAddress string `json:"account_address"`
 }
 
 // --- params response types ---
@@ -777,12 +786,16 @@ func FetchChain(rpc, rest string, opts ChainOpts) ChainSnapshot {
 		missed     int64
 		tombstoned bool
 	}{}
+	consBech32Map := map[string]string{}
 	var sigInfos signingInfosResp
 	if err := doJSON(rest+"/cosmos/slashing/v1beta1/signing_infos?pagination.limit=100", &sigInfos); err == nil {
 		for _, si := range sigInfos.Info {
 			hexAddr := bech32ToHex(si.Address)
 			if hexAddr == "" {
 				hexAddr = strings.ToLower(si.Address) // fallback: already hex
+			}
+			if hexAddr != "" && si.Address != "" {
+				consBech32Map[hexAddr] = si.Address
 			}
 			sigInfoMap[hexAddr] = struct {
 				missed     int64
@@ -1006,19 +1019,41 @@ func FetchChain(rpc, rest string, opts ChainOpts) ChainSnapshot {
 		if totalBonded > 0 {
 			valList[i].VotingPowerPercent = tokens / totalBonded * 100
 		}
+		hexCons := strings.ToLower(v.ConsensusAddr)
+		if b, ok := consBech32Map[hexCons]; ok {
+			valList[i].ConsensusBech32 = b
+		} else if hexCons != "" {
+			valList[i].ConsensusBech32 = hexToBech32(Bech32PrefixCons, hexCons)
+		}
 		// slashing info
-		if si, ok := sigInfoMap[strings.ToLower(v.ConsensusAddr)]; ok {
+		if si, ok := sigInfoMap[hexCons]; ok {
 			valList[i].MissedBlocks = si.missed
 			valList[i].Tombstoned = si.tombstoned
 		}
 		// proposer priority from RPC
-		if pp, ok := rpcVals[strings.ToLower(v.ConsensusAddr)]; ok {
+		if pp, ok := rpcVals[hexCons]; ok {
 			valList[i].ProposerPriority = pp
 		}
 		applyValidatorP2P(&valList[i], snap.Moniker, snap.NodeID, snap.ListenAddr, peerByMoniker)
 	}
 
 	snap.Validators = valList
+	snap.LocalP2PDial = formatP2PDial(snap.NodeID, snap.ListenAddr)
+	if snap.LocalConsensusAddr != "" {
+		hexLocal := strings.ToLower(snap.LocalConsensusAddr)
+		if b, ok := consBech32Map[hexLocal]; ok {
+			snap.LocalConsensusBech32 = b
+		} else {
+			snap.LocalConsensusBech32 = hexToBech32(Bech32PrefixCons, hexLocal)
+		}
+		if snap.LocalConsensusBech32 != "" {
+			var va validatorAccountResp
+			url := fmt.Sprintf("%s/cosmos/evm/vm/v1/validator_account/%s", rest, snap.LocalConsensusBech32)
+			if err := doJSON(url, &va); err == nil && va.AccountAddress != "" {
+				snap.LocalAccountAddr = va.AccountAddress
+			}
+		}
+	}
 
 	// next proposer: validator with the highest proposer priority
 	first := true

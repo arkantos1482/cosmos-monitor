@@ -151,6 +151,7 @@ type Validator struct {
 	Operator        string
 	NodeID          string
 	ConsensusAddr   string
+	ConsensusBech32 string
 	P2PDial         string
 	P2PConnected    bool
 	VPFloat         float64
@@ -168,6 +169,10 @@ type LocalValidator struct {
 	Moniker          string
 	NodeID           string
 	ConsensusAddr    string
+	ConsensusBech32  string
+	AccountAddr      string
+	EVMAddr          string
+	P2PDial          string
 	OperatorAddr     string
 	VotingPower      string
 	VPPercent        float64

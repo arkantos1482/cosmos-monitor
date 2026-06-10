@@ -47,7 +47,12 @@ func TestBuildViewSingleSection(t *testing.T) {
 	if !strings.Contains(out, `class="dash-heading">2. VALIDATOR</h2>`) {
 		t.Fatal("node view should only render validator section")
 	}
-	for _, sub := range []string{"Staking", "Signing &amp; slashing", "Operator", "Consensus", "Process"} {
+	for _, sub := range []string{
+		"Application (Cosmos SDK / ABCI state)",
+		"CometBFT (consensus + networking)",
+		"Identity", "Staking", "Rewards", "Slashing",
+		"Live state", "Validator key", "P2P &amp; RPC",
+	} {
 		if !strings.Contains(out, sub) {
 			t.Fatalf("node view missing subsection %q", sub)
 		}

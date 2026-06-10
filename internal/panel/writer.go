@@ -12,6 +12,7 @@ import (
 // Writer renders dashboard sections as an HTML fragment.
 type Writer interface {
 	Section(title string)
+	Layer(title string)
 	Subsection(title string)
 	Row(label, value string)
 	Hint(text string)
@@ -31,6 +32,7 @@ type Writer interface {
 type docWriter struct {
 	w            io.Writer
 	inSection    bool
+	inLayer      bool
 	inSubsection bool
 	inStatGrid   bool
 	inList       bool
@@ -45,6 +47,7 @@ func (d *docWriter) flush() {
 	d.closeList()
 	d.closeStatGrid()
 	d.closeSubsection()
+	d.closeLayer()
 	d.closeSection()
 }
 
@@ -74,8 +77,17 @@ func (d *docWriter) closeSubsection() {
 	d.inSubsection = false
 }
 
-func (d *docWriter) closeSection() {
+func (d *docWriter) closeLayer() {
 	d.closeSubsection()
+	if !d.inLayer {
+		return
+	}
+	fmt.Fprint(d.w, `</div>`+"\n")
+	d.inLayer = false
+}
+
+func (d *docWriter) closeSection() {
+	d.closeLayer()
 	d.flushSectionHints()
 	if !d.inSection {
 		return
@@ -153,6 +165,13 @@ func (d *docWriter) Section(title string) {
 	fmt.Fprintf(d.w, `<section class="%s"><h2 class="dash-heading">%s</h2>`+"\n",
 		cls, html.EscapeString(title))
 	d.inSection = true
+}
+
+func (d *docWriter) Layer(title string) {
+	d.closeLayer()
+	fmt.Fprintf(d.w, `<div class="dash-layer"><h3 class="dash-layer__title">%s</h3>`+"\n",
+		html.EscapeString(title))
+	d.inLayer = true
 }
 
 func (d *docWriter) Subsection(title string) {
