@@ -68,7 +68,7 @@ func writeHome(w Writer, d model.Report) {
 			badges: []struct{ text, kind string }{{nodeStatus, badgeKind(nodeStatus)}},
 		},
 		{
-			href: "/s/node", slug: "node", title: "Node", span2: true, gauges: true,
+			href: "/s/node", slug: "node", title: "Validator", span2: true, gauges: true,
 			lines: []string{
 				d.Moniker,
 				fmt.Sprintf("height %s · %s", d.BlockHeight, d.TimeSinceBlock),

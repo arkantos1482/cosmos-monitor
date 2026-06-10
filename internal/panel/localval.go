@@ -9,7 +9,7 @@ import (
 
 func writeLocalValidator(w Writer, d model.Report) {
 	w.Section("4. THIS VALIDATOR")
-	w.Em("Staking and rewards for this machine's validator — matched via `/status` consensus address. Node identity is in §2.")
+	w.Em("Staking and rewards for this machine's validator — matched via `/status` consensus address. Validator identity is in §2.")
 
 	lv := d.Local
 	if !lv.IsValidator {

@@ -108,6 +108,8 @@ func sectionSlug(title string) string {
 	switch {
 	case strings.Contains(upper, "INFRASTRUCTURE"):
 		return "infra"
+	case strings.Contains(upper, "2. VALIDATOR"):
+		return "node"
 	case strings.Contains(upper, "NODE") && !strings.Contains(upper, "VALIDATOR"):
 		return "node"
 	case strings.Contains(upper, "VALIDATOR SET"):

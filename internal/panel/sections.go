@@ -28,7 +28,7 @@ type NavItem struct {
 var Nav = []NavItem{
 	{ViewHome, "Overview", "/"},
 	{ViewInfra, "Infrastructure", "/s/infra"},
-	{ViewNode, "Node", "/s/node"},
+	{ViewNode, "Validator", "/s/node"},
 	{ViewValidators, "Validator set", "/s/validators"},
 	{ViewLocalValidator, "This validator", "/s/local"},
 	{ViewEconomics, "Economics", "/s/economics"},

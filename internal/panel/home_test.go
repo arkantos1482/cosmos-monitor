@@ -41,8 +41,8 @@ func TestBuildViewSingleSection(t *testing.T) {
 	if strings.Contains(out, `class="dash-status"`) {
 		t.Fatal("node view should not include status strip")
 	}
-	if !strings.Contains(out, `class="dash-heading">2. NODE</h2>`) {
-		t.Fatal("node view should only render node section")
+	if !strings.Contains(out, `class="dash-heading">2. VALIDATOR</h2>`) {
+		t.Fatal("node view should only render validator section")
 	}
 	if !strings.Contains(out, `dash-section--node`) {
 		t.Fatal("node view should have section accent class")

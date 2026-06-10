@@ -94,7 +94,7 @@ func TestContentInventory(t *testing.T) {
 	out := Build(d)
 	for _, want := range []string{
 		`class="dash-heading">1. INFRASTRUCTURE</h2>`,
-		`class="dash-heading">2. NODE</h2>`,
+		`class="dash-heading">2. VALIDATOR</h2>`,
 		`class="dash-heading">3. VALIDATOR SET</h2>`,
 		`class="dash-heading">4. THIS VALIDATOR</h2>`,
 		`class="dash-heading">5. ECONOMICS</h2>`,
