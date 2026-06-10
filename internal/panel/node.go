@@ -3,6 +3,7 @@ package panel
 import (
 	"fmt"
 
+	"github.com/arkantos1482/cosmos-monitor/internal/feemarket"
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 	"github.com/arkantos1482/cosmos-monitor/internal/report"
 )
@@ -29,6 +30,33 @@ func writeNode(w Writer, d model.Report) {
 	}
 
 	writeNodeCometBFT(w, d, lv, syncStr)
+	writeNodeFeeAcceptance(w, d)
+}
+
+func writeNodeFeeAcceptance(w Writer, d model.Report) {
+	c := feemarket.LoadContext(d)
+	if c.NodeMinGasPrices == "" && c.NodeEVMMinTip == "" && c.NodeMempoolPriceLimit == "" &&
+		c.NodeMaxTxGasWanted == "" && c.NodeAppTomlPath == "" {
+		return
+	}
+	w.Subsection("Fee acceptance (app.toml)")
+	w.Hint("`minimum-gas-prices`, `evm.min-tip`, `evm.mempool.price-limit`, `evm.max-tx-gas-wanted` → local app.toml (APPTOML_PATH or ~/.evmd/config/app.toml). Chain fee params live in § Fee market.")
+	for _, row := range nodeFeeAcceptanceRows(c) {
+		w.Row(row[0], row[1])
+	}
+}
+
+func nodeFeeAcceptanceRows(c feemarket.Context) [][]string {
+	rows := [][]string{
+		{"minimum-gas-prices", orDash(c.NodeMinGasPrices)},
+		{"evm.min-tip", orDash(c.NodeEVMMinTip)},
+		{"evm.mempool.price-limit", orDash(c.NodeMempoolPriceLimit)},
+		{"evm.max-tx-gas-wanted", orDash(c.NodeMaxTxGasWanted)},
+	}
+	if c.NodeAppTomlPath != "" {
+		rows = append(rows, []string{"config path", c.NodeAppTomlPath})
+	}
+	return rows
 }
 
 func writeNodeApplication(w Writer, d model.Report, lv model.LocalValidator) {
@@ -101,7 +129,7 @@ func writeNodeCometBFT(w Writer, d model.Report, lv model.LocalValidator, syncSt
 	}
 
 	w.Subsection("P2P & RPC")
-	w.Hint("`p2p listen`, `p2p dial`, `rpc listen` → CometBFT GET /status (node_info); dial is node_id@listen_addr.")
+	w.Hint("`p2p listen`, `p2p dial`, `rpc listen` → CometBFT GET /status (node_info; dial is node_id@listen_addr).")
 	p2pDial := lv.P2PDial
 	if p2pDial == "" {
 		p2pDial = formatP2PDial(d.NodeID, d.ListenAddr)

@@ -167,7 +167,7 @@ func TestWriteFeemarketL5ChainParams(t *testing.T) {
 		`CometBFT GET /block_results`,
 		"consensus_params",
 		"vm/v1/config",
-		"§ Infrastructure",
+		"§ Validator",
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("L5 missing %q", want)
@@ -186,13 +186,14 @@ func TestWriteFeemarketL5ChainParams(t *testing.T) {
 	}
 }
 
-func TestWriteInfraFeeAcceptance(t *testing.T) {
+func TestWriteNodeFeeAcceptance(t *testing.T) {
 	d := model.Report{
 		NodeMinGasPrices: "0apmt", NodeEVMMinTip: "0",
 		NodeMempoolPriceLimit: "1", NodeMaxTxGasWanted: "0",
 		NodeAppTomlPath: "/home/ubuntu/.evmd/config/app.toml",
+		Local: model.LocalValidator{IsValidator: true, Moniker: "node1", Status: "BOND_STATUS_BONDED"},
 	}
-	out := BuildView(ViewInfra, d)
+	out := BuildView(ViewNode, d)
 	for _, want := range []string{
 		"Fee acceptance (app.toml)",
 		"minimum-gas-prices",
@@ -202,7 +203,11 @@ func TestWriteInfraFeeAcceptance(t *testing.T) {
 		"/home/ubuntu/.evmd/config/app.toml",
 	} {
 		if !strings.Contains(out, want) {
-			t.Fatalf("infra section missing %q", want)
+			t.Fatalf("validator section missing %q", want)
 		}
+	}
+	infra := BuildView(ViewInfra, d)
+	if strings.Contains(infra, "Fee acceptance (app.toml)") {
+		t.Fatal("infra section should not contain app.toml fee acceptance")
 	}
 }

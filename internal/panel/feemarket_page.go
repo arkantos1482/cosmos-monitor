@@ -271,7 +271,7 @@ func buildFeeL5(c feemarket.Context, d model.Report) feeLevel {
 	return feeLevel{
 		ID:      "fee-L5",
 		Title:   "L5 · Formula, parameters, data sources",
-		Concept: "Full computation, governance knobs, and provenance (node app.toml → § Infrastructure).",
+		Concept: "Full computation, governance knobs, and provenance (node app.toml → § Validator).",
 		Extra:   extra.String(),
 	}
 }
@@ -299,7 +299,7 @@ func feemarketDataSourcesHint(c feemarket.Context) string {
 			"`no_base_fee`, `elasticity`, `min_gas_*`, … → REST GET /cosmos/evm/feemarket/v1/params; "+
 			"`evm_denom` → REST GET /cosmos/evm/vm/v1/params; "+
 			"`london_block` → REST GET /cosmos/evm/vm/v1/config; "+
-			"node fee acceptance (app.toml) → %s (§ Infrastructure).",
+			"node fee acceptance (app.toml) → %s (§ Validator).",
 		c.ParentBlock, c.CurrentBlock, appToml,
 	))
 }

@@ -75,6 +75,28 @@ func TestBuildViewSingleSection(t *testing.T) {
 	}
 }
 
+func TestNodeSectionDataSourcesProvenance(t *testing.T) {
+	d := model.Report{
+		Moniker: "node1", Synced: true, BlockHeight: "1", NodeID: "abc",
+		ListenAddr: "tcp://0.0.0.0:26656", RpcListenAddr: "tcp://0.0.0.0:26657",
+		Local: model.LocalValidator{
+			IsValidator: true, Moniker: "node1", Status: "BOND_STATUS_BONDED",
+			VotingPower: "100", VPPercent: 25, Commission: 10,
+		},
+	}
+	out := BuildView(ViewNode, d)
+	if !strings.Contains(out, `class="dash-sources"`) {
+		t.Fatal("validator section should include data sources footer")
+	}
+	if !strings.Contains(out, `class="hint-provenance"`) {
+		t.Fatal("validator data sources should use provenance markup, not inline fallback")
+	}
+	clauses := strings.Count(out, `hint-provenance__clause`)
+	if clauses < 8 {
+		t.Fatalf("expected multiple stacked provenance clauses, got %d", clauses)
+	}
+}
+
 func TestStatusStripOnlyOnHome(t *testing.T) {
 	d := model.Report{Moniker: "n", Synced: true, BlockHeight: "1", BaseFee: "1000"}
 	out := BuildView(ViewHome, d)

@@ -215,6 +215,20 @@ func TestHintProvenanceVerticalClauses(t *testing.T) {
 	}
 }
 
+func TestSectionHintsHTMLPerHintParsing(t *testing.T) {
+	hints := []string{
+		"`p2p listen`, `p2p dial`, `rpc listen` → CometBFT GET /status (node_info; dial is node_id@listen_addr).",
+		"`status`, `jailed` → REST GET /cosmos/staking/v1beta1/validators.",
+	}
+	html := sectionHintsHTML(hints)
+	if !strings.Contains(html, `hint-provenance`) {
+		t.Fatalf("expected provenance markup:\n%s", html)
+	}
+	if strings.Count(html, `hint-provenance__clause`) != 2 {
+		t.Fatalf("expected 2 clauses from independent hints, got:\n%s", html)
+	}
+}
+
 func TestHintDeferredToSectionBottom(t *testing.T) {
 	var b strings.Builder
 	w := newWriter(&b)

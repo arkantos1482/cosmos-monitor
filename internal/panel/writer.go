@@ -102,12 +102,42 @@ func (d *docWriter) flushSectionHints() {
 	}
 	d.closeList()
 	d.closeStatGrid()
-	combined := strings.Join(d.sectionHints, "; ")
+	hints := d.sectionHints
 	d.sectionHints = nil
 	fmt.Fprint(d.w, `<div class="dash-sources">`+"\n")
 	fmt.Fprint(d.w, `<h3 class="dash-subheading">Data sources</h3>`+"\n")
-	fmt.Fprintf(d.w, `<p class="dash-callout dash-callout--hint hint">%s</p>`+"\n", hintHTML(combined))
+	fmt.Fprintf(d.w, `<p class="dash-callout dash-callout--hint hint">%s</p>`+"\n", sectionHintsHTML(hints))
 	fmt.Fprint(d.w, `</div>`+"\n")
+}
+
+// sectionHintsHTML renders deferred section hints as stacked provenance clauses.
+// Each hint is parsed independently so a prose semicolon in one hint cannot
+// break provenance layout for the whole section.
+func sectionHintsHTML(hints []string) string {
+	var clauses []string
+	var fallback []string
+	for _, h := range hints {
+		if isProvenanceHint(h) {
+			clauses = append(clauses, splitHintClauses(h)...)
+		} else {
+			fallback = append(fallback, h)
+		}
+	}
+	if len(clauses) == 0 {
+		return inlineHTML(strings.Join(fallback, " "))
+	}
+	var b strings.Builder
+	b.WriteString(`<span class="hint-provenance">`)
+	for _, clause := range clauses {
+		writeHintClause(&b, strings.TrimSpace(clause))
+	}
+	b.WriteString(`</span>`)
+	if len(fallback) > 0 {
+		b.WriteString(` <span class="hint-provenance__prefix">`)
+		b.WriteString(inlineHTML(strings.Join(fallback, " ")))
+		b.WriteString(`</span>`)
+	}
+	return b.String()
 }
 
 func (d *docWriter) openStatGrid() {
