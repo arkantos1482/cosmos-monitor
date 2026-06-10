@@ -85,8 +85,15 @@ type Report struct {
 	MinGasPrice              string
 	MinGasPriceRaw           string
 	MinGasMultiplier         string
-	AdjCap                   string
 	NoBaseFee                bool
+	EnableHeight             int64
+	BaseFeeParam             string
+	MaxBlockBytes            int64
+	NodeMinGasPrices         string
+	NodeEVMMinTip            string
+	NodeMempoolPriceLimit    string
+	NodeMaxTxGasWanted       string
+	NodeAppTomlPath          string
 	Elasticity               int64
 	BaseFeeChangeDenominator int64
 	ParentBlockGasUsed       uint64

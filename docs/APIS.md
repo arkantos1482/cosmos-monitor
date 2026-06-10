@@ -56,7 +56,7 @@ All endpoints are polled from the node itself (localhost). Endpoints that return
 | Endpoint | Used for | Key fields |
 |----------|----------|------------|
 | `GET /cosmos/evm/feemarket/v1/base_fee` | EIP-1559 base fee of last block | `base_fee` (decimal string) |
-| `GET /cosmos/evm/feemarket/v1/block_gas` | gas used in last block | `gas` (int64 string) |
+| `GET /cosmos/evm/feemarket/v1/block_gas` | stored W (block gas wanted); fallback when `block_results` lacks event | `gas` (int64 string) |
 | `GET /cosmos/evm/feemarket/v1/params` | feemarket params | `params.{no_base_fee,base_fee_change_denominator,elasticity_multiplier,base_fee,min_gas_price,min_gas_multiplier}` |
 
 #### x/vm (EVM) — `/cosmos/evm/vm/v1/`

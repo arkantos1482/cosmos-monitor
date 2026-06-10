@@ -119,7 +119,7 @@ func fetchForView(view panel.View, rpc, rest, evm, container string) Snapshots {
 	}
 
 	chainOpts := chainOptsFor(view)
-	needEVM := view == panel.ViewHome || view == panel.ViewNode
+	needEVM := view == panel.ViewHome || view == panel.ViewNode || view == panel.ViewFeemarket
 	needSys := view == panel.ViewHome
 	needDocker := view == panel.ViewHome
 

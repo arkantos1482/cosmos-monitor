@@ -1057,6 +1057,248 @@ body::after {
   border: 1px solid rgba(94, 179, 255, 0.3);
 }
 
+.fee-badge--floor {
+  background: rgba(167, 139, 250, 0.14);
+  color: #c4b5fd;
+  border: 1px solid rgba(167, 139, 250, 0.35);
+}
+
+.fee-badge--disabled {
+  background: rgba(251, 191, 36, 0.12);
+  color: var(--warn);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+}
+
+/* ── Fee market abstraction ladder ────────────────────────────── */
+
+.fee-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.65rem;
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.55rem 0.75rem;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.fee-nav__link {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 0.18rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid rgba(94, 179, 255, 0.25);
+}
+
+.fee-nav__link:hover {
+  background: rgba(94, 179, 255, 0.1);
+}
+
+.fee-nav__meta {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-family: var(--mono);
+  color: var(--muted);
+}
+
+.fee-level {
+  margin: 0.55rem 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.fee-level__summary {
+  cursor: pointer;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--fg);
+  list-style: none;
+  border-bottom: 1px solid transparent;
+}
+
+.fee-level[open] > .fee-level__summary {
+  border-bottom-color: var(--border);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.fee-level__summary::-webkit-details-marker {
+  display: none;
+}
+
+.fee-level__body {
+  padding: 0.75rem 0.85rem 0.85rem;
+}
+
+.fee-level__concept {
+  margin: 0 0 0.65rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.45;
+  max-width: 68ch;
+}
+
+.fee-level__banner {
+  margin: 0 0 0.55rem;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.8rem;
+  color: var(--warn);
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  border-radius: 8px;
+}
+
+.fee-level__badge-row {
+  margin: 0 0 0.65rem;
+}
+
+.fee-level__rows {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.fee-level__row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 34%) 1fr;
+  gap: 0.35rem 0.75rem;
+  align-items: baseline;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.fee-level__row dt {
+  margin: 0;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.fee-level__row dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.fee-level__footnote,
+.fee-level__note {
+  margin: 0.65rem 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.45;
+  max-width: 72ch;
+}
+
+.fee-level__subsection {
+  margin: 0.85rem 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.fee-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  margin: 0.35rem 0;
+}
+
+.fee-table th,
+.fee-table td {
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.fee-table th {
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.fee-table__note {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.fee-example {
+  margin: 0.75rem 0 0;
+  padding: 0.65rem 0.75rem;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
+
+.fee-example__title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 0.45rem;
+}
+
+.fee-timeline {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-left: 2px solid var(--border);
+  margin-left: 0.35rem;
+}
+
+.fee-timeline__step {
+  position: relative;
+  padding: 0.45rem 0 0.45rem 1rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.fee-timeline__step::before {
+  content: "";
+  position: absolute;
+  left: -0.42rem;
+  top: 0.65rem;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--surface-2);
+}
+
+.fee-timeline__when {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+}
+
+.fee-timeline__what {
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--fg);
+}
+
+.fee-pools {
+  margin-top: 0.85rem;
+}
+
+.fee-pools__title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
 .fee-meter {
   margin: 0.35rem 0 0.55rem;
 }

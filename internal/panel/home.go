@@ -5,6 +5,7 @@ import (
 	"html"
 	"math"
 
+	"github.com/arkantos1482/cosmos-monitor/internal/feemarket"
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
@@ -130,18 +131,10 @@ func feemarketCard(d model.Report) struct {
 	lines   []string
 	badges  []struct{ text, kind string }
 } {
-	ex := buildFeemarketExplain(d)
+	c := feemarket.LoadContext(d)
 	baseFee := d.BaseFee
 	if baseFee == "" {
 		baseFee = "—"
-	}
-	util := ex.UtilizationPct
-	if util == "" {
-		util = "—"
-	}
-	nextAdj := ex.NextAdj
-	if nextAdj == "" {
-		nextAdj = "—"
 	}
 	return struct {
 		href    string
@@ -155,12 +148,24 @@ func feemarketCard(d model.Report) struct {
 		href: "/s/feemarket", slug: "feemarket", title: "Fee market",
 		lines: []string{
 			fmt.Sprintf("base fee %s", baseFee),
-			fmt.Sprintf("utilization %s", util),
-			fmt.Sprintf("next adjustment %s", nextAdj),
+			c.HomeCardLine(),
 		},
 		badges: []struct{ text, kind string }{
-			{ex.TrafficLabel, badgeKind(ex.TrafficLabel)},
+			{c.Badge.Label, feemarketBadgeKind(c.Badge)},
 		},
+	}
+}
+
+func feemarketBadgeKind(b feemarket.Badge) string {
+	switch b.Class {
+	case "rising":
+		return "bad"
+	case "falling", "floor":
+		return "ok"
+	case "disabled":
+		return "warn"
+	default:
+		return ""
 	}
 }
 

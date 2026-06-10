@@ -3,7 +3,6 @@ package report
 import (
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -305,14 +304,26 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 	}
 	d.NoBaseFee = p.NoBaseFee
 	d.Elasticity = p.Elasticity
-	if chain.BaseFee != "" && p.BaseFeeChangeDenominator > 0 {
-		baseFeeF, _ := strconv.ParseFloat(chain.BaseFee, 64)
-		if baseFeeF > 0 {
-			cap := baseFeeF / float64(p.BaseFeeChangeDenominator)
-			_, capDenom := fetch.NormalizeCoin("0", feeDenom)
-			d.AdjCap = "±" + fetch.FormatAmountUnit(cap, capDenom) + "/block" +
-				fmt.Sprintf("  (base_fee ÷ %d)", p.BaseFeeChangeDenominator)
-		}
+	d.EnableHeight = p.EnableHeight
+	if p.BaseFeeParam != "" {
+		d.BaseFeeParam = fetch.FormatFeeAmount(p.BaseFeeParam, feeDenom)
+	}
+	if chain.MaxBlockBytes > 0 {
+		d.MaxBlockBytes = chain.MaxBlockBytes
+	}
+	appCfg := fetch.FetchAppTomlGasConfig()
+	d.NodeAppTomlPath = appCfg.Path
+	if appCfg.MinGasPrices != "" {
+		d.NodeMinGasPrices = appCfg.MinGasPrices
+	}
+	if appCfg.EVMMinTip != "" {
+		d.NodeEVMMinTip = appCfg.EVMMinTip
+	}
+	if appCfg.MempoolPriceLimit != "" {
+		d.NodeMempoolPriceLimit = appCfg.MempoolPriceLimit
+	}
+	if appCfg.MaxTxGasWanted != "" {
+		d.NodeMaxTxGasWanted = appCfg.MaxTxGasWanted
 	}
 
 	d.EVMHTTPEndpoint = evmHTTPEndpoint

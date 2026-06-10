@@ -16,7 +16,7 @@ func TestBuildEconomicsUsesTablesNotMermaid(t *testing.T) {
 	}
 	out := Build(d)
 	idx := strings.Index(out, "5. ECONOMICS")
-	end := strings.Index(out, "6. FEE MARKET")
+	end := strings.Index(out, `class="dash-heading">Fee market</h2>`)
 	if idx < 0 || end < 0 {
 		t.Fatal("expected economics and governance sections")
 	}
@@ -47,16 +47,13 @@ func TestBuildFeeMarketPanel(t *testing.T) {
 		ParentBlockResultsOK: true,
 	}
 	out := Build(d)
-	if !strings.Contains(out, `class="fee-hero"`) {
-		t.Fatal("fee market section should render fee-hero panel")
+	if !strings.Contains(out, `id="fee-L1"`) {
+		t.Fatal("fee market section should render L1 ladder panel")
 	}
-	if !strings.Contains(out, `class="fee-hero__top"`) {
-		t.Fatal("fee market section should render fee-hero header row")
+	if strings.Contains(out, `class="fee-flow"`) {
+		t.Fatal("fee market section should not use legacy fee-flow")
 	}
-	if !strings.Contains(out, `class="fee-flow"`) {
-		t.Fatal("fee market section should render merged flow")
-	}
-	idx := strings.Index(out, "6. FEE MARKET")
+	idx := strings.Index(out, `class="dash-heading">Fee market</h2>`)
 	end := strings.Index(out, "7. GOVERNANCE")
 	if idx < 0 || end < 0 {
 		t.Fatal("expected fee market and governance sections")
@@ -64,12 +61,6 @@ func TestBuildFeeMarketPanel(t *testing.T) {
 	fee := out[idx:end]
 	if strings.Contains(fee, `math-panel`) {
 		t.Fatal("fee market section should not use KaTeX")
-	}
-	if strings.Contains(fee, `fee-key-metrics`) {
-		t.Fatal("fee market hero should not include legacy KPI row")
-	}
-	if !strings.Contains(fee, `id="feemarket-ref"`) {
-		t.Fatal("fee market should include collapsible reference block")
 	}
 	if !strings.Contains(out, `dash-section--feemarket`) {
 		t.Fatal("fee market section should have feemarket accent class")
@@ -107,7 +98,7 @@ func TestContentInventory(t *testing.T) {
 		`class="dash-heading">3. VALIDATOR SET</h2>`,
 		`class="dash-heading">4. THIS VALIDATOR</h2>`,
 		`class="dash-heading">5. ECONOMICS</h2>`,
-		`class="dash-heading">6. FEE MARKET</h2>`,
+		`class="dash-heading">Fee market</h2>`,
 		`class="dash-heading">7. GOVERNANCE</h2>`,
 		`class="dash-heading">8. EVM JSON-RPC</h2>`,
 		`class="dash-subheading">For operators</h3>`,

@@ -67,10 +67,10 @@ remote-start: ## atomic remote pmtop — start in tmux on node4
 		 sleep 1; \
 		 pgrep -a pmtop || (echo "failed to start" && exit 1)'
 
-remote-verify: ## atomic remote pmtop — curl node4 :7777 fee-hero
+remote-verify: ## atomic remote pmtop — curl node4 :7777 fee-L1
 	@$(SSH_NODE4) \
-		'curl -sf http://localhost:7777/ | grep -q fee-hero && echo "OK: fee-hero present" \
-		 || (echo "FAIL: fee-hero not found" && exit 1)'
+		'curl -sf http://localhost:7777/s/feemarket | grep -q "fee-L1" && echo "OK: fee-L1 present" \
+		 || (echo "FAIL: fee-L1 not found" && exit 1)'
 
 remote-run: ## atomic remote pmtop — foreground on node4 :7777
 	$(SSH_NODE4_TTY) '$(REMOTE_PMTOP)'

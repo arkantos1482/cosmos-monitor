@@ -9,7 +9,7 @@ import (
 
 func feemarketChunk(t *testing.T, out string) string {
 	t.Helper()
-	idx := strings.Index(out, "6. FEE MARKET")
+	idx := strings.Index(out, `class="dash-heading">Fee market</h2>`)
 	end := strings.Index(out, "7. GOVERNANCE")
 	if idx < 0 || end < 0 {
 		t.Fatal("expected fee market and governance sections")
@@ -17,79 +17,79 @@ func feemarketChunk(t *testing.T, out string) string {
 	return out[idx:end]
 }
 
-func feemarketAboveRef(t *testing.T, chunk string) string {
-	t.Helper()
-	refIdx := strings.Index(chunk, `id="feemarket-ref"`)
-	if refIdx < 0 {
-		t.Fatal("missing feemarket reference details")
-	}
-	return chunk[:refIdx]
-}
-
-func TestWriteFeemarketStoryLayout(t *testing.T) {
+func TestWriteFeemarketLadderLayout(t *testing.T) {
 	d := model.Report{
 		BlockHeight: "100", BaseFee: "1", BaseFeeRaw: "1000",
 		BlockGas: "21000", ParentBlockGasWanted: 21000, ParentBlockGasUsed: 18000,
 		BlockGasLimit: 100_000_000, Elasticity: 2,
 		BaseFeeChangeDenominator: 8, MinGasMultiplier: "0.5", MinGasPrice: "0.01",
-		ParentBlockResultsOK: true, GasPrice: "1000",
+		ParentBlockResultsOK: true, GasPrice: "1000", EVMDenom: "apmt",
 	}
 	chunk := feemarketChunk(t, Build(d))
-	aboveRef := feemarketAboveRef(t, chunk)
 
 	for _, want := range []string{
-		`class="fee-hero"`,
-		`class="fee-flow"`,
-		`fee-flow__step--demand`,
-		`fee-flow__step--adjust`,
-		`fee-flow__step--network`,
-		`fee-flow__step--wallet`,
-		"Block 99",
-		"vs target",
-		"BeginBlock",
-		"Wallet RPC",
-		"Demand vs capacity",
-		"Below target",
-		"|Δbase|",
-		`id="feemarket-ref"`,
-		`class="dash-details"`,
-		"Parameters, formulas &amp; data sources",
+		`id="fee-L1"`,
+		`id="fee-L2"`,
+		`id="fee-L3"`,
+		`id="fee-L4"`,
+		`id="fee-L5"`,
+		`class="fee-level"`,
+		`class="fee-nav"`,
+		"What you pay now",
+		"Why the fee moved",
+		"What the chain measured",
+		"When each value is written",
+		"Formula, parameters",
+		"When W ≠ gas_used",
+		"Three pools",
+		"In-block accumulator",
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("fee market chunk missing %q", want)
 		}
 	}
+
 	for _, gone := range []string{
-		`class="fee-pipeline"`,
-		`class="fee-cards"`,
-		`fee-key-metrics`,
-		`class="dash-subheading">Variables</h3>`,
-		`class="dash-subheading">Params</h3>`,
-		"W / target",
+		`class="fee-flow"`,
+		`class="fee-hero"`,
+		`id="feemarket-ref"`,
+		"mempool ×",
+		"Finance",
+		"Operator",
+		"Developer",
+		"6. FEE MARKET",
 	} {
-		if strings.Contains(aboveRef, gone) {
-			t.Fatalf("fee market body above reference should not contain %q", gone)
+		if strings.Contains(chunk, gone) {
+			t.Fatalf("fee market should not contain %q", gone)
 		}
 	}
-	if strings.Count(aboveRef, `class="fee-flow__step `) != 4 {
-		t.Fatalf("expected 4 flow steps above reference, got %d", strings.Count(aboveRef, `class="fee-flow__step `))
+
+	l1End := strings.Index(chunk, `id="fee-L2"`)
+	if l1End < 0 {
+		t.Fatal("missing L2")
 	}
-	if strings.Count(aboveRef, ">gas_used<") != 1 {
-		t.Fatalf("gas_used should appear once above reference, got %d", strings.Count(aboveRef, ">gas_used<"))
-	}
-	ex := buildFeemarketExplain(d)
-	if ex.SummaryLine != "" && strings.Contains(aboveRef, ex.SummaryLine) {
-		// SummaryLine is in hero only; flow must not repeat the narrative sentence.
-		flowStart := strings.Index(aboveRef, `class="fee-flow"`)
-		if flowStart >= 0 && strings.Contains(aboveRef[flowStart:], ex.SummaryLine) {
-			t.Fatal("flow should not duplicate hero SummaryLine")
+	l1 := chunk[:l1End]
+	for _, forbidden := range []string{">W<", "gas_used", "target"} {
+		if strings.Contains(strings.ToLower(l1), forbidden) {
+			t.Fatalf("L1 should not expose %q", forbidden)
 		}
 	}
-	if !strings.Contains(chunk, "Symbols") {
-		t.Fatal("reference block should include symbol glossary")
+}
+
+func TestWriteFeemarketAtFloorBadge(t *testing.T) {
+	d := model.Report{
+		BlockHeight: "1284501", BaseFee: "7 apmt", BaseFeeRaw: "7",
+		BlockGasLimit: ^uint64(0), Elasticity: 2,
+		BaseFeeChangeDenominator: 8, MinGasMultiplier: "0.5",
+		ParentBlockGasWanted: 2_847_392, ParentBlockGasUsed: 2_847_392,
+		MinGasPriceRaw: "0", EVMDenom: "apmt",
 	}
-	if !strings.Contains(chunk, "Chain parameters") {
-		t.Fatal("reference block should include chain parameters")
+	chunk := feemarketChunk(t, Build(d))
+	if !strings.Contains(chunk, "AT FLOOR") {
+		t.Fatal("expected AT FLOOR badge")
+	}
+	if strings.Contains(chunk, `fee-badge fee-badge--falling`) {
+		t.Fatal("AT FLOOR must not use falling badge class")
 	}
 }
 
@@ -99,15 +99,8 @@ func TestWriteFeemarketNoBaseFee(t *testing.T) {
 		GasPrice: "500",
 	}
 	chunk := feemarketChunk(t, Build(d))
-	aboveRef := feemarketAboveRef(t, chunk)
-	if strings.Count(aboveRef, `class="fee-flow__step `) != 2 {
-		t.Fatalf("no_base_fee flow should have 2 steps, got %d", strings.Count(aboveRef, `class="fee-flow__step `))
-	}
 	if !strings.Contains(chunk, "FIXED PRICING") {
 		t.Fatal("no_base_fee should show FIXED PRICING badge")
-	}
-	if strings.Contains(aboveRef, `class="fee-pipeline"`) || strings.Contains(aboveRef, `class="fee-cards"`) {
-		t.Fatal("no_base_fee should not render legacy pipeline/cards")
 	}
 }
 
@@ -120,14 +113,58 @@ func TestWriteFeemarketUnlimitedMaxGas(t *testing.T) {
 		ParentBlockResultsOK: true,
 	}
 	chunk := feemarketChunk(t, Build(d))
-	aboveRef := feemarketAboveRef(t, chunk)
-	if strings.Contains(aboveRef, `aria-label="Demand vs capacity"`) {
-		t.Fatal("unlimited max_gas should hide utilization meter")
-	}
-	if !strings.Contains(aboveRef, "MaxUint64") {
+	if !strings.Contains(chunk, "MaxUint64") {
 		t.Fatal("unlimited max_gas should explain MaxUint64 sentinel")
 	}
-	if !strings.Contains(aboveRef, `class="fee-flow"`) {
-		t.Fatal("unlimited max_gas should still render merged flow")
+	if strings.Contains(chunk, `aria-label="Demand vs capacity"`) {
+		t.Fatal("unlimited max_gas should not show legacy demand meter label")
+	}
+}
+
+func TestWriteFeemarketFiniteMaxGasMeter(t *testing.T) {
+	d := model.Report{
+		BlockHeight: "100", BaseFeeRaw: "1000",
+		BlockGasLimit: 30_000_000, Elasticity: 2,
+		BaseFeeChangeDenominator: 8,
+		ParentBlockGasWanted: 12_400_000,
+	}
+	chunk := feemarketChunk(t, Build(d))
+	if !strings.Contains(chunk, `aria-label="Demand vs target"`) {
+		t.Fatal("finite max_gas should show demand meter")
+	}
+}
+
+func TestWriteFeemarketEnableHeightBanner(t *testing.T) {
+	d := model.Report{
+		BlockHeight: "50", EnableHeight: 100,
+		BlockGasLimit: 30_000_000, Elasticity: 2,
+	}
+	chunk := feemarketChunk(t, Build(d))
+	if !strings.Contains(chunk, "FEES DISABLED") {
+		t.Fatal("expected FEES DISABLED badge")
+	}
+}
+
+func TestWriteFeemarketL5NodeAppToml(t *testing.T) {
+	d := model.Report{
+		BlockHeight: "1", BaseFeeRaw: "7",
+		BlockGasLimit: ^uint64(0), Elasticity: 2,
+		BaseFeeChangeDenominator: 8,
+		MaxBlockBytes: 22_020_096,
+		NodeMinGasPrices: "0apmt", NodeEVMMinTip: "0",
+		NodeMempoolPriceLimit: "1", NodeMaxTxGasWanted: "0",
+	}
+	chunk := feemarketChunk(t, Build(d))
+	for _, want := range []string{
+		"minimum-gas-prices",
+		"evm.min-tip",
+		"price-limit",
+		"max-tx-gas-wanted",
+		"22,020,096",
+		"min_unit_gas",
+	} {
+		if !strings.Contains(chunk, want) {
+			t.Fatalf("L5 missing %q", want)
+		}
 	}
 }

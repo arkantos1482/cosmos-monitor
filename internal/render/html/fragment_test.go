@@ -16,8 +16,8 @@ func TestRenderFragmentFeeMarket(t *testing.T) {
 		ParentBlockResultsOK: true,
 	}
 	out := RenderFragment(d)
-	if !strings.Contains(out, `class="fee-traffic"`) {
-		t.Fatal("fragment should include fee-market traffic panel")
+	if !strings.Contains(out, `id="fee-L1"`) {
+		t.Fatal("fragment should include fee market L1 panel")
 	}
 }
 

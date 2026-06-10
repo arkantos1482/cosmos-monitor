@@ -47,6 +47,8 @@ type ChainSnapshot struct {
 	BlockGas uint64
 	// BlockGasLimit is consensus block.max_gas (-1 = unlimited, 0 = unknown).
 	BlockGasLimit int64
+	// MaxBlockBytes is consensus block.max_bytes.
+	MaxBlockBytes int64
 
 	// Parent block (H-1) from CometBFT block_results.
 	ParentBlockGasUsed   uint64
@@ -145,6 +147,8 @@ type ChainParams struct {
 	BaseFeeChangeDenominator int64
 	MinGasMultiplier         float64
 	MinGasPriceRaw           string
+	EnableHeight             int64
+	BaseFeeParam             string
 	ERC20Enabled             bool
 	ActiveStaticPrecompiles  []string
 	HistoryServeWindow       int64
@@ -232,7 +236,8 @@ type consensusParamsResp struct {
 	Result struct {
 		ConsensusParams struct {
 			Block struct {
-				MaxGas string `json:"max_gas"`
+				MaxGas   string `json:"max_gas"`
+				MaxBytes string `json:"max_bytes"`
 			} `json:"block"`
 		} `json:"consensus_params"`
 	} `json:"result"`
@@ -408,7 +413,9 @@ type govTallyParamsResp struct {
 type feemarketParamsResp struct {
 	Params struct {
 		NoBaseFee                bool   `json:"no_base_fee"`
+		BaseFee                  string `json:"base_fee"`
 		BaseFeeChangeDenominator int64  `json:"base_fee_change_denominator"`
+		EnableHeight             string `json:"enable_height"`
 		MinGasPrice              string `json:"min_gas_price"`
 		MinGasMultiplier         string `json:"min_gas_multiplier"`
 		ElasticityMultiplier     int64  `json:"elasticity_multiplier"`
@@ -685,6 +692,7 @@ func FetchChain(rpc, rest string, opts ChainOpts) ChainSnapshot {
 	var consensusParams consensusParamsResp
 	if err := doJSON(rpc+"/consensus_params", &consensusParams); err == nil {
 		snap.BlockGasLimit = parseInt64(consensusParams.Result.ConsensusParams.Block.MaxGas)
+		snap.MaxBlockBytes = parseInt64(consensusParams.Result.ConsensusParams.Block.MaxBytes)
 	}
 
 	peerByMoniker := map[string]struct {
@@ -1071,6 +1079,8 @@ func FetchParams(rest string) ChainParams {
 		p.Elasticity = fmp.Params.ElasticityMultiplier
 		p.NoBaseFee = fmp.Params.NoBaseFee
 		p.BaseFeeChangeDenominator = fmp.Params.BaseFeeChangeDenominator
+		p.BaseFeeParam = fmp.Params.BaseFee
+		p.EnableHeight = parseInt64(fmp.Params.EnableHeight)
 	}
 
 	var ep evmParamsResp
