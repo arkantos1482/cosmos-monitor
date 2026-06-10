@@ -91,6 +91,12 @@ func TestWriteFeemarketAtFloorBadge(t *testing.T) {
 	if strings.Contains(chunk, `fee-badge fee-badge--falling`) {
 		t.Fatal("AT FLOOR must not use falling badge class")
 	}
+	if strings.Contains(chunk, "decrease step base÷8 = 0 apmt") {
+		t.Fatal("AT FLOOR footnote should explain sub-integer truncate, not bare 0 apmt")
+	}
+	if !strings.Contains(chunk, "truncates to 0") {
+		t.Fatal("AT FLOOR footnote should mention truncate-to-zero precision")
+	}
 }
 
 func TestWriteFeemarketNoBaseFee(t *testing.T) {
@@ -162,9 +168,16 @@ func TestWriteFeemarketL5NodeAppToml(t *testing.T) {
 		"max-tx-gas-wanted",
 		"22,020,096",
 		"min_unit_gas",
+		`class="dash-subheading">Data sources</h3>`,
+		`class="dash-callout dash-callout--hint hint"`,
+		`class="hint-provenance"`,
+		`CometBFT GET /block_results`,
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("L5 missing %q", want)
 		}
+	}
+	if strings.Contains(chunk, `fee-level__note">gas_used`) {
+		t.Fatal("L5 data sources should use provenance callout, not fee-level__note paragraph")
 	}
 }

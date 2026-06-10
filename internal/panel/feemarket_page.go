@@ -103,7 +103,7 @@ func buildFeeL2(c feemarket.Context, d model.Report) feeLevel {
 		nextAdj = "HOLD at floor"
 	case "FALLING":
 		if !c.DecreaseStep.IsNil() && c.DecreaseStep.IsPositive() {
-			nextAdj = fmt.Sprintf("FALLING — Δbase ≈ %s", c.DecreaseStep.String()+ " apmt/gas")
+			nextAdj = fmt.Sprintf("FALLING — Δbase ≈ %s/gas", fetch.FormatFeeDec(c.DecreaseStep, c.Denom))
 		} else {
 			nextAdj = "FALLING — base fee drops next block"
 		}
@@ -166,8 +166,8 @@ func buildFeeL3(c feemarket.Context, d model.Report) feeLevel {
 		Concept: "Demand for the formula is W (stored block_gas), which can differ from gas_used.",
 		Rows: [][]string{
 			{fmt.Sprintf("Parent block %s", c.ParentBlock), "fee algorithm reads W, not raw gas_used alone"},
-			{"gas_used", feemarket.FormatUint(c.GasUsed) + " gas"},
-			{"W", feemarket.FormatUint(c.Wanted) + " gas"},
+			{"gas_used", formatGasAmount(c.GasUsed, d.ParentBlockResultsOK)},
+			{"W", formatGasAmount(c.Wanted, d.ParentBlockResultsOK)},
 			{"Relationship", c.WGasUsedRelation()},
 		},
 		Extra: example,
@@ -225,9 +225,9 @@ func buildFeeL4(c feemarket.Context, d model.Report) feeLevel {
 func buildFeeL5(c feemarket.Context, d model.Report) feeLevel {
 	var formula, deltaNote string
 	if !c.NoBaseFee && c.HasTarget && c.DenomU > 0 {
-		base := c.BaseFee
+		base := c.BaseFeeRaw
 		if base == "" {
-			base = c.BaseFeeRaw
+			base = c.BaseFee
 		}
 		wStr := feemarket.FormatUint(c.Wanted)
 		tStr := c.TargetDisplay()
@@ -236,21 +236,21 @@ func buildFeeL5(c feemarket.Context, d model.Report) feeLevel {
 				"        ≤ %s × |%s − %s| / (%s × %d)",
 			base, wStr, tStr, tStr, c.DenomU,
 		)
-		if !c.DecreaseStep.IsNil() {
-			deltaNote = fmt.Sprintf("→ computed decrease step %s apmt · Badge: %s", c.DecreaseStep.String(), c.Badge.Label)
+		if !c.DecreaseStep.IsNil() && c.DecreaseStep.IsPositive() {
+			deltaNote = fmt.Sprintf("→ computed decrease step %s · Badge: %s", fetch.FormatFeeDec(c.DecreaseStep, c.Denom), c.Badge.Label)
 		}
 	}
 
 	chainRows := [][]string{
 		{"no_base_fee", boolStr(d.NoBaseFee)},
-		{"enable_height", formatInt(c.EnableHeight)},
+		{"enable_height", formatEnableHeight(c.EnableHeight)},
 		{"base_fee (param store)", orDash(c.BaseFeeParam)},
-		{"base_fee_change_denominator", formatInt(int64(c.DenomU))},
-		{"elasticity_multiplier", formatInt(c.Elasticity)},
-		{"min_gas_price", orDash(c.MinGasPrice)},
+		{"base_fee_change_denominator", formatParamUint(c.DenomU)},
+		{"elasticity_multiplier", formatParamInt(c.Elasticity)},
+		{"min_gas_price", minGasPriceL5(c)},
 		{"min_gas_multiplier", orDash(c.MinGasMultiplier)},
 		{"max_gas", maxGasL5(c)},
-		{"max_bytes", formatInt(c.MaxBlockBytes)},
+		{"max_bytes", formatParamInt(c.MaxBlockBytes)},
 		{"evm_denom", orDash(c.Denom)},
 		{"london_block", londonStatus(c)},
 		{"min_unit_gas", "1 apmt"},
@@ -276,21 +276,18 @@ func buildFeeL5(c feemarket.Context, d model.Report) feeLevel {
 	if c.Verify != "" {
 		fmt.Fprintf(&extra, `<p class="fee-level__note">Verify: %s</p>`, html.EscapeString(c.Verify))
 	}
-	extra.WriteString(`<div class="fee-level__subsection">Chain parameters (governance / consensus)</div>`)
+	extra.WriteString(feeSubheadingHTML("Chain parameters (governance / consensus)"))
 	extra.WriteString(feeTableHTML([]string{"Parameter", "Value"}, chainRows))
 	if c.UnlimitedBlockGas && c.MaxBlockBytes > 0 {
-		extra.WriteString(`<div class="fee-level__subsection">Practical block limits (max_gas unlimited)</div>`)
+		extra.WriteString(feeSubheadingHTML("Practical block limits (max_gas unlimited)"))
 		fmt.Fprintf(&extra, `<p class="fee-level__note">max_bytes %s · block time %s · validator execution cap applies</p>`,
 			feemarket.FormatUint(uint64(c.MaxBlockBytes)), orDash(c.BlockInterval))
 	}
-	extra.WriteString(`<div class="fee-level__subsection">Node acceptance (this node · app.toml)</div>`)
+	extra.WriteString(feeSubheadingHTML("Node acceptance (this node · app.toml)"))
 	extra.WriteString(feeTableHTML([]string{"Setting", "Value"}, nodeRows))
-	extra.WriteString(`<div class="fee-level__subsection">Data sources</div>`)
-	fmt.Fprintf(&extra, `<p class="fee-level__note">`+
-		`gas_used, W → CometBFT GET /block_results (block %s); W fallback → REST GET /cosmos/evm/feemarket/v1/block_gas; `+
-		`base_fee → REST GET …/base_fee (block %s); params → REST GET …/params; eth_gasPrice → JSON-RPC. `+
-		`Cosmos EVM uses W not gas_used; finite vs sentinel target when max_gas is −1.</p>`,
-		c.ParentBlock, c.CurrentBlock)
+	extra.WriteString(feeSubheadingHTML("Data sources"))
+	extra.WriteString(feemarketDataSourcesHint(c))
+	extra.WriteString(noteCalloutHTML("Cosmos EVM uses W not gas_used; finite vs sentinel target when max_gas is −1."))
 
 	return feeLevel{
 		ID:      "fee-L5",
@@ -304,7 +301,59 @@ func maxGasL5(c feemarket.Context) string {
 	if c.UnlimitedBlockGas {
 		return "unlimited (−1 → MaxUint64)"
 	}
+	if c.BlockGasLimit == 0 {
+		return "—"
+	}
 	return feemarket.FormatUint(c.BlockGasLimit)
+}
+
+func feemarketDataSourcesHint(c feemarket.Context) string {
+	return provenanceCalloutHTML(fmt.Sprintf(
+		"`gas_used`, `W` → CometBFT GET /block_results (block %s); "+
+			"`W` → REST GET /cosmos/evm/feemarket/v1/block_gas (fallback); "+
+			"`base_fee` → REST GET /cosmos/evm/feemarket/v1/base_fee (block %s); "+
+			"`params` → REST GET /cosmos/evm/feemarket/v1/params; "+
+			"`eth_gasPrice` → JSON-RPC eth_gasPrice.",
+		c.ParentBlock, c.CurrentBlock,
+	))
+}
+
+func formatGasAmount(n uint64, resultsOK bool) string {
+	if !resultsOK && n == 0 {
+		return "—"
+	}
+	return feemarket.FormatUint(n) + " gas"
+}
+
+func formatEnableHeight(n int64) string {
+	if n == 0 {
+		return "0 (genesis)"
+	}
+	return feemarket.FormatUint(uint64(n))
+}
+
+func formatParamInt(n int64) string {
+	if n == 0 {
+		return "—"
+	}
+	return feemarket.FormatUint(uint64(n))
+}
+
+func formatParamUint(n uint64) string {
+	if n == 0 {
+		return "—"
+	}
+	return feemarket.FormatUint(n)
+}
+
+func minGasPriceL5(c feemarket.Context) string {
+	if c.MinGasPrice != "" {
+		return c.MinGasPrice
+	}
+	if c.MinGasPriceRaw != "" {
+		return fetch.FormatFeeAmount(c.MinGasPriceRaw, c.Denom)
+	}
+	return "—"
 }
 
 func londonStatus(c feemarket.Context) string {

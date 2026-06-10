@@ -1,6 +1,11 @@
 package fetch
 
-import "testing"
+import (
+	"strings"
+	"testing"
+
+	"cosmossdk.io/math"
+)
 
 func TestFormatAmount(t *testing.T) {
 	tests := []struct {
@@ -31,6 +36,24 @@ func TestFormatCoinLargeInteger(t *testing.T) {
 	want := "400.00M PMT"
 	if got != want {
 		t.Errorf("FormatCoin(large apmt) = %q, want %q", got, want)
+	}
+}
+
+func TestFormatFeeStepTruncates(t *testing.T) {
+	raw := math.LegacyNewDec(7).QuoInt(math.NewIntFromUint64(8))
+	got := FormatFeeStep(raw, "apmt")
+	if got == "0" || got == "0 apmt" {
+		t.Fatalf("expected truncate hint, got %q", got)
+	}
+	if !strings.Contains(got, "truncates to 0") {
+		t.Fatalf("FormatFeeStep = %q", got)
+	}
+}
+
+func TestFormatFeeDecInteger(t *testing.T) {
+	got := FormatFeeDec(math.LegacyNewDec(7), "apmt")
+	if got != "7 apmt" {
+		t.Fatalf("FormatFeeDec = %q", got)
 	}
 }
 

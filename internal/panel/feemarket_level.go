@@ -73,6 +73,18 @@ func feeLevelRowsHTML(rows [][]string) string {
 	return b.String()
 }
 
+func provenanceCalloutHTML(text string) string {
+	return `<p class="dash-callout dash-callout--hint hint">` + hintHTML(text) + `</p>`
+}
+
+func noteCalloutHTML(text string) string {
+	return `<p class="dash-callout dash-callout--note note">` + inlineHTML(text) + `</p>`
+}
+
+func feeSubheadingHTML(title string) string {
+	return `<h3 class="dash-subheading">` + html.EscapeString(title) + `</h3>`
+}
+
 func feeTableHTML(headers []string, rows [][]string) string {
 	var b strings.Builder
 	b.WriteString(`<table class="fee-table"><thead><tr>`)

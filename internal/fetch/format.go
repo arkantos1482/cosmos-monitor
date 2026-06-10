@@ -6,6 +6,8 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
+
+	sdkmath "cosmossdk.io/math"
 )
 
 // FormatAmount renders a human-scale number (already denom-adjusted) for dashboards.
@@ -137,4 +139,28 @@ func denomDivisor(denom string) (*big.Int, string) {
 
 func bigPow10(n int) *big.Int {
 	return new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(n)), nil)
+}
+
+// FormatFeeDec formats a Cosmos legacy decimal fee amount using FormatFeeAmount.
+// Whole-number values use the integer code path so apmt amounts match REST raw strings (e.g. "7" → "7 apmt").
+func FormatFeeDec(d sdkmath.LegacyDec, denom string) string {
+	if d.IsNil() {
+		return "—"
+	}
+	if d.TruncateDec().Equal(d) {
+		return FormatFeeAmount(d.TruncateInt().String(), denom)
+	}
+	s := strings.TrimRight(strings.TrimRight(d.String(), "0"), ".")
+	return FormatFeeAmount(s, denom)
+}
+
+// FormatFeeStep formats a fee delta and marks values that truncate to zero at integer apmt precision.
+func FormatFeeStep(d sdkmath.LegacyDec, denom string) string {
+	if d.IsNil() || d.IsZero() {
+		return FormatFeeAmount("0", denom)
+	}
+	if d.TruncateDec().IsZero() && d.IsPositive() {
+		return fmt.Sprintf("<%s (truncates to 0)", FormatFeeDec(d, denom))
+	}
+	return FormatFeeDec(d, denom)
 }

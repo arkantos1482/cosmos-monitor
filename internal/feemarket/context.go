@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"cosmossdk.io/math"
+	"github.com/arkantos1482/cosmos-monitor/internal/fetch"
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 	"github.com/arkantos1482/cosmos-monitor/internal/report"
 )
@@ -274,9 +275,9 @@ func (c *Context) fillBadge() {
 func floorFootnote(c Context, current, minGasPrice math.LegacyDec) string {
 	var parts []string
 	if c.DenomU > 0 && current.IsPositive() {
-		step := current.QuoInt(math.NewIntFromUint64(c.DenomU)).TruncateDec()
-		if step.IsZero() {
-			parts = append(parts, fmt.Sprintf("precision floor — decrease step base÷%d = 0 apmt at current base.", c.DenomU))
+		rawStep := current.QuoInt(math.NewIntFromUint64(c.DenomU))
+		if rawStep.TruncateDec().IsZero() {
+			parts = append(parts, fmt.Sprintf("precision floor — max decrease step base÷%d = %s at current base.", c.DenomU, fetch.FormatFeeStep(rawStep, c.Denom)))
 		}
 	}
 	if minGasPrice.IsPositive() && !current.GT(minGasPrice) {
