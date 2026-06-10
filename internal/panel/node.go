@@ -16,7 +16,7 @@ func writeNode(w Writer, d model.Report) {
 	}
 
 	w.Section("2. VALIDATOR")
-	w.Em("This machine's validator — staking and rewards, block signing, operator identity, live consensus, and node process.")
+	w.Em("This machine's validator — staking and rewards, signing and slashing, operator identity, live consensus, and CometBFT process.")
 
 	if lv.IsValidator {
 		w.Subsection("Staking")
@@ -41,7 +41,7 @@ func writeNode(w Writer, d model.Report) {
 			w.Row("commission earned", "–")
 		}
 
-		w.Subsection("Block Signing")
+		w.Subsection("Signing & slashing")
 		w.Hint("`signing health`, `missed / window` → REST GET /cosmos/slashing/v1beta1/signing_infos + params; `proposer`, `proposer priority` → CometBFT GET /validators.")
 		w.Row("signing health", lv.SigningStatus)
 		if d.SlashWindow != "" && d.SlashWindow != "0" {
@@ -87,7 +87,7 @@ func writeNode(w Writer, d model.Report) {
 	}
 	w.Row("mempool", fmt.Sprintf("%d pending", d.MempoolTxs))
 
-	w.Subsection("Node")
+	w.Subsection("Process")
 	w.Hint("`node ID`, `version`, `chain ID`, `p2p listen`, `rpc listen` → CometBFT GET /status (node_info only; sync_info and validator_info in Consensus).")
 	if d.NodeID != "" {
 		w.Row("node ID", d.NodeID+"  _(CometBFT P2P peer ID)_")
