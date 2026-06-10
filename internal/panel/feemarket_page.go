@@ -247,16 +247,6 @@ func buildFeeL5(c feemarket.Context, d model.Report) feeLevel {
 		{"min_unit_gas", "1 apmt"},
 	}
 
-	nodeRows := [][]string{
-		{"minimum-gas-prices", orDash(c.NodeMinGasPrices)},
-		{"evm.min-tip", orDash(c.NodeEVMMinTip)},
-		{"evm.mempool.price-limit", orDash(c.NodeMempoolPriceLimit)},
-		{"evm.max-tx-gas-wanted", orDash(c.NodeMaxTxGasWanted)},
-	}
-	if c.NodeAppTomlPath != "" {
-		nodeRows = append(nodeRows, []string{"config path", c.NodeAppTomlPath})
-	}
-
 	var extra strings.Builder
 	if formula != "" {
 		extra.WriteString(`<pre class="fee-formula"><code>` + html.EscapeString(formula) + `</code></pre>`)
@@ -274,8 +264,6 @@ func buildFeeL5(c feemarket.Context, d model.Report) feeLevel {
 		fmt.Fprintf(&extra, `<p class="fee-level__note">max_bytes %s · block time %s · validator execution cap applies</p>`,
 			feemarket.FormatUint(uint64(c.MaxBlockBytes)), orDash(c.BlockInterval))
 	}
-	extra.WriteString(feeSubheadingHTML("Node acceptance (this node · app.toml)"))
-	extra.WriteString(feeTableHTML([]string{"Setting", "Value"}, nodeRows))
 	extra.WriteString(feeSubheadingHTML("Data sources"))
 	extra.WriteString(feemarketDataSourcesHint(c))
 	extra.WriteString(noteCalloutHTML("Cosmos EVM uses W not gas_used; finite vs sentinel target when max_gas is −1."))
@@ -283,7 +271,7 @@ func buildFeeL5(c feemarket.Context, d model.Report) feeLevel {
 	return feeLevel{
 		ID:      "fee-L5",
 		Title:   "L5 · Formula, parameters, data sources",
-		Concept: "Full computation, governance knobs, node acceptance floors, and provenance.",
+		Concept: "Full computation, governance knobs, and provenance (node app.toml → § Infrastructure).",
 		Extra:   extra.String(),
 	}
 }
@@ -311,7 +299,7 @@ func feemarketDataSourcesHint(c feemarket.Context) string {
 			"`no_base_fee`, `elasticity`, `min_gas_*`, … → REST GET /cosmos/evm/feemarket/v1/params; "+
 			"`evm_denom` → REST GET /cosmos/evm/vm/v1/params; "+
 			"`london_block` → REST GET /cosmos/evm/vm/v1/config; "+
-			"`minimum-gas-prices`, `evm.min-tip`, `price-limit`, `max-tx-gas-wanted` → %s.",
+			"node fee acceptance (app.toml) → %s (§ Infrastructure).",
 		c.ParentBlock, c.CurrentBlock, appToml,
 	))
 }

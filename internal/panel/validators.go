@@ -8,8 +8,8 @@ import (
 )
 
 func writeValidators(w Writer, d model.Report) {
-	w.Section("3. VALIDATOR SET")
-	w.Em("All validators on the chain — summary counts, stake and slashing tables, then P2P identity per validator.")
+	w.Section("1. VALIDATOR SET")
+	w.Em("Chain-wide validator set — summary counts, stake and slashing tables, then P2P identity per validator.")
 
 	w.Subsection("Summary")
 	w.Hint("`bonded`, `jailed`, `tombstoned`, `below min signed` → derived (counts from §3 tables); `next proposer` → CometBFT GET /validators (highest proposer_priority).")

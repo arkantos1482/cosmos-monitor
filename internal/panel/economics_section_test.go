@@ -38,8 +38,8 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		},
 	}
 	out := Build(d)
-	idx := strings.Index(out, "4. ECONOMICS")
-	end := strings.Index(out, `class="dash-heading">Fee market</h2>`)
+	idx := strings.Index(out, "2. ECONOMICS")
+	end := strings.Index(out, `class="dash-heading">3. FEE MARKET</h2>`)
 	if idx < 0 || end < 0 {
 		t.Fatal("expected economics and governance sections")
 	}
@@ -51,7 +51,6 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		"At a glance",
 		"Block reward ledger",
 		"fee_collector",
-		"this validator → commission",
 		`class="dash-subheading">Chain parameters (reference)</h3>`,
 	} {
 		if !strings.Contains(chunk, want) {
@@ -61,9 +60,12 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 	for _, gone := range []string{
 		"Money flow (live balances)",
 		"This validator",
+		"this validator → commission",
+		"your commission",
 		"Module account",
 		"Distribution split",
 		"Network total",
+		"per-block commission",
 	} {
 		if strings.Contains(chunk, gone) {
 			t.Fatalf("economics chunk should not contain old table %q", gone)
@@ -114,6 +116,35 @@ func TestFeeCollectorBalanceAndChecks(t *testing.T) {
 	}
 	if economicsUnclaimedCheck(d) != "sums match" {
 		t.Fatalf("expected sums match, got %q", economicsUnclaimedCheck(d))
+	}
+}
+
+func TestLocalValidatorRewardsOnNodeSection(t *testing.T) {
+	d := model.Report{
+		PMTEnabled:      true,
+		PMTRate:         "0.1000 PMT/block",
+		CommunityTaxPct: 2,
+		BondedCount:     4,
+		Validators:      []model.Validator{{CommissionFloat: 10}},
+		Local: model.LocalValidator{
+			IsValidator:      true,
+			Moniker:          "node1",
+			Commission:       10,
+			VPPercent:        25,
+			Outstanding:      "0.001 PMT",
+			CommissionEarned: "0.0001 PMT",
+		},
+	}
+	out := BuildView(ViewNode, d)
+	for _, want := range []string{
+		"per-block commission",
+		"per-block delegators",
+		"outstanding rewards",
+		"commission earned",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("validator section missing %q", want)
+		}
 	}
 }
 

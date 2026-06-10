@@ -17,6 +17,8 @@ func TestBuildHomeSummaryCards(t *testing.T) {
 	out := BuildView(ViewHome, d)
 	for _, want := range []string{
 		`class="dash-status"`,
+		`dash-home__group--chain`,
+		`dash-home__group--node`,
 		`class="dash-cards dash-cards--bento"`,
 		`dash-card--span2`,
 		`dash-card--infra`,

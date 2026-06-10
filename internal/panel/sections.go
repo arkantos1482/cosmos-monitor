@@ -16,23 +16,44 @@ const (
 	ViewEVM        View = "evm"
 )
 
+// NavScope groups sidebar and home cards into chain-wide vs this-node views.
+type NavScope string
+
+const (
+	NavScopeChain NavScope = "chain"
+	NavScopeNode  NavScope = "node"
+)
+
+// NavScopeLabel is the human heading for a nav/home group.
+func NavScopeLabel(s NavScope) string {
+	switch s {
+	case NavScopeChain:
+		return "Chain"
+	case NavScopeNode:
+		return "This node"
+	default:
+		return ""
+	}
+}
+
 // NavItem is a sidebar link target.
 type NavItem struct {
 	View  View
 	Label string
 	Path  string
+	Scope NavScope // empty for Overview only
 }
 
-// Nav lists home plus the seven monitoring sections (display order).
+// Nav lists home plus monitoring sections (chain group, then this node).
 var Nav = []NavItem{
-	{ViewHome, "Overview", "/"},
-	{ViewInfra, "Infrastructure", "/s/infra"},
-	{ViewNode, "Validator", "/s/node"},
-	{ViewValidators, "Validator set", "/s/validators"},
-	{ViewEconomics, "Economics", "/s/economics"},
-	{ViewFeemarket, "Fee market", "/s/feemarket"},
-	{ViewGovernance, "Governance", "/s/governance"},
-	{ViewEVM, "EVM JSON-RPC", "/s/evm"},
+	{ViewHome, "Overview", "/", ""},
+	{ViewValidators, "Validator set", "/s/validators", NavScopeChain},
+	{ViewEconomics, "Economics", "/s/economics", NavScopeChain},
+	{ViewFeemarket, "Fee market", "/s/feemarket", NavScopeChain},
+	{ViewGovernance, "Governance", "/s/governance", NavScopeChain},
+	{ViewInfra, "Infrastructure", "/s/infra", NavScopeNode},
+	{ViewNode, "Validator", "/s/node", NavScopeNode},
+	{ViewEVM, "EVM JSON-RPC", "/s/evm", NavScopeNode},
 }
 
 // ParseView maps a URL segment or query value to a View. Unknown values become ViewHome.

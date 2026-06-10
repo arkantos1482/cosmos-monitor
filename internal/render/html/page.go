@@ -60,18 +60,36 @@ func navSlug(v panel.View) string {
 	}
 }
 
+func writeNavLink(b *strings.Builder, item panel.NavItem, active panel.View) {
+	cls := "dash-nav__link dash-nav__link--" + navSlug(item.View)
+	if item.View == active {
+		cls += " dash-nav__link--active"
+	}
+	icon := navIcons[item.View]
+	fmt.Fprintf(b, `<a class="%s" href="%s">%s%s</a>`,
+		cls, html.EscapeString(item.Path), icon, html.EscapeString(item.Label))
+}
+
 func navHTML(active panel.View) string {
 	var b strings.Builder
 	fmt.Fprint(&b, `<nav id="dash-nav" class="dash-nav" aria-label="Sections">`)
-	fmt.Fprint(&b, `<p class="dash-nav__title">Sections</p>`)
 	for _, item := range panel.Nav {
-		cls := "dash-nav__link dash-nav__link--" + navSlug(item.View)
-		if item.View == active {
-			cls += " dash-nav__link--active"
+		if item.View == panel.ViewHome {
+			fmt.Fprint(&b, `<p class="dash-nav__title">Overview</p>`)
+			writeNavLink(&b, item, active)
+			break
 		}
-		icon := navIcons[item.View]
-		fmt.Fprintf(&b, `<a class="%s" href="%s">%s%s</a>`,
-			cls, html.EscapeString(item.Path), icon, html.EscapeString(item.Label))
+	}
+	var lastScope panel.NavScope
+	for _, item := range panel.Nav {
+		if item.Scope == "" {
+			continue
+		}
+		if item.Scope != lastScope {
+			fmt.Fprintf(&b, `<p class="dash-nav__group">%s</p>`, html.EscapeString(panel.NavScopeLabel(item.Scope)))
+			lastScope = item.Scope
+		}
+		writeNavLink(&b, item, active)
 	}
 	fmt.Fprint(&b, `</nav>`)
 	return b.String()

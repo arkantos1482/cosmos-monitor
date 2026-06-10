@@ -12,7 +12,6 @@ import (
 func writeHome(w Writer, d model.Report) {
 	w.WriteHTML(`<div class="dash-home">`)
 	w.WriteHTML(`<p class="dash-home__lead">Live snapshot — pick a section for full detail. Refreshes every 5s.</p>`)
-	w.WriteHTML(`<div class="dash-cards dash-cards--bento">`)
 
 	syncStr := "synced"
 	if !d.Synced {
@@ -49,29 +48,7 @@ func writeHome(w Writer, d model.Report) {
 		}
 	}
 
-	cards := []struct {
-		href    string
-		slug    string
-		title   string
-		span2   bool
-		gauges  bool
-		lines   []string
-		badges  []struct{ text, kind string }
-	}{
-		{
-			href: "/s/infra", slug: "infra", title: "Infrastructure", span2: true, gauges: true,
-			lines: []string{
-				fmt.Sprintf("load %.2f / %.2f / %.2f", d.Load1, d.Load5, d.Load15),
-				fmt.Sprintf("ram %s / %s (%d%%)", d.MemUsed, d.MemTotal, d.MemPct),
-				fmt.Sprintf("disk %d%% · container %s", d.DiskPct, nodeStatus),
-			},
-			badges: []struct{ text, kind string }{{nodeStatus, badgeKind(nodeStatus)}},
-		},
-		{
-			href: "/s/node", slug: "node", title: "Validator", span2: true, gauges: true,
-			lines: validatorCardLines(d, localRole),
-			badges: validatorCardBadges(d, syncStr),
-		},
+	chainCards := []homeCard{
 		{
 			href: "/s/validators", slug: "validators", title: "Validator set",
 			lines: []string{
@@ -87,7 +64,7 @@ func writeHome(w Writer, d model.Report) {
 			},
 			badges: []struct{ text, kind string }{{pmtStatus, badgeKind(pmtStatus)}},
 		},
-		feemarketCard(d),
+		homeCardFromFeemarket(d),
 		{
 			href: "/s/governance", slug: "governance", title: "Governance",
 			lines: []string{
@@ -95,6 +72,22 @@ func writeHome(w Writer, d model.Report) {
 				fmt.Sprintf("upgrade %s", upgrade),
 				fmt.Sprintf("IBC clients %d", d.IBCClients),
 			},
+		},
+	}
+	nodeCards := []homeCard{
+		{
+			href: "/s/infra", slug: "infra", title: "Infrastructure", span2: true, gauges: true,
+			lines: []string{
+				fmt.Sprintf("load %.2f / %.2f / %.2f", d.Load1, d.Load5, d.Load15),
+				fmt.Sprintf("ram %s / %s (%d%%)", d.MemUsed, d.MemTotal, d.MemPct),
+				fmt.Sprintf("disk %d%% · container %s", d.DiskPct, nodeStatus),
+			},
+			badges: []struct{ text, kind string }{{nodeStatus, badgeKind(nodeStatus)}},
+		},
+		{
+			href: "/s/node", slug: "node", title: "Validator", span2: true, gauges: true,
+			lines: validatorCardLines(d, localRole),
+			badges: validatorCardBadges(d, syncStr),
 		},
 		{
 			href: "/s/evm", slug: "evm", title: "EVM JSON-RPC",
@@ -107,6 +100,37 @@ func writeHome(w Writer, d model.Report) {
 		},
 	}
 
+	writeHomeCardGroup(w, NavScopeChain, d, chainCards)
+	writeHomeCardGroup(w, NavScopeNode, d, nodeCards)
+	w.WriteHTML(`</div>`)
+}
+
+type homeCard struct {
+	href    string
+	slug    string
+	title   string
+	span2   bool
+	gauges  bool
+	lines   []string
+	badges  []struct{ text, kind string }
+}
+
+func homeCardFromFeemarket(d model.Report) homeCard {
+	c := feemarketCard(d)
+	return homeCard{
+		href: c.href, slug: c.slug, title: c.title,
+		lines: c.lines, badges: c.badges,
+	}
+}
+
+func writeHomeCardGroup(w Writer, scope NavScope, d model.Report, cards []homeCard) {
+	label := NavScopeLabel(scope)
+	if label == "" {
+		return
+	}
+	w.WriteHTML(fmt.Sprintf(`<div class="dash-home__group dash-home__group--%s">`, html.EscapeString(string(scope))))
+	w.WriteHTML(fmt.Sprintf(`<h2 class="dash-home__group-title">%s</h2>`, html.EscapeString(label)))
+	w.WriteHTML(`<div class="dash-cards dash-cards--bento">`)
 	for _, c := range cards {
 		writeSummaryCard(w, c.href, c.slug, c.title, c.span2, c.gauges, d, c.lines, c.badges)
 	}

@@ -115,21 +115,12 @@ func economicsUnclaimedDelegator(d model.Report) string {
 	if d.UnclaimedDelegator != "" {
 		return d.UnclaimedDelegator
 	}
-	if d.Local.IsValidator && d.Local.Outstanding != "" {
-		return d.Local.Outstanding
-	}
 	amt, _ := splitOutstandingSuffix(d.TotalOutstanding)
 	return amt
 }
 
 func economicsUnclaimedCommission(d model.Report) string {
-	if d.UnclaimedCommission != "" {
-		return d.UnclaimedCommission
-	}
-	if d.Local.IsValidator && d.Local.CommissionEarned != "" {
-		return d.Local.CommissionEarned
-	}
-	return ""
+	return d.UnclaimedCommission
 }
 
 func economicsUnclaimedTotal(d model.Report) string {
@@ -155,9 +146,6 @@ func economicsUnclaimedTotal(d model.Report) string {
 }
 
 func economicsCommissionPct(d model.Report) (pct float64, ok bool) {
-	if d.Local.IsValidator && d.Local.Commission > 0 {
-		return d.Local.Commission, true
-	}
 	var sum float64
 	var n int
 	for _, v := range d.Validators {
@@ -223,13 +211,6 @@ func economicsFormatPerDay(d model.Report, perBlock float64, unit string) string
 		}
 	}
 	return "—"
-}
-
-func economicsLocalVPShare(d model.Report) string {
-	if !d.Local.IsValidator || d.Local.VPPercent <= 0 {
-		return ""
-	}
-	return fmt.Sprintf("%.2f%% VP", d.Local.VPPercent)
 }
 
 func economicsFeeCollectorCheck(d model.Report) string {
@@ -316,14 +297,6 @@ func economicsLedgerRows(d model.Report) [][]string {
 			"—",
 			"gas used × base fee",
 		})
-	} else if d.MempoolTxs > 0 {
-		rows = append(rows, []string{
-			"3",
-			"tx fees",
-			"—",
-			"—",
-			fmt.Sprintf("mempool %d pending", d.MempoolTxs),
-		})
 	}
 
 	inBlock := RewardInPerBlockTotal(d)
@@ -392,58 +365,22 @@ func economicsLedgerRows(d model.Report) [][]string {
 		})
 	}
 
-	rows = appendEconomicsLocalLedgerRows(rows, d)
 	return rows
 }
 
-func appendEconomicsLocalLedgerRows(rows [][]string, d model.Report) [][]string {
-	if !d.Local.IsValidator {
-		return rows
+// localValidatorPerBlockRewards estimates this validator's per-block commission and delegator share.
+func localValidatorPerBlockRewards(d model.Report) (commission, delegators, unit string, ok bool) {
+	if !d.Local.IsValidator || d.Local.VPPercent <= 0 {
+		return "", "", "", false
 	}
 	lv := d.Local
-	_, valPool, _, _, unit, ok := economicsPerBlockSplit(d)
-	if ok && lv.VPPercent > 0 {
-		vp := lv.VPPercent / 100
-		localShare := valPool * vp
-		localOp := localShare * lv.Commission / 100
-		localDel := localShare - localOp
-		rows = append(rows, []string{
-			"8a",
-			"this validator → commission",
-			economicsFormatPerBlock(localOp, unit),
-			lv.CommissionEarned,
-			fmt.Sprintf("%.2f%% VP · %.2f%% commission", lv.VPPercent, lv.Commission),
-		})
-		rows = append(rows, []string{
-			"8b",
-			"this validator → delegators",
-			economicsFormatPerBlock(localDel, unit),
-			lv.Outstanding,
-			economicsLocalVPShare(d),
-		})
-		return rows
+	_, valPool, _, _, u, splitOK := economicsPerBlockSplit(d)
+	if !splitOK {
+		return "", "", "", false
 	}
-	bal := lv.CommissionEarned
-	if lv.Outstanding != "" {
-		if bal != "" {
-			bal += " / " + lv.Outstanding
-		} else {
-			bal = lv.Outstanding
-		}
-	}
-	if bal == "" {
-		bal = "—"
-	}
-	label := "this validator"
-	if lv.Moniker != "" {
-		label += " (" + lv.Moniker + ")"
-	}
-	rows = append(rows, []string{
-		"8",
-		label,
-		"—",
-		bal,
-		economicsLocalVPShare(d),
-	})
-	return rows
+	vp := lv.VPPercent / 100
+	localShare := valPool * vp
+	localOp := localShare * lv.Commission / 100
+	localDel := localShare - localOp
+	return economicsFormatPerBlock(localOp, u), economicsFormatPerBlock(localDel, u), u, true
 }

@@ -9,8 +9,8 @@ import (
 
 func feemarketChunk(t *testing.T, out string) string {
 	t.Helper()
-	idx := strings.Index(out, `class="dash-heading">Fee market</h2>`)
-	end := strings.Index(out, "6. GOVERNANCE")
+	idx := strings.Index(out, `class="dash-heading">3. FEE MARKET</h2>`)
+	end := strings.Index(out, "4. GOVERNANCE")
 	if idx < 0 || end < 0 {
 		t.Fatal("expected fee market and governance sections")
 	}
@@ -150,21 +150,15 @@ func TestWriteFeemarketEnableHeightBanner(t *testing.T) {
 	}
 }
 
-func TestWriteFeemarketL5NodeAppToml(t *testing.T) {
+func TestWriteFeemarketL5ChainParams(t *testing.T) {
 	d := model.Report{
 		BlockHeight: "1", BaseFeeRaw: "7",
 		BlockGasLimit: ^uint64(0), Elasticity: 2,
 		BaseFeeChangeDenominator: 8,
 		MaxBlockBytes: 22_020_096,
-		NodeMinGasPrices: "0apmt", NodeEVMMinTip: "0",
-		NodeMempoolPriceLimit: "1", NodeMaxTxGasWanted: "0",
 	}
 	chunk := feemarketChunk(t, Build(d))
 	for _, want := range []string{
-		"minimum-gas-prices",
-		"evm.min-tip",
-		"price-limit",
-		"max-tx-gas-wanted",
 		"22,020,096",
 		"min_unit_gas",
 		`class="dash-subheading">Data sources</h3>`,
@@ -172,14 +166,43 @@ func TestWriteFeemarketL5NodeAppToml(t *testing.T) {
 		`class="hint-provenance"`,
 		`CometBFT GET /block_results`,
 		"consensus_params",
-		"local app.toml",
 		"vm/v1/config",
+		"§ Infrastructure",
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("L5 missing %q", want)
 		}
 	}
+	for _, gone := range []string{
+		"minimum-gas-prices",
+		"Node acceptance",
+	} {
+		if strings.Contains(chunk, gone) {
+			t.Fatalf("fee market L5 should not contain node setting %q", gone)
+		}
+	}
 	if strings.Contains(chunk, `fee-level__note">gas_used`) {
 		t.Fatal("L5 data sources should use provenance callout, not fee-level__note paragraph")
+	}
+}
+
+func TestWriteInfraFeeAcceptance(t *testing.T) {
+	d := model.Report{
+		NodeMinGasPrices: "0apmt", NodeEVMMinTip: "0",
+		NodeMempoolPriceLimit: "1", NodeMaxTxGasWanted: "0",
+		NodeAppTomlPath: "/home/ubuntu/.evmd/config/app.toml",
+	}
+	out := BuildView(ViewInfra, d)
+	for _, want := range []string{
+		"Fee acceptance (app.toml)",
+		"minimum-gas-prices",
+		"evm.min-tip",
+		"evm.mempool.price-limit",
+		"evm.max-tx-gas-wanted",
+		"/home/ubuntu/.evmd/config/app.toml",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("infra section missing %q", want)
+		}
 	}
 }

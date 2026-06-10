@@ -15,7 +15,7 @@ func writeNode(w Writer, d model.Report) {
 	}
 
 	w.Section("2. VALIDATOR")
-	w.Em("This node — identities, application staking, and CometBFT live state.")
+	w.Em("This validator on this node — identities, application staking, and CometBFT live state.")
 
 	writeIdentityBoard(w, d, lv)
 

@@ -11,7 +11,7 @@ func writeEconomicsOverview(w Writer, d model.Report) {
 
 func writeEconomicsAtAGlance(w Writer, d model.Report) {
 	w.Subsection("At a glance")
-	w.Hint("`reward in / block` → derived (PMT + inflation + last-block fees, ledger); `fee_collector` → module x/bank (clears each BeginBlock); `community pool` → REST GET /cosmos/distribution/v1beta1/community_pool; `unclaimed delegator`, `unclaimed commission` → module x/distribution outstanding totals; `PMT pool` → module x/pmtrewards pool account; `your commission` → REST GET …/commission (local valoper).")
+	w.Hint("`reward in / block` → derived (PMT + inflation + last-block fees, ledger); `fee_collector` → module x/bank (clears each BeginBlock); `community pool` → REST GET /cosmos/distribution/v1beta1/community_pool; `unclaimed delegator`, `unclaimed commission` → module x/distribution outstanding totals; `PMT pool` → module x/pmtrewards pool account.")
 	w.WriteHTML(`<div class="economics-kpi-band">`)
 
 	if total := RewardInPerBlockTotal(d); total != "—" {
@@ -42,9 +42,6 @@ func writeEconomicsAtAGlance(w Writer, d model.Report) {
 			val += "  (" + d.PMTRunway + ")"
 		}
 		w.Row("PMT pool", val)
-	}
-	if d.Local.IsValidator && d.Local.CommissionEarned != "" {
-		w.Row("your commission", d.Local.CommissionEarned)
 	}
 	w.WriteHTML(`</div>`)
 }

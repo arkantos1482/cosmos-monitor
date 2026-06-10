@@ -151,14 +151,32 @@ body::after {
   box-shadow: var(--shadow);
 }
 
-.dash-nav__title {
+.dash-nav__title,
+.dash-nav__group {
   font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
   color: var(--muted);
-  margin: 0 0 0.5rem;
+  margin: 0;
   padding: 0 0.45rem;
+}
+
+.dash-nav__title {
+  margin-bottom: 0.5rem;
+}
+
+.dash-nav__group {
+  margin-top: 0.85rem;
+  margin-bottom: 0.35rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--border);
+}
+
+.dash-nav__group:first-of-type {
+  margin-top: 0.25rem;
+  padding-top: 0;
+  border-top: none;
 }
 
 .dash-nav__link {
@@ -331,6 +349,27 @@ body::after {
   color: var(--muted);
   margin: 0 0 1rem;
   max-width: 52ch;
+}
+
+.dash-home__group {
+  margin-bottom: 1.35rem;
+}
+
+.dash-home__group-title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 0.65rem;
+}
+
+.dash-home__group--chain .dash-home__group-title {
+  color: color-mix(in srgb, var(--accent-validators) 55%, var(--muted));
+}
+
+.dash-home__group--node .dash-home__group-title {
+  color: color-mix(in srgb, var(--accent-node) 55%, var(--muted));
 }
 
 .dash-cards--bento {

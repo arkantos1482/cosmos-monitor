@@ -25,11 +25,11 @@ func BuildView(v View, d model.Report) string {
 }
 
 func writeAll(w Writer, d model.Report) {
-	writeInfra(w, d)
-	writeNode(w, d)
 	writeValidators(w, d)
 	writeEconomics(w, d)
 	writeFeemarket(w, d)
 	writeGovernance(w, d)
+	writeInfra(w, d)
+	writeNode(w, d)
 	writeEVMSection(w, d)
 }
