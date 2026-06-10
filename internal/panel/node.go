@@ -15,16 +15,17 @@ func writeNode(w Writer, d model.Report) {
 	}
 
 	w.Section("2. VALIDATOR")
-	w.Em("This node — application staking, rewards, and slashing; CometBFT consensus state and P2P identity.")
+	w.Em("This node — identities, application staking, and CometBFT live state.")
+
+	writeIdentityBoard(w, d, lv)
 
 	if lv.IsValidator {
 		writeNodeApplication(w, d, lv)
 	} else {
 		w.Layer("Application (Cosmos SDK / ABCI state)")
-		w.Subsection("Identity")
-		w.Hint("`role`, `moniker` → CometBFT GET /status; role derived when consensus address is absent from x/staking.")
+		w.Subsection("Role")
+		w.Hint("`role` → CometBFT GET /status; derived when consensus address is absent from x/staking.")
 		w.Row("role", lv.SigningStatus)
-		w.Row("moniker", d.Moniker)
 	}
 
 	writeNodeCometBFT(w, d, lv, syncStr)
@@ -32,18 +33,6 @@ func writeNode(w Writer, d model.Report) {
 
 func writeNodeApplication(w Writer, d model.Report, lv model.LocalValidator) {
 	w.Layer("Application (Cosmos SDK / ABCI state)")
-
-	w.Subsection("Identity")
-	w.Hint("`operator`, `account` → x/staking + GET /cosmos/evm/vm/v1/validator_account/{cons_address}; `moniker` → x/staking description.")
-	if lv.OperatorAddr != "" {
-		w.Row("operator", lv.OperatorAddr+"  _(valoper — staking queries, distribution txs)_")
-	}
-	if lv.AccountAddr != "" {
-		w.Row("account", formatBech32EVM(lv.AccountAddr, lv.EVMAddr)+"  _(self-delegation / operator wallet)_")
-	} else {
-		w.Row("account", "–  _(validator_account API unavailable)_")
-	}
-	w.Row("moniker", lv.Moniker)
 
 	w.Subsection("Staking")
 	w.Hint("`status`, `jailed`, `voting power`, `commission` → REST GET /cosmos/staking/v1beta1/validators.")
@@ -58,7 +47,7 @@ func writeNodeApplication(w Writer, d model.Report, lv model.LocalValidator) {
 	w.Row("commission", fmt.Sprintf("%.1f%%  _(validator cut of delegator rewards)_", lv.Commission))
 
 	w.Subsection("Rewards")
-	w.Hint("`outstanding rewards`, `commission earned` → REST GET /cosmos/distribution/v1beta1/validators/{valoper}/outstanding_rewards, …/commission.")
+	w.Hint("`outstanding rewards`, `commission earned` → REST GET /cosmos/distribution/v1beta1/validators/{valoper}/outstanding_rewards, …/commission; `per-block` → derived (network reward flow × VP% × commission).")
 	if lv.Outstanding != "" {
 		w.Row("outstanding rewards", lv.Outstanding+"  _(total unclaimed — x/distribution)_")
 	} else {
@@ -68,6 +57,10 @@ func writeNodeApplication(w Writer, d model.Report, lv model.LocalValidator) {
 		w.Row("commission earned", lv.CommissionEarned+"  _(unclaimed validator commission)_")
 	} else {
 		w.Row("commission earned", "–")
+	}
+	if op, del, _, ok := localValidatorPerBlockRewards(d); ok {
+		w.Row("per-block commission", op+fmt.Sprintf("  (%.2f%% VP · %.2f%% commission)", lv.VPPercent, lv.Commission))
+		w.Row("per-block delegators", del)
 	}
 
 	w.Subsection("Slashing")
@@ -94,13 +87,8 @@ func writeNodeCometBFT(w Writer, d model.Report, lv model.LocalValidator, syncSt
 	w.Row("mempool", fmt.Sprintf("%d pending", d.MempoolTxs))
 
 	if lv.IsValidator || d.LocalConsensusAddr != "" {
-		w.Subsection("Validator key")
-		w.Hint("`consensus` → x/slashing signing_infos or derived from staking pubkey; `voting power` → CometBFT GET /status validator_info; `proposer priority` → GET /validators.")
-		if lv.ConsensusBech32 != "" {
-			w.Row("consensus", lv.ConsensusBech32+"  _(valcons — signs blocks)_")
-		} else if lv.ConsensusAddr != "" {
-			w.Row("consensus", "–  _(valcons unavailable)_")
-		}
+		w.Subsection("Proposer")
+		w.Hint("`voting power` → CometBFT GET /status validator_info; `proposer priority` → GET /validators.")
 		if d.LocalVotingPower != "" {
 			w.Row("voting power", d.LocalVotingPower+"  _(consensus units — `/status` validator_info)_")
 		}
@@ -113,10 +101,7 @@ func writeNodeCometBFT(w Writer, d model.Report, lv model.LocalValidator, syncSt
 	}
 
 	w.Subsection("P2P & RPC")
-	w.Hint("`node ID`, `p2p listen`, `p2p dial`, `rpc listen` → CometBFT GET /status (node_info); dial is node_id@listen_addr.")
-	if d.NodeID != "" {
-		w.Row("node ID", d.NodeID+"  _(CometBFT peer ID)_")
-	}
+	w.Hint("`p2p listen`, `p2p dial`, `rpc listen` → CometBFT GET /status (node_info); dial is node_id@listen_addr.")
 	p2pDial := lv.P2PDial
 	if p2pDial == "" {
 		p2pDial = formatP2PDial(d.NodeID, d.ListenAddr)
@@ -136,16 +121,6 @@ func writeNodeCometBFT(w Writer, d model.Report, lv model.LocalValidator, syncSt
 	if d.Network != "" {
 		w.Row("chain ID", d.Network)
 	}
-}
-
-func formatBech32EVM(bech, evm string) string {
-	if bech == "" {
-		return "–"
-	}
-	if evm != "" {
-		return bech + "  _(EVM: " + evm + ")_"
-	}
-	return bech
 }
 
 func formatP2PDial(nodeID, listen string) string {

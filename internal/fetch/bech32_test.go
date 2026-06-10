@@ -1,6 +1,9 @@
 package fetch
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestHexToBech32RoundTrip(t *testing.T) {
 	hexAddr := "31aec3d55f45aa21f7efbcc4257ea9f56c9ad300"
@@ -11,6 +14,14 @@ func TestHexToBech32RoundTrip(t *testing.T) {
 	got := bech32ToHex(bech)
 	if got != hexAddr {
 		t.Fatalf("round trip: got %q want %q", got, hexAddr)
+	}
+}
+
+func TestConsHexToBech32(t *testing.T) {
+	hexAddr := "31aec3d55f45aa21f7efbcc4257ea9f56c9ad300"
+	bech := ConsHexToBech32(hexAddr)
+	if bech == "" || !strings.HasPrefix(bech, Bech32PrefixCons+"1") {
+		t.Fatalf("ConsHexToBech32: got %q", bech)
 	}
 }
 

@@ -48,10 +48,15 @@ func TestBuildViewSingleSection(t *testing.T) {
 		t.Fatal("node view should only render validator section")
 	}
 	for _, sub := range []string{
+		`class="id-board"`,
+		"id-board__row--account",
+		"id-board__row--operator",
+		"id-board__row--consensus",
+		"id-board__row--p2p",
 		"Application (Cosmos SDK / ABCI state)",
 		"CometBFT (consensus + networking)",
-		"Identity", "Staking", "Rewards", "Slashing",
-		"Live state", "Validator key", "P2P &amp; RPC",
+		"Staking", "Rewards", "Slashing",
+		"Live state", "Proposer", "P2P &amp; RPC",
 	} {
 		if !strings.Contains(out, sub) {
 			t.Fatalf("node view missing subsection %q", sub)

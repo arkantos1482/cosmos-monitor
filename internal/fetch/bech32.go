@@ -44,6 +44,11 @@ func bech32ToBytes(bech string) ([]byte, error) {
 	return bech32.ConvertBits(data, 5, 8, false)
 }
 
+// ConsHexToBech32 encodes a CometBFT consensus address hex string as cosmosvalcons bech32.
+func ConsHexToBech32(hexStr string) string {
+	return hexToBech32(Bech32PrefixCons, hexStr)
+}
+
 // AccBech32ToEVM derives the EVM hex address from a Cosmos account bech32 address.
 func AccBech32ToEVM(bech string) string {
 	b, err := bech32ToBytes(bech)
