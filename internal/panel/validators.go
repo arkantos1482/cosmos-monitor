@@ -2,24 +2,70 @@ package panel
 
 import (
 	"fmt"
+	"html"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 	"github.com/arkantos1482/cosmos-monitor/internal/report"
 )
 
+func writeValidatorsSummary(w Writer, d model.Report, mode SummaryMode) {
+	summaryWrapStart(w, mode, "validators")
+	w.WriteHTML(`<div class="val-summary">`)
+	w.WriteHTML(`<div class="val-summary__kpis">`)
+	for _, kpi := range []struct{ label, val string }{
+		{"bonded", fmt.Sprintf("%d", d.BondedCount)},
+		{"jailed", fmt.Sprintf("%d", d.JailedCount)},
+		{"tombstoned", fmt.Sprintf("%d", d.TombstonedCount)},
+		{"below min signed", fmt.Sprintf("%d", d.BelowThreshold)},
+	} {
+		w.WriteHTML(fmt.Sprintf(
+			`<div class="val-summary__kpi"><span class="val-summary__kpi-label">%s</span>`+
+				`<span class="val-summary__kpi-val">%s</span></div>`,
+			html.EscapeString(kpi.label), html.EscapeString(kpi.val)))
+	}
+	w.WriteHTML(`</div>`)
+	if d.NextProposer != "" {
+		w.WriteHTML(fmt.Sprintf(
+			`<p class="val-summary__proposer">Next proposer: <strong>%s</strong></p>`,
+			html.EscapeString(d.NextProposer)))
+	}
+	if d.JailedCount > 0 || d.BelowThreshold > 0 {
+		var alerts []string
+		if d.JailedCount > 0 {
+			alerts = append(alerts, fmt.Sprintf("%d jailed", d.JailedCount))
+		}
+		if d.BelowThreshold > 0 {
+			alerts = append(alerts, fmt.Sprintf("%d below min signed", d.BelowThreshold))
+		}
+		w.WriteHTML(fmt.Sprintf(`<p class="val-summary__alert">⚠ %s</p>`, html.EscapeString(alerts[0])))
+		if len(alerts) > 1 {
+			w.WriteHTML(fmt.Sprintf(`<p class="val-summary__alert">⚠ %s</p>`, html.EscapeString(alerts[1])))
+		}
+	}
+	if len(d.Validators) > 0 {
+		w.WriteHTML(`<div class="val-summary__chips">`)
+		for _, v := range d.Validators {
+			w.WriteHTML(fmt.Sprintf(
+				`<span class="val-summary__chip%s">%s <span class="val-summary__chip-vp">%.1f%%</span></span>`,
+				chipClass(v), html.EscapeString(report.Truncate(v.Moniker, 12)), v.VPFloat))
+		}
+		w.WriteHTML(`</div>`)
+	}
+	w.WriteHTML(`</div>`)
+	summaryWrapEnd(w, mode)
+}
+
+func chipClass(v model.Validator) string {
+	if v.Jailed || v.Tombstoned || v.MissedHigh {
+		return " val-summary__chip--warn"
+	}
+	return ""
+}
+
 func writeValidators(w Writer, d model.Report) {
+	writeValidatorsSummary(w, d, SummaryEmbedded)
 	w.Section("1. VALIDATOR SET")
 	w.Em("Chain-wide validator set — summary counts, stake and slashing tables, then P2P identity per validator.")
-
-	w.Subsection("Summary")
-	w.Hint("`bonded`, `jailed`, `tombstoned`, `below min signed` → derived (counts from §3 tables); `next proposer` → CometBFT GET /validators (highest proposer_priority).")
-	w.Row("bonded", fmt.Sprintf("%d", d.BondedCount))
-	w.Row("jailed", fmt.Sprintf("%d", d.JailedCount))
-	w.Row("tombstoned", fmt.Sprintf("%d", d.TombstonedCount))
-	w.Row("below min signed", fmt.Sprintf("%d", d.BelowThreshold))
-	if d.NextProposer != "" {
-		w.Row("next proposer", d.NextProposer)
-	}
 
 	w.Subsection("Stake")
 	w.Hint("`vp%%`, `commission`, `status` → REST GET /cosmos/staking/v1beta1/validators (bonded, unbonding, unbonded).")
@@ -72,34 +118,28 @@ func writeValidators(w Writer, d model.Report) {
 
 	w.Subsection("Network (P2P)")
 	w.Hint("`p2p dial`, `node ID` → CometBFT GET /status (local) or GET /net_info (peers); `operator`, `consensus` → REST GET /cosmos/staking/v1beta1/validators.")
+	p2pRows := make([][]string, 0, len(d.Validators))
 	for _, v := range d.Validators {
-		hdr := "**" + v.Moniker + "**"
-		if v.IsLocal {
-			hdr += "  _(this node)_"
+		cons := v.ConsensusBech32
+		if cons == "" {
+			cons = v.ConsensusAddr
 		}
-		w.ValidatorHeader(hdr)
-		if v.Operator != "" {
-			w.Row("operator", "`"+v.Operator+"`")
-		} else {
-			w.Row("operator", "—")
-		}
-		p2p := v.P2PDial
-		if p2p == "" {
-			p2p = "—  _(not in this node's `/net_info` peers)_"
-		}
-		w.Row("p2p dial", "`"+p2p+"`")
-		if v.NodeID != "" {
-			w.Row("node ID", "`"+v.NodeID+"`")
-		} else {
-			w.Row("node ID", "—")
-		}
-		if v.ConsensusBech32 != "" {
-			w.Row("consensus", "`"+v.ConsensusBech32+"`")
-		} else if v.ConsensusAddr != "" {
-			w.Row("consensus", "`"+v.ConsensusAddr+"`")
-		} else {
-			w.Row("consensus", "—")
-		}
+		p2pRows = append(p2pRows, []string{
+			report.Truncate(v.Moniker, 14),
+			identityCell(v.Operator),
+			identityCell(v.P2PDial),
+			identityCell(v.NodeID),
+			identityCell(cons),
+			valLocalMark(v),
+		})
 	}
+	w.Table([]string{"moniker", "operator", "p2p dial", "node ID", "consensus", "local"}, p2pRows)
 	w.BlankLine()
+}
+
+func identityCell(s string) string {
+	if s == "" {
+		return "—"
+	}
+	return "`" + s + "`"
 }

@@ -48,7 +48,6 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		t.Fatal("economics section should not use mermaid")
 	}
 	for _, want := range []string{
-		"At a glance",
 		"Block reward ledger",
 		"fee_collector",
 		`class="dash-subheading">Chain parameters (reference)</h3>`,
@@ -56,6 +55,12 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("economics chunk missing %q", want)
 		}
+	}
+	if !strings.Contains(out, `class="eco-summary"`) || !strings.Contains(out, `economics-kpi-band`) {
+		t.Fatal("economics should include summary with KPI band")
+	}
+	if strings.Contains(chunk, "At a glance") {
+		t.Fatal("economics should not duplicate at-a-glance subsection")
 	}
 	for _, gone := range []string{
 		"Money flow (live balances)",

@@ -27,11 +27,14 @@ func TestBuildEconomicsUsesTablesNotMermaid(t *testing.T) {
 	if !strings.Contains(eco, "Block reward ledger") {
 		t.Fatal("economics should use block reward ledger")
 	}
-	if !strings.Contains(eco, "At a glance") {
-		t.Fatal("economics should include at-a-glance stats")
+	if strings.Contains(eco, "At a glance") {
+		t.Fatal("economics should not duplicate at-a-glance subsection")
 	}
-	if !strings.Contains(eco, `economics-kpi-band`) {
-		t.Fatal("economics should wrap at-a-glance in KPI band")
+	if !strings.Contains(out, `economics-kpi-band`) {
+		t.Fatal("economics summary should use KPI band")
+	}
+	if !strings.Contains(out, `class="eco-summary"`) {
+		t.Fatal("economics should include embedded summary")
 	}
 	if !strings.Contains(eco, `data-table--ledger`) {
 		t.Fatal("ledger table should use ledger styling")
@@ -105,7 +108,7 @@ func TestContentInventory(t *testing.T) {
 		`class="kpi-grid"`,
 		`class="kpi-tile"`,
 		`class="data-table"`,
-		"At a glance",
+		`class="val-summary"`,
 		"Block reward ledger",
 		`class="dash-subheading">Chain parameters (reference)</h3>`,
 		`dash-section--feemarket`,

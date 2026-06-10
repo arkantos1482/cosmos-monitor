@@ -3,6 +3,7 @@ package panel
 import (
 	"encoding/json"
 	"fmt"
+	"html"
 	"sort"
 	"strconv"
 	"strings"
@@ -72,32 +73,92 @@ func jsonRPCCurl(endpoint, requestJSON string) string {
 	return fmt.Sprintf("curl -sS -X POST %s \\\n  -H 'Content-Type: application/json' \\\n  -d '%s'", endpoint, escaped)
 }
 
-func writeEVMRPCSection(w Writer, d model.Report) {
+func writeEVMSummary(w Writer, d model.Report, mode SummaryMode) {
 	overall := evmRPCOverallStatus(d)
-
+	overallKind := "ok"
+	switch overall {
+	case "DOWN":
+		overallKind = "bad"
+	case "DEGRADED":
+		overallKind = "warn"
+	}
 	syncLabel := "synced"
 	if !d.EVMSynced {
 		syncLabel = "syncing"
 	}
-
 	blockAge := "—"
 	if d.EVMBlockAge != "" {
 		blockAge = d.EVMBlockAge
-		if d.EVMBlockAgeErr {
-			blockAge += " ⚠ stalled"
-		} else if d.EVMBlockAgeWarn {
-			blockAge += " ⚠ slow"
-		}
 	}
-
-	probeSummary := fmt.Sprintf("%d/%d probes", d.RPCProbeOK, d.RPCProbeTotal)
 	listenLabel := "not listening"
 	if d.EVMListening {
 		listenLabel = "listening"
 	}
+	httpEP := d.EVMHTTPEndpoint
+	if httpEP == "" {
+		httpEP = "http://localhost:8545"
+	}
 
-	w.StrongLine(fmt.Sprintf("**RPC: %s** · block %s · %s · %s · %s",
-		overall, blockAge, syncLabel, probeSummary, listenLabel))
+	summaryWrapStart(w, mode, "evm")
+	w.WriteHTML(`<div class="evm-summary">`)
+	w.WriteHTML(`<div class="evm-summary__header">`)
+	writeSummaryBadges(w, "evm-summary__status", summaryBadge{"RPC " + overall, overallKind})
+	w.WriteHTML(fmt.Sprintf(`<span class="evm-summary__meta">block %s · %s · %s</span>`,
+		html.EscapeString(blockAge), html.EscapeString(syncLabel), html.EscapeString(listenLabel)))
+	w.WriteHTML(`</div>`)
+	w.WriteHTML(fmt.Sprintf(`<p class="evm-summary__probes-label">Probes %d/%d ok</p>`, d.RPCProbeOK, d.RPCProbeTotal))
+	w.WriteHTML(`<div class="evm-summary__probes">`)
+	for _, ns := range evmProbeNamespaces(d.RPCProbes) {
+		ok := evmNamespaceOK(d.RPCProbes, ns)
+		cls := "evm-summary__probe--ok"
+		if !ok {
+			cls = "evm-summary__probe--fail"
+		}
+		w.WriteHTML(fmt.Sprintf(`<span class="evm-summary__probe %s" title="%s_">%s</span>`,
+			cls, html.EscapeString(ns), html.EscapeString(ns)))
+	}
+	w.WriteHTML(`</div>`)
+	w.WriteHTML(fmt.Sprintf(
+		`<p class="evm-summary__detail">Chain <strong>%d</strong> · txpool <strong>%d</strong> pending · <strong>%d</strong> queued</p>`,
+		d.EVMChainID, d.PendingTx, d.QueuedTx))
+	w.WriteHTML(fmt.Sprintf(`<p class="evm-summary__endpoint mono">%s</p>`, html.EscapeString(report.Truncate(httpEP, 48))))
+	w.WriteHTML(`</div>`)
+	summaryWrapEnd(w, mode)
+}
+
+func evmProbeNamespaces(probes []model.RPCProbe) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, p := range sortedRPCProbes(probes) {
+		ns := probeNamespace(p.Method)
+		if seen[ns] {
+			continue
+		}
+		seen[ns] = true
+		out = append(out, ns)
+	}
+	return out
+}
+
+func evmNamespaceOK(probes []model.RPCProbe, ns string) bool {
+	found := false
+	for _, p := range probes {
+		if probeNamespace(p.Method) != ns {
+			continue
+		}
+		found = true
+		if !p.OK {
+			return false
+		}
+	}
+	return found
+}
+
+func writeEVMRPCSection(w Writer, d model.Report) {
+	syncLabel := "synced"
+	if !d.EVMSynced {
+		syncLabel = "syncing"
+	}
 
 	w.Subsection("For operators")
 	w.Hint("`HTTP JSON-RPC` → config app.toml [json-rpc] address; `WebSocket` → config app.toml [json-rpc] ws-address; `enabled APIs` → config app.toml [json-rpc] api; `chain ID` → JSON-RPC eth_chainId + genesis EVM config; `native denom`, `client` → genesis + JSON-RPC web3_clientVersion.")

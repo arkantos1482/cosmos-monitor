@@ -22,6 +22,7 @@ var layoutTmpl = template.Must(template.New("layout").Parse(layoutHTML))
 type pageData struct {
 	Moniker   string
 	PageTitle string
+	Status    template.HTML
 	Nav       template.HTML
 	Content   template.HTML
 	DataURL   string
@@ -112,11 +113,12 @@ func dataURL(active panel.View) string {
 }
 
 // FullPage wraps an HTML fragment in the dashboard document shell.
-func FullPage(moniker string, active panel.View, fragment string) string {
+func FullPage(moniker string, active panel.View, statusStrip, fragment string) string {
 	var buf bytes.Buffer
 	_ = layoutTmpl.Execute(&buf, pageData{
 		Moniker:   html.EscapeString(moniker),
 		PageTitle: html.EscapeString(pageTitle(active)),
+		Status:    template.HTML(statusStrip),
 		Nav:       template.HTML(navHTML(active)),
 		Content:   template.HTML(fragment),
 		DataURL:   dataURL(active),

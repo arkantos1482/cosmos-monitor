@@ -2,11 +2,61 @@ package panel
 
 import (
 	"fmt"
+	"html"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/feemarket"
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 	"github.com/arkantos1482/cosmos-monitor/internal/report"
 )
+
+func writeNodeSummary(w Writer, d model.Report, mode SummaryMode) {
+	lv := d.Local
+	syncStr := "synced"
+	syncKind := "ok"
+	if !d.Synced {
+		syncStr = "catching up"
+		syncKind = "warn"
+	}
+	proposer := "no"
+	if lv.IsNextProposer {
+		proposer = "yes — next block"
+	}
+
+	summaryWrapStart(w, mode, "node")
+	w.WriteHTML(`<div class="node-summary">`)
+	w.WriteHTML(`<div class="node-summary__header">`)
+	w.WriteHTML(fmt.Sprintf(`<span class="node-summary__moniker">%s</span>`, html.EscapeString(d.Moniker)))
+	var badges []summaryBadge
+	badges = append(badges, summaryBadge{syncStr, syncKind})
+	badges = append(badges, localBadges(d)...)
+	writeSummaryBadges(w, "node-summary__badges", badges...)
+	w.WriteHTML(`</div>`)
+	w.WriteHTML(`<div class="node-summary__grid">`)
+	for _, row := range []struct{ label, val string }{
+		{"height", d.BlockHeight + " · " + d.TimeSinceBlock},
+		{"voting power", nodeVPRow(lv)},
+		{"next proposer", proposer},
+		{"peers", fmt.Sprintf("%d cosmos · %d evm", d.PeerCount, d.EVMPeerCount)},
+		{"signing", lv.SigningStatus},
+	} {
+		if row.val == "" || row.val == " · " {
+			continue
+		}
+		w.WriteHTML(fmt.Sprintf(
+			`<div class="node-summary__cell"><span class="node-summary__label">%s</span>`+
+				`<span class="node-summary__val">%s</span></div>`,
+			html.EscapeString(row.label), html.EscapeString(row.val)))
+	}
+	w.WriteHTML(`</div></div>`)
+	summaryWrapEnd(w, mode)
+}
+
+func nodeVPRow(lv model.LocalValidator) string {
+	if !lv.IsValidator {
+		return lv.SigningStatus
+	}
+	return fmt.Sprintf("%.1f%% · %s · %.1f%% commission", lv.VPPercent, lv.Status, lv.Commission)
+}
 
 func writeNode(w Writer, d model.Report) {
 	lv := d.Local
@@ -15,6 +65,7 @@ func writeNode(w Writer, d model.Report) {
 		syncStr = "CATCHING UP"
 	}
 
+	writeNodeSummary(w, d, SummaryEmbedded)
 	w.Section("2. VALIDATOR")
 	w.Em("This validator on this node — identities, application staking, and CometBFT live state.")
 

@@ -44,13 +44,14 @@ func Start(addr string, evmEndpoint string, render RenderFunc) {
 func serveView(w http.ResponseWriter, r *http.Request, v panel.View, render RenderFunc) {
 	d := render(v)
 	fragment := RenderView(v, d)
+	status := panel.RenderStatusStrip(d)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	// Poll-only HTMX (#data every 5s): fragment. Boost nav and direct loads: full page.
+	// Poll-only HTMX (#data every 5s): OOB status + main fragment. Boost nav and direct loads: full page.
 	if r.Header.Get("HX-Request") != "" && r.Header.Get("HX-Boosted") == "" {
-		fmt.Fprint(w, fragment)
+		fmt.Fprint(w, panel.BuildStatusOOB(d)+fragment)
 		return
 	}
-	fmt.Fprint(w, FullPage(pageMoniker(d), v, fragment))
+	fmt.Fprint(w, FullPage(pageMoniker(d), v, status, fragment))
 }
 
 func pageMoniker(d model.Report) string {

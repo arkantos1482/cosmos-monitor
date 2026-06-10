@@ -4,12 +4,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/arkantos1482/cosmos-monitor/internal/model"
 	"github.com/arkantos1482/cosmos-monitor/internal/panel"
 )
 
 func TestFullPageHTMXShell(t *testing.T) {
-	out := FullPage("node1", panel.ViewEconomics, "<p>body</p>")
+	status := panel.RenderStatusStrip(model.Report{Moniker: "node1", Synced: true, BlockHeight: "1"})
+	out := FullPage("node1", panel.ViewEconomics, status, "<p>body</p>")
 	for _, want := range []string{
+		`id="dash-status"`,
 		`id="dash-nav"`,
 		`dash-nav__link--active`,
 		`dash-nav__link--economics`,

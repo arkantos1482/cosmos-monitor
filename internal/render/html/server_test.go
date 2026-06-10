@@ -23,8 +23,11 @@ func TestServeViewPollReturnsFragment(t *testing.T) {
 	if strings.Contains(body, "<!DOCTYPE html>") || strings.Contains(body, `id="dash-nav"`) {
 		t.Fatal("poll request should return fragment only")
 	}
-	if !strings.Contains(body, "dash-section") && !strings.Contains(body, "dash-home") {
+	if !strings.Contains(body, "dash-section") && !strings.Contains(body, "dash-overview") {
 		t.Fatal("poll response should contain rendered view content")
+	}
+	if !strings.Contains(body, `id="dash-status"`) || !strings.Contains(body, `hx-swap-oob="true"`) {
+		t.Fatal("poll response should include OOB status bar")
 	}
 }
 
@@ -35,7 +38,7 @@ func TestServeViewBoostReturnsFullPage(t *testing.T) {
 	rec := httptest.NewRecorder()
 	serveView(rec, req, panel.ViewEconomics, stubRender)
 	body := rec.Body.String()
-	for _, want := range []string{"<!DOCTYPE html>", `hx-boost="true"`, `id="dash-nav"`, `id="data"`} {
+	for _, want := range []string{"<!DOCTYPE html>", `hx-boost="true"`, `id="dash-status"`, `id="dash-nav"`, `id="data"`} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("boost request missing %q", want)
 		}
@@ -49,5 +52,8 @@ func TestServeViewDirectReturnsFullPage(t *testing.T) {
 	body := rec.Body.String()
 	if !strings.Contains(body, `<!DOCTYPE html>`) || !strings.Contains(body, `hx-boost="true"`) {
 		t.Fatal("direct load should return full boosted page")
+	}
+	if !strings.Contains(body, `id="dash-status"`) {
+		t.Fatal("direct load should include global status bar")
 	}
 }

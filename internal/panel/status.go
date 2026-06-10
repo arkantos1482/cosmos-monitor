@@ -3,11 +3,36 @@ package panel
 import (
 	"fmt"
 	"html"
+	"strings"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-func writeStatusStrip(w Writer, d model.Report) {
+// RenderStatusStrip returns the global KPI bar HTML for layout embedding.
+func RenderStatusStrip(d model.Report) string {
+	return renderStatusHTML(d, "")
+}
+
+// BuildStatusOOB returns the status bar with HTMX out-of-band swap attributes for poll updates.
+func BuildStatusOOB(d model.Report) string {
+	return renderStatusHTML(d, `hx-swap-oob="true"`)
+}
+
+func renderStatusHTML(d model.Report, extraAttrs string) string {
+	var b strings.Builder
+	w := newWriter(&b)
+	attrs := extraAttrs
+	if attrs != "" {
+		attrs = " " + attrs
+	}
+	w.WriteHTML(fmt.Sprintf(`<div id="dash-status" class="dash-status"%s role="region" aria-label="Live status">`, attrs))
+	writeStatusPills(w, d)
+	w.WriteHTML(`</div>`)
+	w.flush()
+	return b.String()
+}
+
+func writeStatusPills(w Writer, d model.Report) {
 	syncStr := "synced"
 	syncCls := "badge--ok"
 	if !d.Synced {
@@ -51,7 +76,6 @@ func writeStatusStrip(w Writer, d model.Report) {
 		refresh = "live"
 	}
 
-	w.WriteHTML(`<div class="dash-status" role="region" aria-label="Live status">`)
 	writeStatusPill(w, "Height", height, "")
 	writeStatusPillBadge(w, "Sync", syncStr, syncCls)
 	writeStatusPill(w, "Peers", fmt.Sprintf("%d cosmos · %d evm", d.PeerCount, d.EVMPeerCount), "")
@@ -59,7 +83,6 @@ func writeStatusStrip(w Writer, d model.Report) {
 	writeStatusPill(w, "Base fee", baseFee, "")
 	writeStatusPillBadge(w, "PMT", pmtStr, pmtCls)
 	w.WriteHTML(fmt.Sprintf(`<time class="dash-status__time">%s</time>`, html.EscapeString(refresh)))
-	w.WriteHTML(`</div>`)
 }
 
 func writeStatusPill(w Writer, label, value, badgeCls string) {

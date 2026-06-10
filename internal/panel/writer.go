@@ -398,6 +398,9 @@ func (d *docWriter) Table(headers []string, rows [][]string) {
 	if reference {
 		tableCls += " data-table--reference"
 	}
+	if isIdentityNetworkTable(headers) {
+		tableCls += " data-table--identity"
+	}
 	fmt.Fprintf(d.w, `<div class="table-scroll"><table class="%s"><thead><tr>`, tableCls)
 	for i, h := range headers {
 		thCls := ""
@@ -447,6 +450,15 @@ const (
 	refColVal
 	refColDesc
 )
+
+func isIdentityNetworkTable(headers []string) bool {
+	if len(headers) < 5 {
+		return false
+	}
+	return strings.EqualFold(headers[0], "moniker") &&
+		strings.EqualFold(headers[1], "operator") &&
+		strings.EqualFold(headers[2], "p2p dial")
+}
 
 // isReferenceTable marks 3-column glossary tables: reference | value | meaning.
 func isReferenceTable(headers []string) bool {

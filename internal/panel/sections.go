@@ -85,7 +85,6 @@ func writeView(w Writer, v View, d model.Report) {
 	case ViewEVM:
 		writeEVMSection(w, d)
 	default:
-		writeStatusStrip(w, d)
-		writeHome(w, d)
+		writeOverview(w, d)
 	}
 }

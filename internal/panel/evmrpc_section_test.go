@@ -20,8 +20,14 @@ func TestBuildEVMRPCSection(t *testing.T) {
 		PendingTx: 2, QueuedTx: 1,
 	}
 	out := Build(d)
-	if !strings.Contains(out, "<strong>RPC: OK</strong>") {
-		t.Fatal("output should include RPC status line")
+	if strings.Contains(out, "<strong>RPC: OK</strong>") {
+		t.Fatal("output should not use legacy StrongLine RPC callout")
+	}
+	if !strings.Contains(out, `class="evm-summary"`) {
+		t.Fatal("output should include EVM summary")
+	}
+	if !strings.Contains(out, `evm-summary__probe`) {
+		t.Fatal("EVM summary should include probe dots")
 	}
 	if !strings.Contains(out, `class="dash-subheading">Probe health</h3>`) {
 		t.Fatal("expected Probe health subsection")
