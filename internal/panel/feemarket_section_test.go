@@ -40,7 +40,7 @@ func TestWriteFeemarketLadderLayout(t *testing.T) {
 		"Why the fee moved",
 		"What the chain measured",
 		"When each value is written",
-		"Formula, parameters",
+		"Formula &amp; parameters",
 		"Illustrative example: when W ≠ gas_used",
 		"Three pools",
 		"In-block accumulator",
@@ -159,11 +159,12 @@ func TestWriteFeemarketL5ChainParams(t *testing.T) {
 		BaseFeeChangeDenominator: 8,
 		MaxBlockBytes: 22_020_096,
 	}
-	chunk := feemarketChunk(t, Build(d))
+	chunk := feemarketChunk(t, BuildWithOptions(d, Options{ShowSources: true}))
 	for _, want := range []string{
 		"22,020,096",
 		"min_unit_gas",
-		`class="dash-subheading">Data sources</h3>`,
+		`class="dash-sources"`,
+		`>Data sources</summary>`,
 		`class="dash-callout dash-callout--hint hint"`,
 		`class="hint-provenance"`,
 		`CometBFT GET /block_results`,
@@ -184,7 +185,36 @@ func TestWriteFeemarketL5ChainParams(t *testing.T) {
 		}
 	}
 	if strings.Contains(chunk, `fee-level__note">gas_used`) {
-		t.Fatal("L5 data sources should use provenance callout, not fee-level__note paragraph")
+		t.Fatal("fee market data sources should use section provenance, not fee-level__note paragraph")
+	}
+	l5Start := strings.Index(chunk, `id="fee-L5"`)
+	if l5Start < 0 {
+		t.Fatal("missing L5")
+	}
+	l5CloseRel := strings.Index(chunk[l5Start:], `</details>`)
+	if l5CloseRel < 0 {
+		t.Fatal("missing L5 closing details")
+	}
+	l5Block := chunk[l5Start : l5Start+l5CloseRel]
+	if strings.Contains(l5Block, "CometBFT GET /block_results") {
+		t.Fatal("L5 should not embed data source provenance")
+	}
+	sourcesIdx := strings.Index(chunk, `class="dash-sources"`)
+	if sourcesIdx < 0 || sourcesIdx < l5Start+l5CloseRel {
+		t.Fatal("data sources should render in section footer after L5")
+	}
+}
+
+func TestWriteFeemarketSourcesHiddenByDefault(t *testing.T) {
+	d := model.Report{
+		BlockHeight: "1", BaseFeeRaw: "7",
+		BlockGasLimit: ^uint64(0), Elasticity: 2,
+		BaseFeeChangeDenominator: 8, MinGasMultiplier: "0.5",
+		ParentBlockResultsOK: true, EVMDenom: "apmt",
+	}
+	chunk := feemarketChunk(t, Build(d))
+	if strings.Contains(chunk, `class="dash-sources"`) {
+		t.Fatal("fee market should omit data sources without -show-sources")
 	}
 }
 

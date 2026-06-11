@@ -31,6 +31,7 @@ type Writer interface {
 
 type docWriter struct {
 	w            io.Writer
+	opts         Options
 	inSection    bool
 	inLayer      bool
 	inSubsection bool
@@ -39,8 +40,8 @@ type docWriter struct {
 	sectionHints []string
 }
 
-func newWriter(w io.Writer) *docWriter {
-	return &docWriter{w: w}
+func newWriter(w io.Writer, opts Options) *docWriter {
+	return &docWriter{w: w, opts: opts}
 }
 
 func (d *docWriter) flush() {
@@ -104,10 +105,15 @@ func (d *docWriter) flushSectionHints() {
 	d.closeStatGrid()
 	hints := d.sectionHints
 	d.sectionHints = nil
-	fmt.Fprint(d.w, `<div class="dash-sources">`+"\n")
-	fmt.Fprint(d.w, `<h3 class="dash-subheading">Data sources</h3>`+"\n")
-	fmt.Fprintf(d.w, `<p class="dash-callout dash-callout--hint hint">%s</p>`+"\n", sectionHintsHTML(hints))
-	fmt.Fprint(d.w, `</div>`+"\n")
+	d.writeSourcesBlock(sectionHintsHTML(hints))
+}
+
+func (d *docWriter) writeSourcesBlock(body string) {
+	if !d.opts.ShowSources || body == "" {
+		return
+	}
+	fmt.Fprint(d.w, `<details class="dash-sources" hx-preserve><summary class="dash-sources__summary">Data sources</summary>`+"\n")
+	fmt.Fprintf(d.w, `<div class="dash-sources__body"><p class="dash-callout dash-callout--hint hint">%s</p></div></details>`+"\n", body)
 }
 
 // sectionHintsHTML renders deferred section hints as stacked provenance clauses.
@@ -321,7 +327,7 @@ func (d *docWriter) Hint(text string) {
 func (d *docWriter) writeHintCallout(text string) {
 	d.closeList()
 	d.closeStatGrid()
-	fmt.Fprintf(d.w, `<p class="dash-callout dash-callout--hint hint">%s</p>`+"\n", hintHTML(text))
+	d.writeSourcesBlock(hintHTML(text))
 }
 
 func (d *docWriter) Em(text string) {

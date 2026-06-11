@@ -841,14 +841,25 @@ body::after {
   border-top: 1px solid var(--border);
 }
 
-.dash-sources .dash-subheading {
+.dash-sources__summary {
+  cursor: pointer;
   font-size: 0.78rem;
   font-weight: 500;
   color: var(--muted);
+  list-style: none;
+  user-select: none;
+}
+
+.dash-sources__summary::-webkit-details-marker {
+  display: none;
+}
+
+.dash-sources[open] .dash-sources__summary {
+  color: var(--fg);
   margin-bottom: 0.35rem;
 }
 
-.dash-sources .hint {
+.dash-sources__body .hint {
   margin-bottom: 0;
 }
 

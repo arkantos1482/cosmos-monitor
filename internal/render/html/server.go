@@ -15,7 +15,7 @@ import (
 type RenderFunc func(v panel.View) model.Report
 
 // Start serves the dashboard on addr (e.g. ":7777").
-func Start(addr string, evmEndpoint string, render RenderFunc) {
+func Start(addr string, evmEndpoint string, render RenderFunc, opts panel.Options) {
 	http.HandleFunc("/s/", func(w http.ResponseWriter, r *http.Request) {
 		slug := strings.TrimPrefix(r.URL.Path, "/s/")
 		slug = strings.TrimSuffix(slug, "/")
@@ -24,7 +24,7 @@ func Start(addr string, evmEndpoint string, render RenderFunc) {
 			http.Redirect(w, r, "/", http.StatusFound)
 			return
 		}
-		serveView(w, r, v, render)
+		serveView(w, r, v, render, opts)
 	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -32,7 +32,7 @@ func Start(addr string, evmEndpoint string, render RenderFunc) {
 			http.NotFound(w, r)
 			return
 		}
-		serveView(w, r, panel.ViewHome, render)
+		serveView(w, r, panel.ViewHome, render, opts)
 	})
 
 	log.Printf("web UI → http://localhost%s", addr)
@@ -41,9 +41,9 @@ func Start(addr string, evmEndpoint string, render RenderFunc) {
 	}
 }
 
-func serveView(w http.ResponseWriter, r *http.Request, v panel.View, render RenderFunc) {
+func serveView(w http.ResponseWriter, r *http.Request, v panel.View, render RenderFunc, opts panel.Options) {
 	d := render(v)
-	fragment := RenderView(v, d)
+	fragment := RenderViewWithOptions(v, d, opts)
 	status := panel.RenderStatusStrip(d)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	// Poll-only HTMX (#data every 5s): OOB status + main fragment. Boost nav and direct loads: full page.

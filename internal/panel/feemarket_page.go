@@ -264,14 +264,12 @@ func buildFeeL5(c feemarket.Context, d model.Report) feeLevel {
 		fmt.Fprintf(&extra, `<p class="fee-level__note">max_bytes %s · block time %s · validator execution cap applies</p>`,
 			feemarket.FormatUint(uint64(c.MaxBlockBytes)), orDash(c.BlockInterval))
 	}
-	extra.WriteString(feeSubheadingHTML("Data sources"))
-	extra.WriteString(feemarketDataSourcesHint(c))
 	extra.WriteString(noteCalloutHTML("Cosmos EVM uses W not gas_used; finite vs sentinel target when max_gas is −1."))
 
 	return feeLevel{
 		ID:      "fee-L5",
-		Title:   "L5 · Formula, parameters, data sources",
-		Concept: "Full computation, governance knobs, and provenance (node app.toml → § Validator).",
+		Title:   "L5 · Formula & parameters",
+		Concept: "Full computation and governance knobs (node fee acceptance → § Validator).",
 		Extra:   extra.String(),
 	}
 }
@@ -284,24 +282,6 @@ func maxGasL5(c feemarket.Context) string {
 		return "—"
 	}
 	return feemarket.FormatUint(c.BlockGasLimit)
-}
-
-func feemarketDataSourcesHint(c feemarket.Context) string {
-	appToml := "local app.toml (APPTOML_PATH or ~/.evmd/config/app.toml)"
-	return provenanceCalloutHTML(fmt.Sprintf(
-		"`head height` → CometBFT GET /status; "+
-			"`max_gas`, `max_bytes` → CometBFT GET /consensus_params; "+
-			"`gas_used`, `W` → CometBFT GET /block_results?height=%s; "+
-			"`base_fee` (BeginBlock) → CometBFT GET /block_results?height=%s; "+
-			"`block interval` → CometBFT GET /block; "+
-			"`base_fee` → REST GET /cosmos/evm/feemarket/v1/base_fee; "+
-			"`W` (fallback) → REST GET /cosmos/evm/feemarket/v1/block_gas; "+
-			"`no_base_fee`, `elasticity`, `min_gas_*`, … → REST GET /cosmos/evm/feemarket/v1/params; "+
-			"`evm_denom` → REST GET /cosmos/evm/vm/v1/params; "+
-			"`london_block` → REST GET /cosmos/evm/vm/v1/config; "+
-			"node fee acceptance (app.toml) → %s (§ Validator).",
-		c.ParentBlock, c.CurrentBlock, appToml,
-	))
 }
 
 func formatGasAmount(n uint64, resultsOK bool) string {

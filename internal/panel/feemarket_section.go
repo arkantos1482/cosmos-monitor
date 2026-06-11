@@ -45,9 +45,29 @@ func writeFeemarketSummary(w Writer, d model.Report, mode SummaryMode) {
 }
 
 func writeFeemarket(w Writer, d model.Report) {
+	c := feemarket.LoadContext(d)
 	w.Section("3. FEE MARKET")
 	writeFeemarketSummary(w, d, SummaryEmbedded)
 	w.Em("Chain-wide EIP-1559 fee market — live base fee, demand, and governance parameters.")
 	writeFeemarketPage(w, d)
+	w.Hint(feemarketSourcesHint(c))
 	w.BlankLine()
+}
+
+func feemarketSourcesHint(c feemarket.Context) string {
+	appToml := "local app.toml (APPTOML_PATH or ~/.evmd/config/app.toml)"
+	return fmt.Sprintf(
+		"`head height` → CometBFT GET /status; "+
+			"`max_gas`, `max_bytes` → CometBFT GET /consensus_params; "+
+			"`gas_used`, `W` → CometBFT GET /block_results?height=%s; "+
+			"`base_fee` (BeginBlock) → CometBFT GET /block_results?height=%s; "+
+			"`block interval` → CometBFT GET /block; "+
+			"`base_fee` → REST GET /cosmos/evm/feemarket/v1/base_fee; "+
+			"`W` (fallback) → REST GET /cosmos/evm/feemarket/v1/block_gas; "+
+			"`no_base_fee`, `elasticity`, `min_gas_*`, … → REST GET /cosmos/evm/feemarket/v1/params; "+
+			"`evm_denom` → REST GET /cosmos/evm/vm/v1/params; "+
+			"`london_block` → REST GET /cosmos/evm/vm/v1/config; "+
+			"node fee acceptance (app.toml) → %s (§ Validator).",
+		c.ParentBlock, c.CurrentBlock, appToml,
+	)
 }

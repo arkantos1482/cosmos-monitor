@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/fetchall"
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
@@ -19,7 +20,10 @@ func main() {
 	container := flag.String("container", "evmd-node", "Docker container name")
 	webAddr := flag.String("web", ":7777", "address to serve web UI (e.g. :7777); empty disables")
 	dump := flag.Bool("dump", false, "fetch once, print HTML fragment to stdout, and exit")
+	showSources := flag.Bool("show-sources", false, "show collapsible data-source provenance (dev only)")
 	flag.Parse()
+
+	opts := panel.Options{ShowSources: showSourcesEnabled(*showSources)}
 
 	load := func(v panel.View) model.Report {
 		sn := fetchall.LoadFor(v, *rpc, *rest, *evm, *container)
@@ -28,7 +32,7 @@ func main() {
 
 	if *dump {
 		rep := load(panel.ViewHome)
-		if err := (html.Dump{W: os.Stdout}).Render(rep); err != nil {
+		if err := (html.Dump{W: os.Stdout, Opts: opts}).Render(rep); err != nil {
 			fmt.Fprintf(os.Stderr, "pmtop: %v\n", err)
 			os.Exit(1)
 		}
@@ -40,5 +44,17 @@ func main() {
 		os.Exit(2)
 	}
 
-	html.Start(*webAddr, *evm, load)
+	html.Start(*webAddr, *evm, load, opts)
+}
+
+func showSourcesEnabled(flagVal bool) bool {
+	if flagVal {
+		return true
+	}
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("PMTOP_SHOW_SOURCES"))) {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
+	}
 }

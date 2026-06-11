@@ -8,7 +8,8 @@ SSH_KEY  := ~/.ssh/pmt-nodes.pem
 # Paths on the remote host (same layout on fleet nodes).
 REMOTE_GO    := /usr/local/go/bin/go
 REMOTE_REPO  := ~/cosmos-monitor
-REMOTE_PMTOP := ~/pmtop
+REMOTE_PMTOP       := ~/pmtop
+REMOTE_PMTOP_FLAGS ?=
 
 BINARY := pmtop
 
@@ -48,7 +49,7 @@ tunnel: ## atomic local — forward node4 :7777 to localhost:7777
 # Atomic — remote pmtop (on node4)
 # ══════════════════════════════════════════════════════════════════════════════
 
-.PHONY: remote-pull remote-pull-reset remote-build remote-smoke remote-stop remote-start remote-verify remote-run
+.PHONY: remote-pull remote-pull-reset remote-build remote-smoke remote-stop remote-start remote-start-dev remote-verify remote-run
 remote-pull: ## atomic remote pmtop — git pull on node4
 	$(SSH_NODE4) 'cd $(REMOTE_REPO) && git pull'
 
@@ -66,9 +67,12 @@ remote-stop: ## atomic remote pmtop — kill tmux / process on node4
 
 remote-start: ## atomic remote pmtop — start in tmux on node4
 	$(SSH_NODE4) \
-		'tmux new-session -d -s pmtop "$(REMOTE_PMTOP)"; \
+		'tmux new-session -d -s pmtop "$(REMOTE_PMTOP) $(REMOTE_PMTOP_FLAGS)"; \
 		 sleep 1; \
 		 pgrep -a pmtop || (echo "failed to start" && exit 1)'
+
+remote-start-dev: ## atomic remote pmtop — start with -show-sources on node4
+	$(MAKE) remote-start REMOTE_PMTOP_FLAGS=-show-sources
 
 remote-verify: ## atomic remote pmtop — curl node4 :7777 fee-L1
 	@$(SSH_NODE4) \
@@ -114,7 +118,7 @@ dump: build ## integration local — HTML fragment
 
 remote-restart: remote-stop remote-start ## integration remote pmtop — recycle server on node4 (no pull/build)
 
-remote-dev-release: push remote-pull remote-build remote-smoke remote-stop remote-start remote-verify ## integration remote — push, then build and run on node4
+remote-dev-release: push remote-pull remote-build remote-smoke remote-stop remote-start-dev remote-verify ## integration remote — push, build, run on node4 (-show-sources)
 
 # ══════════════════════════════════════════════════════════════════════════════
 

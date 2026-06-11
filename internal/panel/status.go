@@ -20,7 +20,7 @@ func BuildStatusOOB(d model.Report) string {
 
 func renderStatusHTML(d model.Report, extraAttrs string) string {
 	var b strings.Builder
-	w := newWriter(&b)
+	w := newWriter(&b, Options{})
 	attrs := extraAttrs
 	if attrs != "" {
 		attrs = " " + attrs

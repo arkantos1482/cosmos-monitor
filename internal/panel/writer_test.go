@@ -7,7 +7,7 @@ import (
 
 func TestReferenceTableSoftWrap(t *testing.T) {
 	var b strings.Builder
-	w := newWriter(&b)
+	w := newWriter(&b, Options{})
 	w.Table([]string{"Symbol", "Value", "Meaning"}, [][]string{
 		{
 			"target",
@@ -28,7 +28,7 @@ func TestReferenceTableSoftWrap(t *testing.T) {
 
 func TestReferenceTableAlignment(t *testing.T) {
 	var b strings.Builder
-	w := newWriter(&b)
+	w := newWriter(&b, Options{})
 	w.Table([]string{"Setting", "Value", "Meaning"}, [][]string{
 		{"elasticity_multiplier", "2", "Target = gasLimit ÷ elasticity"},
 		{"no_base_fee", "no", "EIP-1559 auto-adjust enabled"},
@@ -69,7 +69,7 @@ func TestReferenceTableAlignment(t *testing.T) {
 
 func TestWriterComponents(t *testing.T) {
 	var b strings.Builder
-	w := newWriter(&b)
+	w := newWriter(&b, Options{})
 	w.Section("1. TEST")
 	w.Subsection("Metrics")
 	w.Row("status", "running")
@@ -106,7 +106,7 @@ func TestWriterComponents(t *testing.T) {
 
 func TestHintProvenanceMarkup(t *testing.T) {
 	var b strings.Builder
-	w := newWriter(&b)
+	w := newWriter(&b, Options{ShowSources: true})
 	w.Hint("`moniker`, `node ID`, `version`, `chain ID`, `p2p listen`, `rpc listen` → CometBFT GET /status (node_info only; sync_info and validator_info in Consensus).")
 	w.flush()
 	out := b.String()
@@ -150,7 +150,7 @@ func TestHintFallbackNoArrow(t *testing.T) {
 
 func TestKPIHashDetailTile(t *testing.T) {
 	var b strings.Builder
-	w := newWriter(&b)
+	w := newWriter(&b, Options{})
 	w.Row("node ID", "3381ddd6b06ec766400d3bdbddcfaaa2305f4984  _(CometBFT P2P peer ID)_")
 	w.flush()
 	out := b.String()
@@ -170,7 +170,7 @@ func TestKPIHashDetailTile(t *testing.T) {
 
 func TestKPIPlainTileUnchanged(t *testing.T) {
 	var b strings.Builder
-	w := newWriter(&b)
+	w := newWriter(&b, Options{})
 	w.Row("height", "482,160")
 	w.flush()
 	out := b.String()
@@ -206,7 +206,7 @@ func TestHintProvenancePMTRewards(t *testing.T) {
 
 func TestHintProvenanceVerticalClauses(t *testing.T) {
 	var b strings.Builder
-	w := newWriter(&b)
+	w := newWriter(&b, Options{ShowSources: true})
 	w.Hint("`load` → proc /proc/loadavg; `ram` → proc /proc/meminfo (MemTotal, MemAvailable); `disk` → fs statfs /.")
 	w.flush()
 	out := b.String()
@@ -231,7 +231,7 @@ func TestSectionHintsHTMLPerHintParsing(t *testing.T) {
 
 func TestHintDeferredToSectionBottom(t *testing.T) {
 	var b strings.Builder
-	w := newWriter(&b)
+	w := newWriter(&b, Options{ShowSources: true})
 	w.Section("1. TEST")
 	w.Subsection("Metrics")
 	w.Hint("`status` → docker GET /containers/{name}/json.")
@@ -247,7 +247,19 @@ func TestHintDeferredToSectionBottom(t *testing.T) {
 	if hintIdx < rowIdx {
 		t.Fatal("data sources hint should render after section content")
 	}
-	if !strings.Contains(out, `>Data sources</h3>`) {
-		t.Fatal("deferred hints should use Data sources heading")
+	if !strings.Contains(out, `>Data sources</summary>`) {
+		t.Fatal("deferred hints should use collapsible Data sources summary")
+	}
+}
+
+func TestShowSourcesHiddenByDefault(t *testing.T) {
+	var b strings.Builder
+	w := newWriter(&b, Options{})
+	w.Section("1. TEST")
+	w.Hint("`status` → docker GET /containers/{name}/json.")
+	w.flush()
+	out := b.String()
+	if strings.Contains(out, `class="dash-sources"`) {
+		t.Fatal("data sources should be omitted when ShowSources is false")
 	}
 }

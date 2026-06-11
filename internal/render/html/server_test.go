@@ -18,7 +18,7 @@ func TestServeViewPollReturnsFragment(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/s/economics", nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
-	serveView(rec, req, panel.ViewEconomics, stubRender)
+	serveView(rec, req, panel.ViewEconomics, stubRender, panel.Options{})
 	body := rec.Body.String()
 	if strings.Contains(body, "<!DOCTYPE html>") || strings.Contains(body, `id="dash-nav"`) {
 		t.Fatal("poll request should return fragment only")
@@ -36,7 +36,7 @@ func TestServeViewBoostReturnsFullPage(t *testing.T) {
 	req.Header.Set("HX-Request", "true")
 	req.Header.Set("HX-Boosted", "true")
 	rec := httptest.NewRecorder()
-	serveView(rec, req, panel.ViewEconomics, stubRender)
+	serveView(rec, req, panel.ViewEconomics, stubRender, panel.Options{})
 	body := rec.Body.String()
 	for _, want := range []string{"<!DOCTYPE html>", `hx-boost="true"`, `id="dash-status"`, `id="dash-nav"`, `id="data"`} {
 		if !strings.Contains(body, want) {
@@ -48,7 +48,7 @@ func TestServeViewBoostReturnsFullPage(t *testing.T) {
 func TestServeViewDirectReturnsFullPage(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
-	serveView(rec, req, panel.ViewHome, stubRender)
+	serveView(rec, req, panel.ViewHome, stubRender, panel.Options{})
 	body := rec.Body.String()
 	if !strings.Contains(body, `<!DOCTYPE html>`) || !strings.Contains(body, `hx-boost="true"`) {
 		t.Fatal("direct load should return full boosted page")

@@ -100,9 +100,13 @@ func TestNodeSectionDataSourcesProvenance(t *testing.T) {
 			VotingPower: "100", VPPercent: 25, Commission: 10,
 		},
 	}
-	out := BuildView(ViewNode, d)
+	out := BuildViewWithOptions(ViewNode, d, Options{ShowSources: true})
 	if !strings.Contains(out, `class="dash-sources"`) {
-		t.Fatal("validator section should include data sources footer")
+		t.Fatal("validator section should include data sources footer when enabled")
+	}
+	outHidden := BuildView(ViewNode, d)
+	if strings.Contains(outHidden, `class="dash-sources"`) {
+		t.Fatal("validator section should hide data sources by default")
 	}
 }
 
