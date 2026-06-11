@@ -267,6 +267,157 @@ func ecoFlagEffectHTML(effect string, inactive, warn bool) string {
 	return fmt.Sprintf(`<span%s>%s</span>`, cls, inlineHTML(effect))
 }
 
+// economicsDomainCardsHTML generates the three domain cards that replace KPI band + badges + secondary line
+func economicsDomainCardsHTML(d model.Report, compact bool) string {
+	var b strings.Builder
+	b.WriteString(`<div class="eco-domains">`)
+	
+	// Distribution domain card
+	b.WriteString(`<div class="eco-domain eco-domain--distribution">`)
+	b.WriteString(`<h3 class="eco-domain__title">Distribution</h3>`)
+	b.WriteString(`<div class="eco-domain__rows">`)
+	
+	// Community tax row
+	taxValue := orEcoDash(d.CommunityTax)
+	poolBalance := orEcoDash(d.CommunityPool)
+	var taxEffect string
+	rowClass := ""
+	if d.CommunityTaxZero {
+		taxEffect = "0% — community pool gets no cut"
+		if poolBalance == "—" || poolBalance == "0 PMT" {
+			taxEffect = "0% tax → pool empty"
+		}
+		rowClass = ` class="eco-domain__row--warn"`
+	} else {
+		taxEffect = fmt.Sprintf("tax → pool %s", poolBalance)
+		if !economicsHasRewardSource(d) {
+			taxEffect = "tax configured but no rewards flowing"
+			rowClass = ` class="eco-domain__row--warn"`
+		}
+	}
+	fmt.Fprintf(&b, `<div%s><div class="eco-domain__param">Community</div><div class="eco-domain__value">%s</div><div class="eco-domain__effect">%s</div></div>`,
+		rowClass, html.EscapeString(taxValue), html.EscapeString(taxEffect))
+	
+	// Fee collector row (if not compact)
+	if !compact {
+		if bal := FeeCollectorBalance(d); bal != "" {
+			check := economicsFeeCollectorCheck(d)
+			effect := "cleared each block"
+			rowCls := ""
+			if check == "not cleared?" {
+				effect = "stuck — check distribution"
+				rowCls = ` class="eco-domain__row--warn"`
+			}
+			fmt.Fprintf(&b, `<div%s><div class="eco-domain__param">fee_collector</div><div class="eco-domain__value">%s</div><div class="eco-domain__effect">%s</div></div>`,
+				rowCls, html.EscapeString(bal), html.EscapeString(effect))
+		}
+	}
+	
+	// Unclaimed rewards (if significant and not compact)
+	if !compact {
+		if del := economicsUnclaimedDelegator(d); del != "" {
+			fmt.Fprintf(&b, `<div><div class="eco-domain__param">Unclaimed</div><div class="eco-domain__value">%s delegator</div><div class="eco-domain__effect">pending distribution</div></div>`,
+				html.EscapeString(del))
+		}
+		if comm := economicsUnclaimedCommission(d); comm != "" {
+			fmt.Fprintf(&b, `<div><div class="eco-domain__param"></div><div class="eco-domain__value">%s commission</div><div class="eco-domain__effect">pending withdrawal</div></div>`,
+				html.EscapeString(comm))
+		}
+	}
+	
+	b.WriteString(`</div></div>`)
+	
+	// Staking domain card
+	b.WriteString(`<div class="eco-domain eco-domain--staking">`)
+	b.WriteString(`<h3 class="eco-domain__title">Staking</h3>`)
+	b.WriteString(`<div class="eco-domain__rows">`)
+	
+	// Bonded ratio
+	goalDiff := ""
+	if d.BondedPct > d.GoalBonded {
+		goalDiff = fmt.Sprintf("%.1f%% over goal", d.BondedPct-d.GoalBonded)
+	} else if d.BondedPct < d.GoalBonded {
+		goalDiff = fmt.Sprintf("%.1f%% under goal", d.GoalBonded-d.BondedPct)
+	} else {
+		goalDiff = "at goal"
+	}
+	fmt.Fprintf(&b, `<div><div class="eco-domain__param">Bonded</div><div class="eco-domain__value">%.2f%% (goal %.0f%%)</div><div class="eco-domain__effect">%s</div></div>`,
+		d.BondedPct, d.GoalBonded, html.EscapeString(goalDiff))
+	
+	if !compact {
+		// Add bonded/not-bonded amounts if available
+		if d.BondedAmt != "" {
+			fmt.Fprintf(&b, `<div><div class="eco-domain__param">Bonded amt</div><div class="eco-domain__value">%s</div><div class="eco-domain__effect">actively securing chain</div></div>`,
+				html.EscapeString(d.BondedAmt))
+		}
+		if d.NotBonded != "" {
+			fmt.Fprintf(&b, `<div><div class="eco-domain__param">Not bonded</div><div class="eco-domain__value">%s</div><div class="eco-domain__effect">unbonded or unbonding</div></div>`,
+				html.EscapeString(d.NotBonded))
+		}
+	}
+	
+	b.WriteString(`</div></div>`)
+	
+	// Rewards In domain card
+	b.WriteString(`<div class="eco-domain eco-domain--rewards">`)
+	b.WriteString(`<h3 class="eco-domain__title">Rewards In</h3>`)
+	b.WriteString(`<div class="eco-domain__rows">`)
+	
+	// PMT rewards
+	pmtRowClass := ""
+	pmtEffect := ecoPMTEffect(d)
+	if !d.PMTEnabled {
+		pmtRowClass = ` class="eco-domain__row--inactive"`
+	} else if d.PMTPoolEmpty {
+		pmtRowClass = ` class="eco-domain__row--warn"`
+	}
+	pmtVal := orEcoDash(d.PMTRate)
+	if d.PMTEnabled && d.PMTRate != "" && !compact {
+		pmtVal += "/block"
+	}
+	fmt.Fprintf(&b, `<div%s><div class="eco-domain__param">PMT</div><div class="eco-domain__value">%s</div><div class="eco-domain__effect">%s</div></div>`,
+		pmtRowClass, html.EscapeString(pmtVal), html.EscapeString(pmtEffect))
+	
+	// Inflation
+	inflRowClass := ""
+	inflEffect := ecoInflationEffect(d)
+	if d.Inflation <= 0 {
+		inflRowClass = ` class="eco-domain__row--inactive"`
+	}
+	inflVal := fmt.Sprintf("%.2f%%", d.Inflation)
+	if d.Inflation > 0 && d.InflationPerBlock != "" && !compact {
+		inflVal += " (" + d.InflationPerBlock + "/block)"
+	}
+	fmt.Fprintf(&b, `<div%s><div class="eco-domain__param">Inflation</div><div class="eco-domain__value">%s</div><div class="eco-domain__effect">%s</div></div>`,
+		inflRowClass, html.EscapeString(inflVal), html.EscapeString(inflEffect))
+	
+	// Tx fees (if not compact)
+	if !compact {
+		feesRowClass := ""
+		feesEffect := ecoTxFeesEffect(d)
+		feesVal := orEcoDash(trimFeeNote(d.LastBlockFees))
+		if d.LastBlockFees == "" {
+			feesRowClass = ` class="eco-domain__row--inactive"`
+		}
+		fmt.Fprintf(&b, `<div%s><div class="eco-domain__param">Tx fees</div><div class="eco-domain__value">%s</div><div class="eco-domain__effect">%s</div></div>`,
+			feesRowClass, html.EscapeString(feesVal), html.EscapeString(feesEffect))
+		
+		// Total per block
+		totalRowClass := ""
+		totalEffect := ecoRewardInEffect(d)
+		totalVal := orEcoDash(RewardInPerBlockTotal(d))
+		if !economicsHasRewardSource(d) {
+			totalRowClass = ` class="eco-domain__row--warn"`
+		}
+		fmt.Fprintf(&b, `<div%s><div class="eco-domain__param">Total/block</div><div class="eco-domain__value">%s</div><div class="eco-domain__effect">%s</div></div>`,
+			totalRowClass, html.EscapeString(totalVal), html.EscapeString(totalEffect))
+	}
+	
+	b.WriteString(`</div></div>`)
+	b.WriteString(`</div>`)
+	
+	return b.String()
+}
 func economicsLedgerTableHTML(rows []EcoLedgerRow) string {
 	headers := []string{"Step", "Where", "In this block", "Balance now", "Check"}
 	var b strings.Builder

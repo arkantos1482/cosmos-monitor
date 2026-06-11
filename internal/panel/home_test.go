@@ -15,6 +15,13 @@ func TestBuildOverviewStack(t *testing.T) {
 		MemPct: 42, DiskPct: 55, Load1: 0.5,
 		RPCProbeOK: 4, RPCProbeTotal: 4,
 		RPCProbes: []model.RPCProbe{{Method: "eth_blockNumber", OK: true}},
+		// Economics data for compact domain summary on overview card
+		PMTRate: "0.1 PMT/block",
+		CommunityTax: "2%", 
+		CommunityPool: "0.5 PMT",
+		ModuleAccounts: []model.ModuleAccountRow{
+			{Name: "fee_collector", Balance: "0 PMT", Role: "fees"},
+		},
 	}
 	out := BuildView(ViewHome, d)
 	for _, want := range []string{
@@ -34,13 +41,13 @@ func TestBuildOverviewStack(t *testing.T) {
 		`href="/s/infra"`,
 		`href="/s/evm"`,
 		`class="val-summary"`,
-		`class="eco-summary"`,
+		`eco-summary`,
 		`class="fee-summary"`,
 		`class="gov-summary"`,
 		`class="infra-summary"`,
 		`class="node-summary"`,
 		`class="evm-summary"`,
-		`economics-kpi-band`,
+		`eco-summary`,
 		`mini-gauge`,
 		`evm-summary__probe`,
 	} {
@@ -61,6 +68,14 @@ func TestBuildOverviewStack(t *testing.T) {
 	chainIdx := strings.Index(out, `dash-overview__group--chain`)
 	if nodeIdx < 0 || chainIdx < 0 || nodeIdx > chainIdx {
 		t.Fatal("overview should show This node group before Chain group")
+	}
+	
+	// Verify economics overview card shows compact domain summary instead of KPI tiles
+	if !strings.Contains(out, `eco-summary--compact`) {
+		t.Fatal("economics overview card should show compact domain summary")
+	}
+	if strings.Contains(out, `kpi-tile`) && strings.Index(out, `dash-overview__card--economics`) >= 0 {
+		t.Fatal("economics overview card should not use KPI tiles, use compact domain layout")
 	}
 }
 
@@ -139,6 +154,11 @@ func TestSectionSummariesEmbedded(t *testing.T) {
 		PMTEnabled: true, PMTRate: "0.1 PMT/block",
 		EVMRPCOk: true, EVMSynced: true, RPCProbeOK: 1, RPCProbeTotal: 1,
 		RPCProbes: []model.RPCProbe{{Method: "eth_chainId", OK: true}},
+		CommunityTax: "2%",
+		CommunityPool: "0.5 PMT",
+		ModuleAccounts: []model.ModuleAccountRow{
+			{Name: "fee_collector", Balance: "1 PMT", Role: "fees"},
+		},
 	}
 	for _, tc := range []struct {
 		view View
@@ -146,7 +166,7 @@ func TestSectionSummariesEmbedded(t *testing.T) {
 		gone string
 	}{
 		{ViewValidators, `class="val-summary"`, `class="dash-subheading">Summary</h3>`},
-		{ViewEconomics, `economics-kpi-band`, "At a glance"},
+		{ViewEconomics, `eco-domains`, "At a glance"},
 		{ViewFeemarket, `class="fee-summary"`, ""},
 		{ViewGovernance, `class="gov-summary"`, ""},
 		{ViewInfra, `class="infra-summary"`, ""},

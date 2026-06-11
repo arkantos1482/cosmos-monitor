@@ -24,8 +24,8 @@ func TestEconomicsInactivePMTDisabled(t *testing.T) {
 	if !strings.Contains(out, `badge--bad">false`) {
 		t.Fatal("expected false badge for disabled PMT")
 	}
-	if !strings.Contains(out, `badge--bad">inflation off`) {
-		t.Fatal("expected inflation off badge in summary")
+	if !strings.Contains(out, `eco-domain__row--inactive`) {
+		t.Fatal("expected inactive inflation in domain card")
 	}
 }
 

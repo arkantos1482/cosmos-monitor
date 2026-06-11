@@ -1543,6 +1543,209 @@ body::after {
   color: var(--warn);
 }
 
+/* ── Economics domain cards ───────────────────────────────────── */
+
+.eco-domain {
+  margin: 0.65rem 0;
+  padding: 0.75rem 0.85rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  border-left: 3px solid var(--accent-economics);
+  box-shadow: var(--shadow);
+}
+
+.eco-domain + .eco-domain {
+  margin-top: 0.85rem;
+}
+
+.eco-domain--distribution {
+  border-left-color: var(--accent-2);
+}
+
+.eco-domain--staking {
+  border-left-color: var(--accent-validators);
+}
+
+.eco-domain--rewards {
+  border-left-color: var(--accent-economics);
+}
+
+.eco-domain__title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg);
+  margin: 0 0 0.65rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.eco-domain__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.eco-domain__row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 32%) minmax(8rem, 40%) 1fr;
+  gap: 0.5rem 0.65rem;
+  align-items: baseline;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.eco-domain__param {
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: lowercase;
+}
+
+.eco-domain__value {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: var(--fg);
+}
+
+.eco-domain__effect {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-style: italic;
+}
+
+.eco-domain__row--warn .eco-domain__value {
+  color: var(--warn);
+}
+
+.eco-domain__row--warn .eco-domain__effect {
+  color: var(--warn);
+  font-weight: 500;
+  font-style: normal;
+}
+
+.eco-domain__row--inactive .eco-domain__value {
+  color: var(--bad);
+}
+
+.eco-domain__row--inactive .eco-domain__effect {
+  color: var(--bad);
+  font-weight: 500;
+  font-style: normal;
+}
+
+/* ── Economics module accounts table ──────────────────────────── */
+
+.eco-module-accounts {
+  margin: 0.75rem 0;
+}
+
+.eco-module-accounts .table-scroll {
+  margin: 0.35rem 0 0.55rem;
+}
+
+.eco-module-accounts .data-table {
+  font-size: 0.78rem;
+}
+
+.eco-module-accounts .data-table thead th {
+  font-size: 0.72rem;
+  color: var(--muted);
+  background: var(--surface-2);
+}
+
+.eco-module-accounts .data-table tbody td {
+  vertical-align: top;
+  line-height: 1.4;
+}
+
+.eco-module-accounts .data-table__module {
+  font-weight: 600;
+  color: var(--accent-economics);
+}
+
+.eco-module-accounts .data-table__balance {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.eco-module-accounts .data-table__address {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+  word-break: break-all;
+  max-width: 16rem;
+}
+
+.eco-module-accounts .data-table__ledger {
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--accent);
+}
+
+.eco-module-accounts .data-table__role {
+  color: var(--muted);
+  font-size: 0.76rem;
+  max-width: 12rem;
+}
+
+/* ── Economics advanced/collapsible section ───────────────────── */
+
+.eco-advanced {
+  margin: 1rem 0 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.eco-advanced[open] {
+  background: var(--surface);
+}
+
+.eco-advanced__summary {
+  cursor: pointer;
+  padding: 0.65rem 0.85rem 0.65rem 1.85rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--muted);
+  list-style: none;
+  user-select: none;
+  position: relative;
+  border-bottom: 1px solid transparent;
+}
+
+.eco-advanced__summary::before {
+  content: "▸";
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.72rem;
+  color: var(--accent);
+  transition: transform 0.15s;
+}
+
+.eco-advanced[open] .eco-advanced__summary::before {
+  content: "▾";
+}
+
+.eco-advanced__summary::-webkit-details-marker {
+  display: none;
+}
+
+.eco-advanced[open] .eco-advanced__summary {
+  color: var(--fg);
+  border-bottom-color: var(--border);
+}
+
+.eco-advanced__body {
+  padding: 0.75rem 0.85rem 0.85rem;
+}
+
 /* ── Economics flags panel ─────────────────────────────────────── */
 
 .eco-flags {

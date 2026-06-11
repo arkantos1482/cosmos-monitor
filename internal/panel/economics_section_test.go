@@ -26,6 +26,8 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		ModuleAccounts: []model.ModuleAccountRow{
 			{Name: "fee_collector", Balance: "0 PMT", Role: "fees"},
 			{Name: "distribution", Balance: "0 PMT", Role: "escrow"},
+			{Name: "bonded_tokens_pool", Balance: "12.5M PMT", Role: "staking"},
+			{Name: "not_bonded_tokens_pool", Balance: "5.8M PMT", Role: "staking"},
 		},
 		Validators: []model.Validator{{CommissionFloat: 10}},
 		Local: model.LocalValidator{
@@ -47,31 +49,37 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 	if strings.Contains(chunk, `class="diagram-panel mermaid"`) {
 		t.Fatal("economics section should not use mermaid")
 	}
+	
+	// Check new cohesive layout elements are present
 	for _, want := range []string{
 		"Block reward ledger",
-		"fee_collector",
+		"Module accounts",                               // New unified module accounts table
 		`class="dash-subheading">Chain parameters (reference)</h3>`,
-		`parameters (reward flow)`,
+		`<details class="eco-advanced">`,               // Collapsible flags section
+		`Advanced parameters (reward flow)`,           // Collapsible section title 
 		`id="eco-flags"`,
 		`pmtrewards.enabled`,
 		`eco-flags__table`,
+		"eco-domains",                                  // Domain cards wrapper
+		"eco-domain--distribution",                     // Distribution domain card
+		"eco-domain--rewards",                          // Rewards domain card
+		"eco-domain--staking",                          // Staking domain card
+		"eco-module-accounts",                          // Module accounts table class
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("economics chunk missing %q", want)
 		}
 	}
-	if !strings.Contains(out, `class="eco-summary"`) || !strings.Contains(out, `economics-kpi-band`) {
-		t.Fatal("economics should include summary with KPI band")
-	}
+	
+	// Check that old KPI + badges layout is gone
 	if strings.Contains(chunk, "At a glance") {
 		t.Fatal("economics should not duplicate at-a-glance subsection")
 	}
 	for _, gone := range []string{
 		"Money flow (live balances)",
-		"This validator",
+		"This validator", 
 		"this validator → commission",
 		"your commission",
-		"Module account",
 		"Distribution split",
 		"Network total",
 		"per-block commission",
@@ -79,6 +87,17 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		if strings.Contains(chunk, gone) {
 			t.Fatalf("economics chunk should not contain old table %q", gone)
 		}
+	}
+	
+	// Verify community tax is only in Distribution domain card, not duplicated in reference
+	communityTaxMatches := strings.Count(chunk, "community tax") + strings.Count(chunk, "Community")
+	if communityTaxMatches < 1 {
+		t.Fatal("economics should show community tax in Distribution domain card")
+	}
+	
+	// Verify flags are in collapsible section (should not be immediately visible)
+	if !strings.Contains(chunk, `<summary>Advanced parameters`) {
+		t.Fatal("flags should be in collapsible details section")
 	}
 }
 

@@ -12,7 +12,12 @@ func TestBuildEconomicsUsesTablesNotMermaid(t *testing.T) {
 		Inflation: 3.5, PMTEnabled: true, PMTRate: "0.1 PMT/block",
 		BaseFee: "1000", Elasticity: 2, BlockGas: "21000",
 		ParentBlockGasWanted: 21000, ParentBlockResultsOK: true,
-		ModuleAccounts: []model.ModuleAccountRow{{Name: "fee_collector", Balance: "1 PMT"}},
+		ModuleAccounts: []model.ModuleAccountRow{
+			{Name: "fee_collector", Balance: "1 PMT", Role: "fees"},
+			{Name: "distribution", Balance: "0 PMT", Role: "escrow"},
+		},
+		CommunityTax: "2%",
+		CommunityPool: "0.5 PMT",
 	}
 	out := Build(d)
 	idx := strings.Index(out, "2. ECONOMICS")
@@ -30,14 +35,28 @@ func TestBuildEconomicsUsesTablesNotMermaid(t *testing.T) {
 	if strings.Contains(eco, "At a glance") {
 		t.Fatal("economics should not duplicate at-a-glance subsection")
 	}
-	if !strings.Contains(out, `economics-kpi-band`) {
-		t.Fatal("economics summary should use KPI band")
+	if !strings.Contains(out, `eco-domains`) {
+		t.Fatal("economics summary should use domain cards")
 	}
 	if !strings.Contains(out, `class="eco-summary"`) {
 		t.Fatal("economics should include embedded summary")
 	}
 	if !strings.Contains(eco, `data-table--ledger`) {
 		t.Fatal("ledger table should use ledger styling")
+	}
+	
+	// Verify new cohesive layout elements
+	if !strings.Contains(eco, "eco-domain--distribution") {
+		t.Fatal("economics should include Distribution domain card")
+	}
+	if !strings.Contains(eco, "eco-domain--rewards") {
+		t.Fatal("economics should include Rewards domain card") 
+	}
+	if !strings.Contains(eco, "Module accounts") {
+		t.Fatal("economics should include Module accounts table")
+	}
+	if !strings.Contains(eco, `<details class="eco-advanced">`) {
+		t.Fatal("economics should have collapsible advanced parameters section")
 	}
 }
 
