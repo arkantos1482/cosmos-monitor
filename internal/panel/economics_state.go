@@ -126,8 +126,37 @@ func ecoDomainValueHTML(v string) string {
 }
 
 func ecoDomainRow(b *strings.Builder, rowClass, param, value, effect string) {
-	fmt.Fprintf(b, `<div%s><div class="eco-domain__param">%s</div><div class="eco-domain__value">%s</div><div class="eco-domain__effect">%s</div></div>`,
-		rowClass, html.EscapeString(param), ecoDomainValueHTML(value), html.EscapeString(effect))
+	ecoDomainRowHTML(b, rowClass, param, ecoDomainValueHTML(value), effect)
+}
+
+func ecoDomainRowHTML(b *strings.Builder, rowClass, param, valueHTML, effect string) {
+	cls := `eco-domain__row`
+	if mod := strings.Trim(rowClass, ` "'`); mod != "" {
+		cls += " " + mod
+	}
+	fmt.Fprintf(b, `<div class="%s"><div class="eco-domain__param">%s</div><div class="eco-domain__value">%s</div><div class="eco-domain__effect">%s</div></div>`,
+		cls, html.EscapeString(param), valueHTML, html.EscapeString(effect))
+}
+
+func ecoBalanceAddrHTML(balance, addr string) string {
+	bal := strings.TrimSpace(balance)
+	if bal == "" || bal == "—" {
+		bal = ""
+	}
+	addr = strings.TrimSpace(addr)
+	if bal == "" && addr == "" {
+		return "—"
+	}
+	var b strings.Builder
+	b.WriteString(`<div class="eco-acct">`)
+	if bal != "" {
+		fmt.Fprintf(&b, `<div class="eco-acct__balance">%s</div>`, html.EscapeString(bal))
+	}
+	if addr != "" {
+		fmt.Fprintf(&b, `<code class="eco-acct__addr">%s</code>`, html.EscapeString(addr))
+	}
+	b.WriteString(`</div>`)
+	return b.String()
 }
 
 func ecoDomainDivider(b *strings.Builder) {
@@ -171,7 +200,8 @@ func pmtRewardsCardHTML(d model.Report, compact bool) string {
 	} else if d.PMTPoolEmpty {
 		poolCls = ` class="eco-domain__row--warn"`
 	}
-	ecoDomainRow(&b, poolCls, "pool balance", orEcoDash(d.PMTBalance), ecoPoolEffect(d))
+	poolVal := ecoBalanceAddrHTML(orEcoDash(d.PMTBalance), displayAddress(d.PMTPoolAddress))
+	ecoDomainRowHTML(&b, poolCls, "reward pool", poolVal, ecoPoolEffect(d))
 
 	if !compact && d.PMTAnnual != "" {
 		annualCls := ""
@@ -179,11 +209,6 @@ func pmtRewardsCardHTML(d model.Report, compact bool) string {
 			annualCls = ` class="eco-domain__row--inactive"`
 		}
 		ecoDomainRow(&b, annualCls, "annual emissions", d.PMTAnnual, "estimated yearly payout at current rate")
-	}
-
-	ecoDomainDivider(&b)
-	if addr := displayAddress(d.PMTPoolAddress); addr != "" {
-		ecoDomainRow(&b, "", "pool address", addr, "funding source for block rewards")
 	}
 
 	b.WriteString(`</div></div>`)
@@ -310,15 +335,8 @@ func writeStakingModuleAccountRows(b *strings.Builder, d model.Report) {
 		if bal == "" && addr == "" {
 			continue
 		}
-		val := orEcoDash(bal)
-		if addr != "" {
-			if val != "—" {
-				val += " @ " + addr
-			} else {
-				val = addr
-			}
-		}
-		ecoDomainRow(b, "", mod.name, val, mod.effect)
+		val := ecoBalanceAddrHTML(orEcoDash(bal), addr)
+		ecoDomainRowHTML(b, "", mod.name, val, mod.effect)
 	}
 }
 

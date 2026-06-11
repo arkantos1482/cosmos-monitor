@@ -133,6 +133,34 @@ func TestStakingCardNoGoalText(t *testing.T) {
 	}
 }
 
+func TestPMTRewardsPoolMerged(t *testing.T) {
+	wantEVM := "0xEDACCBBFB7DB3278BC72AEEF66CC10A96C272A38"
+	d := model.Report{
+		PMTEnabled:      true,
+		PMTRate:         "0.1 PMT/block",
+		PMTBalance:      "1.00M PMT",
+		PMTPoolAddress:  "cosmos1akkvh0ahmve830rj4mhkdnqs49kzw23c63nhdx",
+	}
+	card := pmtRewardsCardHTML(d, false)
+	for _, want := range []string{
+		"reward pool",
+		`class="eco-acct"`,
+		`class="eco-acct__balance"`,
+		`class="eco-acct__addr"`,
+		wantEVM,
+		"1.00M PMT",
+	} {
+		if !strings.Contains(card, want) {
+			t.Fatalf("PMT rewards card missing %q:\n%s", want, card)
+		}
+	}
+	for _, gone := range []string{"pool balance", "pool address", "Governance params"} {
+		if strings.Contains(card, gone) {
+			t.Fatalf("PMT rewards card should not contain %q", gone)
+		}
+	}
+}
+
 func TestSlashingCardSeparate(t *testing.T) {
 	d := model.Report{
 		SlashWindow:   "10000",

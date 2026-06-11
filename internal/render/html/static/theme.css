@@ -1543,15 +1543,9 @@ body::after {
 /* ── Economics domain cards ───────────────────────────────────── */
 
 .eco-domains {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.85rem;
-}
-
-@media (max-width: 720px) {
-  .eco-domains {
-    grid-template-columns: 1fr;
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .eco-domain {
@@ -1619,11 +1613,21 @@ body::after {
 
 .eco-domain__row {
   display: grid;
-  grid-template-columns: minmax(7rem, 32%) minmax(8rem, 40%) 1fr;
-  gap: 0.5rem 0.65rem;
-  align-items: baseline;
+  grid-template-columns: minmax(7rem, 11rem) 1fr;
+  gap: 0.12rem 0.85rem;
+  align-items: start;
   font-size: 0.82rem;
   line-height: 1.4;
+}
+
+.eco-domain__row > .eco-domain__value {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.eco-domain__row > .eco-domain__effect {
+  grid-column: 2;
+  grid-row: 2;
 }
 
 .eco-domain__param {
@@ -1663,6 +1667,35 @@ body::after {
   color: var(--bad);
   font-weight: 500;
   font-style: normal;
+}
+
+.eco-acct {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.eco-acct__balance {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--fg);
+  line-height: 1.35;
+}
+
+.eco-acct__addr {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--muted);
+  word-break: break-all;
+  line-height: 1.4;
+  padding: 0.2rem 0.45rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
 }
 
 /* ── Economics module accounts table ──────────────────────────── */
