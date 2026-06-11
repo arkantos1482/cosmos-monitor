@@ -33,19 +33,61 @@ func renderStatusHTML(d model.Report, extraAttrs string) string {
 }
 
 func writeStatusPills(w Writer, d model.Report) {
-	syncStr := "synced"
-	syncCls := "badge--ok"
-	if !d.Synced {
-		syncStr = "catching up"
-		syncCls = "badge--warn"
+	height := "—"
+	if d.HasChainStatus {
+		height = d.BlockHeight
+		if height == "" {
+			height = "—"
+		}
+		if d.TimeSinceBlock != "" {
+			height += " · " + d.TimeSinceBlock
+		}
+	}
+	writeStatusPill(w, "Height", height, "")
+
+	if d.HasChainStatus {
+		syncStr := "synced"
+		syncCls := "badge--ok"
+		if !d.Synced {
+			syncStr = "catching up"
+			syncCls = "badge--warn"
+		}
+		writeStatusPillBadge(w, "Sync", syncStr, syncCls)
+	} else {
+		writeStatusPill(w, "Sync", "—", "")
 	}
 
-	nodeStatus := "stopped"
-	nodeCls := "badge--bad"
-	if d.NodeRunning {
-		nodeStatus = "running"
-		nodeCls = "badge--ok"
+	peers := "—"
+	if d.HasChainStatus || d.HasEVMPeers {
+		cosmos := "—"
+		evm := "—"
+		if d.HasChainStatus {
+			cosmos = fmt.Sprintf("%d", d.PeerCount)
+		}
+		if d.HasEVMPeers {
+			evm = fmt.Sprintf("%d", d.EVMPeerCount)
+		}
+		peers = fmt.Sprintf("%s cosmos · %s evm", cosmos, evm)
 	}
+	writeStatusPill(w, "Peers", peers, "")
+
+	if d.HasNodeStatus {
+		nodeStatus := "stopped"
+		nodeCls := "badge--bad"
+		if d.NodeRunning {
+			nodeStatus = "running"
+			nodeCls = "badge--ok"
+		}
+		writeStatusPillBadge(w, "Node", nodeStatus, nodeCls)
+	} else {
+		writeStatusPill(w, "Node", "—", "")
+	}
+
+	baseFee := d.BaseFee
+	if !d.HasChainStatus || baseFee == "" {
+		baseFee = "—"
+	}
+	writeStatusPill(w, "Base fee", baseFee, "")
 
 	pmtStr := "disabled"
 	pmtCls := ""
@@ -57,31 +99,12 @@ func writeStatusPills(w Writer, d model.Report) {
 			pmtCls = "badge--warn"
 		}
 	}
-
-	height := d.BlockHeight
-	if height == "" {
-		height = "—"
-	}
-	if d.TimeSinceBlock != "" {
-		height += " · " + d.TimeSinceBlock
-	}
-
-	baseFee := d.BaseFee
-	if baseFee == "" {
-		baseFee = "—"
-	}
+	writeStatusPillBadge(w, "PMT", pmtStr, pmtCls)
 
 	refresh := d.TimeUTC
 	if refresh == "" {
 		refresh = "live"
 	}
-
-	writeStatusPill(w, "Height", height, "")
-	writeStatusPillBadge(w, "Sync", syncStr, syncCls)
-	writeStatusPill(w, "Peers", fmt.Sprintf("%d cosmos · %d evm", d.PeerCount, d.EVMPeerCount), "")
-	writeStatusPillBadge(w, "Node", nodeStatus, nodeCls)
-	writeStatusPill(w, "Base fee", baseFee, "")
-	writeStatusPillBadge(w, "PMT", pmtStr, pmtCls)
 	w.WriteHTML(fmt.Sprintf(`<time class="dash-status__time">%s</time>`, html.EscapeString(refresh)))
 }
 

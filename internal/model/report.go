@@ -1,5 +1,12 @@
 package model
 
+// StatusAvailability records which status-strip data sources succeeded.
+type StatusAvailability struct {
+	ChainOK  bool
+	EVMOK    bool
+	DockerOK bool
+}
+
 // Report holds pre-formatted dashboard data for HTML panel output.
 type Report struct {
 	Moniker      string
@@ -8,6 +15,10 @@ type Report struct {
 	TimeUTC      string
 	PeerCount    int
 	EVMPeerCount uint64
+	// Status-strip source availability (false → render "—" instead of zero/false defaults).
+	HasChainStatus bool
+	HasEVMPeers    bool
+	HasNodeStatus  bool
 
 	NodeID             string
 	AppVersion         string

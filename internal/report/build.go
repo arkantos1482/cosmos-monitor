@@ -10,11 +10,14 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, docker fetch.DockerSnapshot, evmHTTPEndpoint string) model.Report {
+func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, docker fetch.DockerSnapshot, evmHTTPEndpoint string, status model.StatusAvailability) model.Report {
 	p := chain.Params
 	d := model.Report{}
 
 	d.Moniker = chain.Moniker
+	d.HasChainStatus = status.ChainOK
+	d.HasEVMPeers = status.EVMOK
+	d.HasNodeStatus = status.DockerOK
 	d.Synced = !chain.CatchingUp
 	d.BlockHeight = FormatInt(chain.BlockHeight)
 	d.TimeUTC = time.Now().UTC().Format("15:04:05") + " UTC"

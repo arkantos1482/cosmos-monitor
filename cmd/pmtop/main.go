@@ -23,7 +23,7 @@ func main() {
 
 	load := func(v panel.View) model.Report {
 		sn := fetchall.LoadFor(v, *rpc, *rest, *evm, *container)
-		return report.Build(sn.Chain, sn.EVM, sn.System, sn.Docker, *evm)
+		return report.Build(sn.Chain, sn.EVM, sn.System, sn.Docker, *evm, sn.Status)
 	}
 
 	if *dump {

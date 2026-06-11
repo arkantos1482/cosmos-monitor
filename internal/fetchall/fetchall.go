@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/fetch"
+	"github.com/arkantos1482/cosmos-monitor/internal/model"
 	"github.com/arkantos1482/cosmos-monitor/internal/panel"
 )
 
@@ -14,6 +15,7 @@ type Snapshots struct {
 	EVM    fetch.EVMSnapshot
 	System fetch.SystemSnapshot
 	Docker fetch.DockerSnapshot
+	Status model.StatusAvailability
 }
 
 const (
@@ -56,7 +58,10 @@ func LoadFor(view panel.View, rpc, rest, evm, container string) Snapshots {
 	}
 	cache.mu.Unlock()
 
-	snap := fetchForView(view, rpc, rest, evm, container)
+	viewSnap := fetchForView(view, rpc, rest, evm, container)
+	barSnap, barOK := fetchStatusBar(rpc, rest, evm, container)
+	snap := mergeStatusOverlay(viewSnap, barSnap, barOK)
+	snap.Status = barOK
 
 	cache.mu.Lock()
 	if cache.byView == nil {
