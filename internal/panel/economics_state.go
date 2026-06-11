@@ -143,37 +143,6 @@ func ecoBondedVsGoalEffect(d model.Report) string {
 	return "at goal — inflation stable"
 }
 
-func orEcoDash(s string) string {
-	if s == "" || s == "—" {
-		return "—"
-	}
-	return s
-}
-
-func ecoDomainValueHTML(v string) string {
-	switch strings.ToLower(strings.TrimSpace(v)) {
-	case "true":
-		return `<span class="badge badge--ok">true</span>`
-	case "false":
-		return `<span class="badge badge--bad">false</span>`
-	default:
-		return softWrapHTML(v)
-	}
-}
-
-func ecoDomainRow(b *strings.Builder, rowClass, param, value, effect string) {
-	ecoDomainRowHTML(b, rowClass, param, ecoDomainValueHTML(value), effect)
-}
-
-func ecoDomainRowHTML(b *strings.Builder, rowClass, param, valueHTML, effect string) {
-	cls := `eco-domain__row`
-	if mod := strings.Trim(rowClass, ` "'`); mod != "" {
-		cls += " " + mod
-	}
-	fmt.Fprintf(b, `<div class="%s"><div class="eco-domain__param">%s</div><div class="eco-domain__value">%s</div><div class="eco-domain__effect">%s</div></div>`,
-		cls, html.EscapeString(param), valueHTML, html.EscapeString(effect))
-}
-
 type economicsDistItem struct {
 	param, balance, addr, effect, rowClass string
 }
@@ -194,31 +163,6 @@ func economicsDistItemsHTML(items []economicsDistItem) string {
 
 func economicsDistributionModuleAddr(d model.Report) string {
 	return moduleAccountDisplayAddress(d, "distribution")
-}
-
-func ecoBalanceAddrHTML(balance, addr string) string {
-	bal := strings.TrimSpace(balance)
-	if bal == "" || bal == "—" {
-		bal = ""
-	}
-	addr = strings.TrimSpace(addr)
-	if bal == "" && addr == "" {
-		return "—"
-	}
-	var b strings.Builder
-	b.WriteString(`<div class="eco-acct">`)
-	if bal != "" {
-		fmt.Fprintf(&b, `<div class="eco-acct__balance">%s</div>`, html.EscapeString(bal))
-	}
-	if addr != "" {
-		fmt.Fprintf(&b, `<code class="eco-acct__addr">%s</code>`, html.EscapeString(addr))
-	}
-	b.WriteString(`</div>`)
-	return b.String()
-}
-
-func ecoDomainDivider(b *strings.Builder) {
-	b.WriteString(`<div class="eco-domain__divider">Governance params</div>`)
 }
 
 func economicsDomainCardsHTML(d model.Report, compact bool) string {
@@ -332,17 +276,7 @@ func stakingCardHTML(d model.Report, compact bool) string {
 	}
 
 	writeStakingModuleAccountRows(&b, d)
-
-	ecoDomainDivider(&b)
-	if d.BondDenom != "" {
-		ecoDomainRow(&b, "", "bond denom", d.BondDenom, "staking unit of account")
-	}
-	if d.UnbondingTime != "" {
-		ecoDomainRow(&b, "", "unbonding time", d.UnbondingTime, "time locked after unstaking")
-	}
-	if d.MaxValidators > 0 {
-		ecoDomainRow(&b, "", "max validators", fmt.Sprintf("%d", d.MaxValidators), "active set cap")
-	}
+	writeStakingParamRows(&b, d)
 
 	b.WriteString(`</div></div>`)
 	return b.String()
@@ -354,11 +288,36 @@ func slashingCardHTML(d model.Report, _ bool) string {
 	b.WriteString(`<h3 class="eco-domain__title">Slashing <span class="eco-domain__subtitle">x/slashing</span></h3>`)
 	b.WriteString(`<div class="eco-domain__rows">`)
 
+	writeSlashingParamRows(&b, d)
+
+	b.WriteString(`</div></div>`)
+	return b.String()
+}
+
+func writeStakingModuleAccountRows(b *strings.Builder, d model.Report) {
+	writeModuleAccountRow(b, d, "bonded_tokens_pool", "staked tokens escrow")
+	writeModuleAccountRow(b, d, "not_bonded_tokens_pool", "unbonded / unbonding escrow")
+}
+
+func writeStakingParamRows(b *strings.Builder, d model.Report) {
+	ecoDomainDivider(b)
+	if d.BondDenom != "" {
+		ecoDomainRow(b, "", "bond denom", d.BondDenom, "staking unit of account")
+	}
+	if d.UnbondingTime != "" {
+		ecoDomainRow(b, "", "unbonding time", d.UnbondingTime, "time locked after unstaking")
+	}
+	if d.MaxValidators > 0 {
+		ecoDomainRow(b, "", "max validators", fmt.Sprintf("%d", d.MaxValidators), "active set cap")
+	}
+}
+
+func writeSlashingParamRows(b *strings.Builder, d model.Report) {
 	if d.SlashWindow != "" && d.SlashWindow != "0" {
-		ecoDomainRow(&b, "", "signed blocks window", d.SlashWindow+" blocks", "downtime tracking window")
+		ecoDomainRow(b, "", "signed blocks window", d.SlashWindow+" blocks", "downtime tracking window")
 	}
 	if d.MinSigned > 0 {
-		ecoDomainRow(&b, "", "min signed", fmt.Sprintf("%.1f%%", d.MinSigned), "miss more → downtime slash risk")
+		ecoDomainRow(b, "", "min signed", fmt.Sprintf("%.1f%%", d.MinSigned), "miss more → downtime slash risk")
 	}
 	if d.SlashDowntime != "" {
 		dtCls := ""
@@ -367,7 +326,7 @@ func slashingCardHTML(d model.Report, _ bool) string {
 			dtCls = ` class="eco-domain__row--warn"`
 			dtEffect = "inactive — downtime slash disabled"
 		}
-		ecoDomainRow(&b, dtCls, "slash / downtime", d.SlashDowntime, dtEffect)
+		ecoDomainRow(b, dtCls, "slash / downtime", d.SlashDowntime, dtEffect)
 	}
 	if d.SlashDS != "" {
 		dsCls := ""
@@ -376,27 +335,7 @@ func slashingCardHTML(d model.Report, _ bool) string {
 			dsCls = ` class="eco-domain__row--warn"`
 			dsEffect = "inactive — double-sign slash disabled"
 		}
-		ecoDomainRow(&b, dsCls, "slash / double-sign", d.SlashDS, dsEffect)
-	}
-
-	b.WriteString(`</div></div>`)
-	return b.String()
-}
-
-func writeStakingModuleAccountRows(b *strings.Builder, d model.Report) {
-	for _, mod := range []struct {
-		name, effect string
-	}{
-		{"bonded_tokens_pool", "staked tokens escrow"},
-		{"not_bonded_tokens_pool", "unbonded / unbonding escrow"},
-	} {
-		bal := moduleAccountBalance(d, mod.name)
-		addr := moduleAccountDisplayAddress(d, mod.name)
-		if bal == "" && addr == "" {
-			continue
-		}
-		val := ecoBalanceAddrHTML(orEcoDash(bal), addr)
-		ecoDomainRowHTML(b, "", mod.name, val, mod.effect)
+		ecoDomainRow(b, dsCls, "slash / double-sign", d.SlashDS, dsEffect)
 	}
 }
 

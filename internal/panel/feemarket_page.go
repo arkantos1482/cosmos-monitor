@@ -12,6 +12,7 @@ import (
 
 func writeFeemarketPage(w Writer, d model.Report) {
 	c := feemarket.LoadContext(d)
+	w.WriteHTML(feemarketDomainCardsHTML(d))
 	levels := buildFeeLevels(c, d)
 	writeFeeNav(w, c)
 	for _, lv := range levels {
@@ -232,21 +233,6 @@ func buildFeeL5(c feemarket.Context, d model.Report) feeLevel {
 		}
 	}
 
-	chainRows := [][]string{
-		{"no_base_fee", boolStr(d.NoBaseFee)},
-		{"enable_height", formatEnableHeight(c.EnableHeight)},
-		{"base_fee (param store)", orDash(c.BaseFeeParam)},
-		{"base_fee_change_denominator", formatParamUint(c.DenomU)},
-		{"elasticity_multiplier", formatParamInt(c.Elasticity)},
-		{"min_gas_price", minGasPriceL5(c)},
-		{"min_gas_multiplier", orDash(c.MinGasMultiplier)},
-		{"max_gas", maxGasL5(c)},
-		{"max_bytes", formatParamInt(c.MaxBlockBytes)},
-		{"evm_denom", orDash(c.Denom)},
-		{"london_block", londonStatus(c)},
-		{"min_unit_gas", "1 apmt"},
-	}
-
 	var extra strings.Builder
 	if formula != "" {
 		extra.WriteString(`<pre class="fee-formula"><code>` + html.EscapeString(formula) + `</code></pre>`)
@@ -258,7 +244,7 @@ func buildFeeL5(c feemarket.Context, d model.Report) feeLevel {
 		fmt.Fprintf(&extra, `<p class="fee-level__note">Verify: %s</p>`, html.EscapeString(c.Verify))
 	}
 	extra.WriteString(feeSubheadingHTML("Chain parameters (governance / consensus)"))
-	extra.WriteString(feeTableHTML([]string{"Parameter", "Value"}, chainRows))
+	extra.WriteString(feeChainParamsDomainHTML(c, d))
 	if c.UnlimitedBlockGas && c.MaxBlockBytes > 0 {
 		extra.WriteString(feeSubheadingHTML("Practical block limits (max_gas unlimited)"))
 		fmt.Fprintf(&extra, `<p class="fee-level__note">max_bytes %s · block time %s · validator execution cap applies</p>`,

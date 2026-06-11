@@ -160,14 +160,14 @@ func chainOptsFor(view panel.View) fetch.ChainOpts {
 	switch view {
 	case panel.ViewNode:
 		return fetch.ChainOpts{
-			SkipValidatorRewards: true,
-			SkipGovernance:       true,
-			SkipEconomics:        true,
+			SkipGovernance: true,
+			SkipEconomics:  true,
 		}
 	case panel.ViewGovernance:
 		return fetch.ChainOpts{
-			SkipValidatorRewards: true,
-			SkipEconomics:        true,
+			SkipValidatorRewards:  true,
+			SkipEconomics:         true,
+			IncludeModuleBalances: true,
 		}
 	default:
 		return fetch.ChainOpts{}

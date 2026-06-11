@@ -59,7 +59,14 @@ func TestLoadForCacheExpires(t *testing.T) {
 
 func TestChainOptsForGovernanceSkipsEconomics(t *testing.T) {
 	o := chainOptsFor(panel.ViewGovernance)
-	if !o.SkipValidatorRewards || !o.SkipEconomics || o.SkipGovernance {
+	if !o.SkipValidatorRewards || !o.SkipEconomics || o.SkipGovernance || !o.IncludeModuleBalances {
+		t.Fatalf("unexpected opts: %+v", o)
+	}
+}
+
+func TestChainOptsForNodeFetchesValidatorRewards(t *testing.T) {
+	o := chainOptsFor(panel.ViewNode)
+	if o.SkipValidatorRewards || !o.SkipEconomics || !o.SkipGovernance {
 		t.Fatalf("unexpected opts: %+v", o)
 	}
 }

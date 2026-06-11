@@ -47,42 +47,6 @@ func economicsPMTPerBlock(d model.Report) (perBlock float64, unit string, ok boo
 	return v, unit, true
 }
 
-func moduleAccountBalance(d model.Report, name string) string {
-	for _, m := range d.ModuleAccounts {
-		if m.Name == name {
-			return m.Balance
-		}
-	}
-	return ""
-}
-
-func moduleAccountAddress(d model.Report, name string) string {
-	for _, m := range d.ModuleAccounts {
-		if m.Name == name {
-			return m.Address
-		}
-	}
-	return ""
-}
-
-// displayAddress prefers EVM hex (0x…) for module account addresses; falls back to bech32.
-func displayAddress(addr string) string {
-	if addr == "" {
-		return ""
-	}
-	if strings.HasPrefix(strings.ToLower(addr), "0x") {
-		return addr
-	}
-	if evm := fetch.AccBech32ToEVM(addr); evm != "" {
-		return evm
-	}
-	return addr
-}
-
-func moduleAccountDisplayAddress(d model.Report, name string) string {
-	return displayAddress(moduleAccountAddress(d, name))
-}
-
 func FeeCollectorBalance(d model.Report) string {
 	return moduleAccountBalance(d, "fee_collector")
 }

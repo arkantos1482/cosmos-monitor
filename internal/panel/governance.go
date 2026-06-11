@@ -85,41 +85,15 @@ func writeGovernance(w Writer, d model.Report) {
 		w.Em("No active proposals.")
 	}
 
-	w.Subsection("Voting Params")
-	w.Hint("`voting period` → REST GET /cosmos/gov/v1beta1/params/voting; `quorum`, `threshold`, `veto threshold` → REST GET …/params/tallying.")
-	w.Row("voting period", d.VotingPeriod)
-	w.Row("quorum", fmt.Sprintf("%.1f%%", d.Quorum))
-	w.Row("threshold", fmt.Sprintf("%.1f%%", d.Threshold))
-	if d.VetoThreshold > 0 {
-		w.Row("veto threshold", fmt.Sprintf("%.1f%%", d.VetoThreshold))
-	}
+	w.WriteHTML(governanceDomainCardsHTML(d))
+	w.Hint("`voting period`, `quorum`, `threshold` → REST GET /cosmos/gov/v1beta1/params/voting, …/params/tallying; " +
+		"`upgrade` → REST GET /cosmos/upgrade/v1beta1/current_plan; " +
+		"`ibc clients` → REST GET /ibc/core/client/v1/client_states; " +
+		"`token pairs`, `enable_erc20` → REST GET /cosmos/evm/erc20/v1/token_pairs, /cosmos/evm/erc20/v1/params; " +
+		"`gov` module balance → REST GET /cosmos/bank/v1beta1/balances/{gov_module_addr}.")
 
-	w.Subsection("Upgrade")
-	w.Hint("`name`, `target height` → REST GET /cosmos/upgrade/v1beta1/current_plan (plan null when none pending).")
-	if d.UpgradeName == "" {
-		w.Row("pending", "none")
-	} else {
-		w.Row("name", d.UpgradeName)
-		w.Row("target height", d.UpgradeHeight)
-		if d.BlocksLeft != "" {
-			w.Row("blocks remaining", d.BlocksLeft)
-		}
-	}
-
-	w.Subsection("IBC")
-	w.Hint("`active clients` → derived (count of REST GET /ibc/core/client/v1/client_states).")
-	w.Row("active clients", fmt.Sprintf("%d", d.IBCClients))
-
-	w.Subsection(fmt.Sprintf("Token Pairs  (%d)", len(d.TokenPairs)))
-	w.Hint("each row → REST GET /cosmos/evm/erc20/v1/token_pairs (denom, erc20_address, enabled).")
-	if len(d.TokenPairs) == 0 {
-		w.WriteString("none registered\n\n")
-	}
-	for _, tp := range d.TokenPairs {
-		enabled := "yes"
-		if !tp.Enabled {
-			enabled = "no"
-		}
-		w.ListItem(fmt.Sprintf("`%s`  `%s`  enabled: %s", tp.Denom, tp.ERC20, enabled))
+	if len(d.TokenPairs) > 0 {
+		w.Subsection(fmt.Sprintf("Token Pairs  (%d)", len(d.TokenPairs)))
+		w.WriteHTML(governanceTokenPairsHTML(d.TokenPairs))
 	}
 }

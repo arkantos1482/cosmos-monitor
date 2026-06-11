@@ -160,6 +160,8 @@ func writeEVMRPCSection(w Writer, d model.Report) {
 		syncLabel = "syncing"
 	}
 
+	w.WriteHTML(evmDomainCardsHTML(d))
+
 	w.Subsection("For operators")
 	w.Hint("`HTTP JSON-RPC` → config app.toml [json-rpc] address; `WebSocket` → config app.toml [json-rpc] ws-address; `enabled APIs` → config app.toml [json-rpc] api; `chain ID` → JSON-RPC eth_chainId + genesis EVM config; `native denom`, `client` → genesis + JSON-RPC web3_clientVersion.")
 	httpEP := d.EVMHTTPEndpoint

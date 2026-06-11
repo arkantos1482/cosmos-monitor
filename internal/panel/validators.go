@@ -65,7 +65,7 @@ func chipClass(v model.Validator) string {
 func writeValidators(w Writer, d model.Report) {
 	w.Section("1. VALIDATOR SET")
 	writeValidatorsSummary(w, d, SummaryEmbedded)
-	w.Em("Chain-wide validator set — summary counts, stake and slashing tables, then P2P identity per validator.")
+	w.Em("Chain-wide validator set — summary counts, stake and slashing tables, then P2P identity per validator. Staking/slashing params → § Economics.")
 
 	w.Subsection("Stake")
 	w.Hint("`vp%%`, `commission`, `status` → REST GET /cosmos/staking/v1beta1/validators (bonded, unbonding, unbonded).")

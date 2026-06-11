@@ -21,6 +21,7 @@ var trackedModuleAccounts = []struct {
 	{"distribution", "x/distribution module escrow (often ~0 after BeginBlock payout)"},
 	{"bonded_tokens_pool", "Staked tokens (locked; matches staking pool bonded)"},
 	{"not_bonded_tokens_pool", "Unbonding / unbonded stake in staking pool"},
+	{"gov", "Proposal deposit escrow until voting or refund"},
 }
 
 type moduleAccountsResp struct {

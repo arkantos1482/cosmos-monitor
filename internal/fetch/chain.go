@@ -830,12 +830,6 @@ func FetchChain(rpc, rest string, opts ChainOpts) ChainSnapshot {
 			snap.CommunityPool = formatCoins(cp.Pool, "")
 		}
 
-		preferDenom := snap.Params.BondDenom
-		if preferDenom == "" {
-			preferDenom = snap.TotalSupplyDenom
-		}
-		snap.ModuleBalances = FetchModuleBalances(rest, preferDenom)
-
 		// base fee
 		var bf baseFeeResp
 		if err := doJSON(rest+"/cosmos/evm/feemarket/v1/base_fee", &bf); err == nil {
@@ -871,6 +865,14 @@ func FetchChain(rpc, rest string, opts ChainOpts) ChainSnapshot {
 				snap.LastBlockFeeRaw = fmt.Sprintf("%.0f", fee)
 			}
 		}
+	}
+
+	if !opts.SkipEconomics || opts.IncludeModuleBalances {
+		preferDenom := snap.Params.BondDenom
+		if preferDenom == "" {
+			preferDenom = snap.TotalSupplyDenom
+		}
+		snap.ModuleBalances = FetchModuleBalances(rest, preferDenom)
 	}
 
 	if !opts.SkipGovernance {
