@@ -30,10 +30,16 @@ func TestRenderFragmentEconomicsTables(t *testing.T) {
 	if !strings.Contains(out, "Block reward ledger") {
 		t.Fatal("rendered fragment should include economics ledger")
 	}
-	if !strings.Contains(out, `class="dash-subheading">Chain parameters (reference)</h3>`) {
-		t.Fatal("rendered fragment should include economics reference subsection")
+	for _, want := range []string{
+		`class="dash-subheading">Distribution</h3>`,
+		"eco-domain--pmtrewards",
+		"eco-domain--inflation",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("rendered fragment missing %q", want)
+		}
 	}
-	if strings.Contains(out, `data-details-key="economics-chain-params"`) {
-		t.Fatal("economics reference should not use collapsible details")
+	if strings.Contains(out, `class="dash-subheading">Chain parameters (reference)</h3>`) {
+		t.Fatal("economics reference subsection should be removed")
 	}
 }

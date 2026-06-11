@@ -1542,8 +1542,20 @@ body::after {
 
 /* ── Economics domain cards ───────────────────────────────────── */
 
+.eco-domains {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.85rem;
+}
+
+@media (max-width: 720px) {
+  .eco-domains {
+    grid-template-columns: 1fr;
+  }
+}
+
 .eco-domain {
-  margin: 0.65rem 0;
+  margin: 0;
   padding: 0.75rem 0.85rem;
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -1552,11 +1564,11 @@ body::after {
   box-shadow: var(--shadow);
 }
 
-.eco-domain + .eco-domain {
-  margin-top: 0.85rem;
+.eco-domain--pmtrewards {
+  border-left-color: var(--accent-economics);
 }
 
-.eco-domain--distribution {
+.eco-domain--inflation {
   border-left-color: var(--accent-2);
 }
 
@@ -1564,8 +1576,8 @@ body::after {
   border-left-color: var(--accent-validators);
 }
 
-.eco-domain--rewards {
-  border-left-color: var(--accent-economics);
+.eco-domain--txfees {
+  border-left-color: var(--accent-feemarket, var(--accent));
 }
 
 .eco-domain__title {
@@ -1577,6 +1589,36 @@ body::after {
   margin: 0 0 0.65rem;
   padding-bottom: 0.35rem;
   border-bottom: 1px solid var(--border);
+}
+
+.eco-domain__subtitle {
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  color: var(--muted);
+  margin-left: 0.35rem;
+}
+
+.eco-domain__divider {
+  margin: 0.55rem 0 0.4rem;
+  padding-top: 0.45rem;
+  border-top: 1px dashed var(--border);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.eco-domain__hint {
+  margin-top: 0.45rem;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.eco-domain__hint code {
+  font-size: 0.68rem;
 }
 
 .eco-domain__rows {
@@ -1688,73 +1730,6 @@ body::after {
   color: var(--muted);
   font-size: 0.76rem;
   max-width: 12rem;
-}
-
-/* ── Economics flags panel ─────────────────────────────────────── */
-
-.eco-flags {
-  margin: 0.35rem 0 0.55rem;
-}
-
-.eco-flags__table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.78rem;
-  margin: 0.35rem 0;
-}
-
-.eco-flags__table th,
-.eco-flags__table td {
-  padding: 0.4rem 0.55rem;
-  border: 1px solid var(--border);
-  text-align: left;
-  vertical-align: top;
-}
-
-.eco-flags__table th {
-  background: rgba(0, 0, 0, 0.18);
-  color: var(--muted);
-  font-weight: 600;
-}
-
-.eco-flags__param code {
-  font-size: 0.76rem;
-  color: var(--accent-economics);
-}
-
-.eco-flags__val {
-  font-family: var(--mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.eco-flags__effect {
-  color: var(--muted);
-  font-size: 0.76rem;
-  line-height: 1.4;
-  max-width: 28ch;
-}
-
-.eco-flags__row--inactive td {
-  background: rgba(240, 113, 120, 0.06);
-}
-
-.eco-flags__row--inactive .eco-flags__param code,
-.eco-flags__row--inactive .eco-flags__val {
-  color: var(--bad);
-}
-
-.eco-flags__row--inactive .eco-flags__effect--inactive {
-  color: var(--bad);
-  font-weight: 600;
-}
-
-.eco-flags__row--warn td {
-  background: rgba(251, 191, 36, 0.05);
-}
-
-.eco-flags__row--warn .eco-flags__effect--warn {
-  color: var(--warn);
-  font-weight: 600;
 }
 
 /* ── Fee market hero ──────────────────────────────────────────── */

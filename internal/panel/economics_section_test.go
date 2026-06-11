@@ -50,23 +50,33 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		t.Fatal("economics section should not use mermaid")
 	}
 	
-	// Check new cohesive layout elements are present
 	for _, want := range []string{
 		"Block reward ledger",
-		"Module accounts",                               // New unified module accounts table
-		`class="dash-subheading">Chain parameters (reference)</h3>`,
-		`class="dash-subheading">Advanced parameters (reward flow)</h3>`,
-		`id="eco-flags"`,
-		`pmtrewards.enabled`,
-		`eco-flags__table`,
-		"eco-domains",                                  // Domain cards wrapper
-		"eco-domain--distribution",                     // Distribution domain card
-		"eco-domain--rewards",                          // Rewards domain card
-		"eco-domain--staking",                          // Staking domain card
-		"eco-module-accounts",                          // Module accounts table class
+		"Module accounts",
+		`class="dash-subheading">Distribution</h3>`,
+		"eco-domains",
+		"eco-domain--pmtrewards",
+		"eco-domain--inflation",
+		"eco-domain--staking",
+		"eco-domain--txfees",
+		"eco-module-accounts",
+		"community tax",
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("economics chunk missing %q", want)
+		}
+	}
+
+	for _, gone := range []string{
+		`class="dash-subheading">Chain parameters (reference)</h3>`,
+		`class="dash-subheading">Advanced parameters (reward flow)</h3>`,
+		`id="eco-flags"`,
+		"eco-domain--distribution",
+		"eco-domain--rewards",
+		"Total/block",
+	} {
+		if strings.Contains(chunk, gone) {
+			t.Fatalf("economics chunk should not contain %q", gone)
 		}
 	}
 	
@@ -88,11 +98,6 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		}
 	}
 	
-	// Verify community tax is only in Distribution domain card, not duplicated in reference
-	communityTaxMatches := strings.Count(chunk, "community tax") + strings.Count(chunk, "Community")
-	if communityTaxMatches < 1 {
-		t.Fatal("economics should show community tax in Distribution domain card")
-	}
 }
 
 func TestEconomicsPerBlockSplit(t *testing.T) {

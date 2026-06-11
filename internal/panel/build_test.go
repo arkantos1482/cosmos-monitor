@@ -45,18 +45,27 @@ func TestBuildEconomicsUsesTablesNotMermaid(t *testing.T) {
 		t.Fatal("ledger table should use ledger styling")
 	}
 	
-	// Verify new cohesive layout elements
-	if !strings.Contains(eco, "eco-domain--distribution") {
-		t.Fatal("economics should include Distribution domain card")
+	for _, want := range []string{
+		"eco-domain--pmtrewards",
+		"eco-domain--inflation",
+		"eco-domain--staking",
+		"eco-domain--txfees",
+		`class="dash-subheading">Distribution</h3>`,
+		"Module accounts",
+	} {
+		if !strings.Contains(eco, want) {
+			t.Fatalf("economics should include %q", want)
+		}
 	}
-	if !strings.Contains(eco, "eco-domain--rewards") {
-		t.Fatal("economics should include Rewards domain card") 
-	}
-	if !strings.Contains(eco, "Module accounts") {
-		t.Fatal("economics should include Module accounts table")
-	}
-	if !strings.Contains(eco, `class="dash-subheading">Advanced parameters (reward flow)</h3>`) {
-		t.Fatal("economics should include advanced parameters subsection")
+	for _, gone := range []string{
+		"eco-domain--distribution",
+		"eco-domain--rewards",
+		`class="dash-subheading">Advanced parameters (reward flow)</h3>`,
+		`class="dash-subheading">Chain parameters (reference)</h3>`,
+	} {
+		if strings.Contains(eco, gone) {
+			t.Fatalf("economics should not contain %q", gone)
+		}
 	}
 }
 
@@ -129,7 +138,8 @@ func TestContentInventory(t *testing.T) {
 		`class="data-table"`,
 		`class="val-summary"`,
 		"Block reward ledger",
-		`class="dash-subheading">Chain parameters (reference)</h3>`,
+		`class="dash-subheading">Distribution</h3>`,
+		"eco-domain--pmtrewards",
 		`dash-section--feemarket`,
 	} {
 		if !strings.Contains(out, want) {

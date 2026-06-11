@@ -26,31 +26,34 @@ func writeEconomicsSummary(w Writer, d model.Report, mode SummaryMode) {
 
 func writeEconomicsCompactSummary(w Writer, d model.Report) {
 	w.WriteHTML(`<div class="eco-summary eco-summary--compact">`)
-	
-	// One-line health per domain (3 rows max)
-	rewardStatus := "no inflow"
-	if economicsHasRewardSource(d) {
-		if total := RewardInPerBlockTotal(d); total != "—" {
-			rewardStatus = total + "/block"
-		} else {
-			rewardStatus = "active"
+
+	pmtStatus := "disabled"
+	if d.PMTEnabled {
+		switch {
+		case d.PMTPoolEmpty:
+			pmtStatus = "pool empty"
+		case d.PMTRate != "":
+			pmtStatus = d.PMTRate
+		default:
+			pmtStatus = "enabled"
 		}
 	}
-	w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">Rewards in: %s</div>`, rewardStatus))
-	
-	distStatus := "0% tax → pool empty"
-	if !d.CommunityTaxZero && d.CommunityTax != "" {
-		poolDisplay := d.CommunityPool
-		if poolDisplay == "" {
-			poolDisplay = "0 PMT"
-		}
-		distStatus = fmt.Sprintf("%s tax → pool %s", d.CommunityTax, poolDisplay)
+	w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">PMT: %s</div>`, html.EscapeString(pmtStatus)))
+
+	inflStatus := "off"
+	if d.Inflation > 0 {
+		inflStatus = fmt.Sprintf("%.2f%%", d.Inflation)
 	}
-	w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">Distribution: %s</div>`, distStatus))
-	
-	w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">Staking: %.2f%% bonded (goal %.0f%%)</div>`, 
-		d.BondedPct, d.GoalBonded))
-	
+	w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">Inflation: %s</div>`, html.EscapeString(inflStatus)))
+
+	w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">Staking: %.2f%% bonded</div>`, d.BondedPct))
+
+	feesStatus := "none"
+	if d.LastBlockFees != "" {
+		feesStatus = trimFeeNote(d.LastBlockFees)
+	}
+	w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">Tx fees: %s</div>`, html.EscapeString(feesStatus)))
+
 	w.WriteHTML(`</div>`)
 }
 
@@ -87,9 +90,22 @@ func writeEconomicsKPIRows(w Writer, d model.Report) {
 }
 
 func writeEconomicsOverview(w Writer, d model.Report) {
+	w.Subsection("Distribution")
+	w.Hint("`x/distribution` live state — rewards flow `fee_collector` → community tax → escrow → validator payouts. Steps 1–3 (PMT, mint, tx fees) are summarized in the source cards above.")
 	writeEconomicsLedger(w, d)
 	writeEconomicsModuleAccountsTable(w, d)
-	writeEconomicsFlagsPanel(w, d)
+	writeEconomicsCommunityTax(w, d)
+}
+
+func writeEconomicsCommunityTax(w Writer, d model.Report) {
+	val := orEcoDash(d.CommunityTax)
+	effect := ecoTaxEffect(d)
+	if d.CommunityTaxZero {
+		val += "  _(0% — community pool gets no cut)_"
+	} else {
+		val += "  _(" + effect + ")_"
+	}
+	w.Row("community tax", val)
 }
 
 
@@ -154,12 +170,3 @@ func writeEconomicsLedger(w Writer, d model.Report) {
 	w.WriteHTML(economicsLedgerTableHTML(rows))
 }
 
-func writeEconomicsFlagsPanel(w Writer, d model.Report) {
-	flags := economicsFlags(d)
-	if len(flags) == 0 {
-		return
-	}
-	w.Subsection("Advanced parameters (reward flow)")
-	w.Em("Governance and module knobs that determine whether each ledger step is active. Red rows are ineffective on this chain right now.")
-	w.WriteHTML(economicsFlagsTableHTML(flags))
-}

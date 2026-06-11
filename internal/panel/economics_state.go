@@ -28,94 +28,6 @@ func economicsHasRewardSource(d model.Report) bool {
 	return false
 }
 
-func economicsSummaryBadges(d model.Report) []summaryBadge {
-	b := []summaryBadge{pmtPoolBadge(d)}
-	if d.Inflation <= 0 {
-		b = append(b, summaryBadge{"inflation off", "bad"})
-	} else {
-		b = append(b, summaryBadge{fmt.Sprintf("inflation %.2f%%", d.Inflation), "ok"})
-	}
-	if d.CommunityTaxZero {
-		b = append(b, summaryBadge{"community tax 0%", "warn"})
-	} else if d.CommunityTax != "" {
-		b = append(b, summaryBadge{"community tax " + d.CommunityTax, "ok"})
-	}
-	if !economicsHasRewardSource(d) {
-		b = append(b, summaryBadge{"no reward inflow", "bad"})
-	}
-	return b
-}
-
-type ecoFlag struct {
-	param    string
-	value    string
-	effect   string
-	inactive bool
-	warn     bool
-}
-
-func economicsFlags(d model.Report) []ecoFlag {
-	flags := []ecoFlag{
-		{
-			param:  "pmtrewards.enabled",
-			value:  boolStr(d.PMTEnabled),
-			effect: ecoPMTEffect(d),
-			inactive: !d.PMTEnabled,
-		},
-		{
-			param: "pmtrewards.pool_balance",
-			value: orEcoDash(d.PMTBalance),
-			effect: ecoPoolEffect(d),
-			inactive: !d.PMTEnabled,
-			warn:     d.PMTEnabled && d.PMTPoolEmpty,
-		},
-		{
-			param:    "pmtrewards.reward_per_block",
-			value:    orEcoDash(d.PMTRate),
-			effect:   ecoPMTRateEffect(d),
-			inactive: !d.PMTEnabled || d.PMTRate == "",
-			warn:     d.PMTEnabled && !d.PMTPoolEmpty && d.PMTRate == "",
-		},
-		{
-			param:    "mint.inflation",
-			value:    fmt.Sprintf("%.2f%%", d.Inflation),
-			effect:   ecoInflationEffect(d),
-			inactive: d.Inflation <= 0,
-		},
-		{
-			param:    "mint.annual_provisions",
-			value:    orEcoDash(d.AnnualProvisions),
-			effect:   ecoAnnualProvEffect(d),
-			inactive: d.Inflation <= 0 || d.AnnualProvisions == "",
-		},
-		{
-			param:    "distribution.community_tax",
-			value:    orEcoDash(d.CommunityTax),
-			effect:   ecoTaxEffect(d),
-			inactive: d.CommunityTaxZero,
-			warn:     !d.CommunityTaxZero && !economicsHasRewardSource(d),
-		},
-		{
-			param:    "tx_fees.last_block",
-			value:    orEcoDash(trimFeeNote(d.LastBlockFees)),
-			effect:   ecoTxFeesEffect(d),
-			inactive: d.LastBlockFees == "",
-		},
-		{
-			param:  "reward_in.total_per_block",
-			value:  orEcoDash(RewardInPerBlockTotal(d)),
-			effect: ecoRewardInEffect(d),
-			inactive: !economicsHasRewardSource(d),
-		},
-		{
-			param:  "staking.bonded_ratio",
-			value:  fmt.Sprintf("%.2f%% (goal %.0f%%)", d.BondedPct, d.GoalBonded),
-			effect: "inflation adjusts toward goal bonded",
-		},
-	}
-	return flags
-}
-
 func ecoPMTEffect(d model.Report) string {
 	if !d.PMTEnabled {
 		return "module disabled — no PMT block rewards"
@@ -196,11 +108,14 @@ func ecoTxFeesEffect(d model.Report) string {
 	return "gas × base fee → fee_collector"
 }
 
-func ecoRewardInEffect(d model.Report) string {
-	if !economicsHasRewardSource(d) {
-		return "nothing entering fee_collector"
+func ecoBondedVsGoalEffect(d model.Report) string {
+	if d.BondedPct > d.GoalBonded {
+		return fmt.Sprintf("%.1f%% over goal — inflation decreases", d.BondedPct-d.GoalBonded)
 	}
-	return "sum of active reward sources"
+	if d.BondedPct < d.GoalBonded {
+		return fmt.Sprintf("%.1f%% under goal — inflation increases", d.GoalBonded-d.BondedPct)
+	}
+	return "at goal — inflation stable"
 }
 
 func trimFeeNote(s string) string {
@@ -217,35 +132,7 @@ func orEcoDash(s string) string {
 	return s
 }
 
-func economicsFlagsTableHTML(flags []ecoFlag) string {
-	var b strings.Builder
-	b.WriteString(`<div class="eco-flags" id="eco-flags">`)
-	b.WriteString(`<table class="eco-flags__table"><thead><tr>`)
-	for _, h := range []string{"Parameter", "Value", "Effect"} {
-		fmt.Fprintf(&b, `<th>%s</th>`, html.EscapeString(h))
-	}
-	b.WriteString(`</tr></thead><tbody>`)
-	for _, f := range flags {
-		trCls := ""
-		switch {
-		case f.inactive:
-			trCls = ` class="eco-flags__row--inactive"`
-		case f.warn:
-			trCls = ` class="eco-flags__row--warn"`
-		}
-		fmt.Fprintf(&b, `<tr%s>`, trCls)
-		fmt.Fprintf(&b, `<td class="eco-flags__param"><code>%s</code></td>`, html.EscapeString(f.param))
-		b.WriteString(`<td class="eco-flags__val">`)
-		b.WriteString(ecoFlagValueHTML(f.value))
-		b.WriteString(`</td><td class="eco-flags__effect">`)
-		b.WriteString(ecoFlagEffectHTML(f.effect, f.inactive, f.warn))
-		b.WriteString(`</td></tr>`)
-	}
-	b.WriteString(`</tbody></table></div>`)
-	return b.String()
-}
-
-func ecoFlagValueHTML(v string) string {
+func ecoDomainValueHTML(v string) string {
 	switch strings.ToLower(strings.TrimSpace(v)) {
 	case "true":
 		return `<span class="badge badge--ok">true</span>`
@@ -256,168 +143,193 @@ func ecoFlagValueHTML(v string) string {
 	}
 }
 
-func ecoFlagEffectHTML(effect string, inactive, warn bool) string {
-	cls := ""
-	switch {
-	case inactive:
-		cls = ` class="eco-flags__effect--inactive"`
-	case warn:
-		cls = ` class="eco-flags__effect--warn"`
-	}
-	return fmt.Sprintf(`<span%s>%s</span>`, cls, inlineHTML(effect))
+func ecoDomainRow(b *strings.Builder, rowClass, param, value, effect string) {
+	fmt.Fprintf(b, `<div%s><div class="eco-domain__param">%s</div><div class="eco-domain__value">%s</div><div class="eco-domain__effect">%s</div></div>`,
+		rowClass, html.EscapeString(param), ecoDomainValueHTML(value), html.EscapeString(effect))
 }
 
-// economicsDomainCardsHTML generates the three domain cards that replace KPI band + badges + secondary line
+func ecoDomainDivider(b *strings.Builder) {
+	b.WriteString(`<div class="eco-domain__divider">Governance params</div>`)
+}
+
+func ecoDomainHint(b *strings.Builder, hint string) {
+	fmt.Fprintf(b, `<div class="eco-domain__hint"><code>%s</code></div>`, html.EscapeString(hint))
+}
+
 func economicsDomainCardsHTML(d model.Report, compact bool) string {
 	var b strings.Builder
 	b.WriteString(`<div class="eco-domains">`)
-	
-	// Distribution domain card
-	b.WriteString(`<div class="eco-domain eco-domain--distribution">`)
-	b.WriteString(`<h3 class="eco-domain__title">Distribution</h3>`)
+	b.WriteString(pmtRewardsCardHTML(d, compact))
+	b.WriteString(inflationCardHTML(d, compact))
+	b.WriteString(stakingCardHTML(d, compact))
+	b.WriteString(txFeesCardHTML(d, compact))
+	b.WriteString(`</div>`)
+	return b.String()
+}
+
+func pmtRewardsCardHTML(d model.Report, compact bool) string {
+	var b strings.Builder
+	b.WriteString(`<div class="eco-domain eco-domain--pmtrewards">`)
+	b.WriteString(`<h3 class="eco-domain__title">PMT Rewards <span class="eco-domain__subtitle">x/pmtrewards</span></h3>`)
 	b.WriteString(`<div class="eco-domain__rows">`)
-	
-	// Community tax row
-	taxValue := orEcoDash(d.CommunityTax)
-	poolBalance := orEcoDash(d.CommunityPool)
-	var taxEffect string
-	rowClass := ""
-	if d.CommunityTaxZero {
-		taxEffect = "0% — community pool gets no cut"
-		if poolBalance == "—" || poolBalance == "0 PMT" {
-			taxEffect = "0% tax → pool empty"
-		}
-		rowClass = ` class="eco-domain__row--warn"`
-	} else {
-		taxEffect = fmt.Sprintf("tax → pool %s", poolBalance)
-		if !economicsHasRewardSource(d) {
-			taxEffect = "tax configured but no rewards flowing"
-			rowClass = ` class="eco-domain__row--warn"`
-		}
-	}
-	fmt.Fprintf(&b, `<div%s><div class="eco-domain__param">Community</div><div class="eco-domain__value">%s</div><div class="eco-domain__effect">%s</div></div>`,
-		rowClass, html.EscapeString(taxValue), html.EscapeString(taxEffect))
-	
-	// Fee collector row (if not compact)
-	if !compact {
-		if bal := FeeCollectorBalance(d); bal != "" {
-			check := economicsFeeCollectorCheck(d)
-			effect := "cleared each block"
-			rowCls := ""
-			if check == "not cleared?" {
-				effect = "stuck — check distribution"
-				rowCls = ` class="eco-domain__row--warn"`
-			}
-			fmt.Fprintf(&b, `<div%s><div class="eco-domain__param">fee_collector</div><div class="eco-domain__value">%s</div><div class="eco-domain__effect">%s</div></div>`,
-				rowCls, html.EscapeString(bal), html.EscapeString(effect))
-		}
-	}
-	
-	// Unclaimed rewards (if significant and not compact)
-	if !compact {
-		if del := economicsUnclaimedDelegator(d); del != "" {
-			fmt.Fprintf(&b, `<div><div class="eco-domain__param">Unclaimed</div><div class="eco-domain__value">%s delegator</div><div class="eco-domain__effect">pending distribution</div></div>`,
-				html.EscapeString(del))
-		}
-		if comm := economicsUnclaimedCommission(d); comm != "" {
-			fmt.Fprintf(&b, `<div><div class="eco-domain__param"></div><div class="eco-domain__value">%s commission</div><div class="eco-domain__effect">pending withdrawal</div></div>`,
-				html.EscapeString(comm))
-		}
-	}
-	
-	b.WriteString(`</div></div>`)
-	
-	// Staking domain card
-	b.WriteString(`<div class="eco-domain eco-domain--staking">`)
-	b.WriteString(`<h3 class="eco-domain__title">Staking</h3>`)
-	b.WriteString(`<div class="eco-domain__rows">`)
-	
-	// Bonded ratio
-	goalDiff := ""
-	if d.BondedPct > d.GoalBonded {
-		goalDiff = fmt.Sprintf("%.1f%% over goal", d.BondedPct-d.GoalBonded)
-	} else if d.BondedPct < d.GoalBonded {
-		goalDiff = fmt.Sprintf("%.1f%% under goal", d.GoalBonded-d.BondedPct)
-	} else {
-		goalDiff = "at goal"
-	}
-	fmt.Fprintf(&b, `<div><div class="eco-domain__param">Bonded</div><div class="eco-domain__value">%.2f%% (goal %.0f%%)</div><div class="eco-domain__effect">%s</div></div>`,
-		d.BondedPct, d.GoalBonded, html.EscapeString(goalDiff))
-	
-	if !compact {
-		// Add bonded/not-bonded amounts if available
-		if d.BondedAmt != "" {
-			fmt.Fprintf(&b, `<div><div class="eco-domain__param">Bonded amt</div><div class="eco-domain__value">%s</div><div class="eco-domain__effect">actively securing chain</div></div>`,
-				html.EscapeString(d.BondedAmt))
-		}
-		if d.NotBonded != "" {
-			fmt.Fprintf(&b, `<div><div class="eco-domain__param">Not bonded</div><div class="eco-domain__value">%s</div><div class="eco-domain__effect">unbonded or unbonding</div></div>`,
-				html.EscapeString(d.NotBonded))
-		}
-	}
-	
-	b.WriteString(`</div></div>`)
-	
-	// Rewards In domain card
-	b.WriteString(`<div class="eco-domain eco-domain--rewards">`)
-	b.WriteString(`<h3 class="eco-domain__title">Rewards In</h3>`)
-	b.WriteString(`<div class="eco-domain__rows">`)
-	
-	// PMT rewards
-	pmtRowClass := ""
-	pmtEffect := ecoPMTEffect(d)
+
+	enabledCls := ""
 	if !d.PMTEnabled {
-		pmtRowClass = ` class="eco-domain__row--inactive"`
+		enabledCls = ` class="eco-domain__row--inactive"`
+	}
+	ecoDomainRow(&b, enabledCls, "enabled", boolStr(d.PMTEnabled), ecoPMTEffect(d))
+
+	rateCls := ""
+	if !d.PMTEnabled {
+		rateCls = ` class="eco-domain__row--inactive"`
+	} else if d.PMTPoolEmpty || d.PMTRate == "" {
+		rateCls = ` class="eco-domain__row--warn"`
+	}
+	ecoDomainRow(&b, rateCls, "reward / block", orEcoDash(d.PMTRate), ecoPMTRateEffect(d))
+
+	poolCls := ""
+	if !d.PMTEnabled {
+		poolCls = ` class="eco-domain__row--inactive"`
 	} else if d.PMTPoolEmpty {
-		pmtRowClass = ` class="eco-domain__row--warn"`
+		poolCls = ` class="eco-domain__row--warn"`
 	}
-	pmtVal := orEcoDash(d.PMTRate)
-	if d.PMTEnabled && d.PMTRate != "" && !compact {
-		pmtVal += "/block"
+	ecoDomainRow(&b, poolCls, "pool balance", orEcoDash(d.PMTBalance), ecoPoolEffect(d))
+
+	if !compact && d.PMTAnnual != "" {
+		annualCls := ""
+		if !d.PMTEnabled {
+			annualCls = ` class="eco-domain__row--inactive"`
+		}
+		ecoDomainRow(&b, annualCls, "annual emissions", d.PMTAnnual, "estimated yearly payout at current rate")
 	}
-	fmt.Fprintf(&b, `<div%s><div class="eco-domain__param">PMT</div><div class="eco-domain__value">%s</div><div class="eco-domain__effect">%s</div></div>`,
-		pmtRowClass, html.EscapeString(pmtVal), html.EscapeString(pmtEffect))
-	
-	// Inflation
-	inflRowClass := ""
-	inflEffect := ecoInflationEffect(d)
+
+	ecoDomainDivider(&b)
+	if d.PMTPoolAddress != "" {
+		ecoDomainRow(&b, "", "pool address", d.PMTPoolAddress, "funding source for block rewards")
+	}
+	ecoDomainHint(&b, "GET /cosmos/evm/pmtrewards/v1/params")
+
+	b.WriteString(`</div></div>`)
+	return b.String()
+}
+
+func inflationCardHTML(d model.Report, compact bool) string {
+	var b strings.Builder
+	b.WriteString(`<div class="eco-domain eco-domain--inflation">`)
+	b.WriteString(`<h3 class="eco-domain__title">Inflation <span class="eco-domain__subtitle">x/mint</span></h3>`)
+	b.WriteString(`<div class="eco-domain__rows">`)
+
+	inflCls := ""
 	if d.Inflation <= 0 {
-		inflRowClass = ` class="eco-domain__row--inactive"`
+		inflCls = ` class="eco-domain__row--inactive"`
 	}
 	inflVal := fmt.Sprintf("%.2f%%", d.Inflation)
 	if d.Inflation > 0 && d.InflationPerBlock != "" && !compact {
 		inflVal += " (" + d.InflationPerBlock + "/block)"
 	}
-	fmt.Fprintf(&b, `<div%s><div class="eco-domain__param">Inflation</div><div class="eco-domain__value">%s</div><div class="eco-domain__effect">%s</div></div>`,
-		inflRowClass, html.EscapeString(inflVal), html.EscapeString(inflEffect))
-	
-	// Tx fees (if not compact)
-	if !compact {
-		feesRowClass := ""
-		feesEffect := ecoTxFeesEffect(d)
-		feesVal := orEcoDash(trimFeeNote(d.LastBlockFees))
-		if d.LastBlockFees == "" {
-			feesRowClass = ` class="eco-domain__row--inactive"`
-		}
-		fmt.Fprintf(&b, `<div%s><div class="eco-domain__param">Tx fees</div><div class="eco-domain__value">%s</div><div class="eco-domain__effect">%s</div></div>`,
-			feesRowClass, html.EscapeString(feesVal), html.EscapeString(feesEffect))
-		
-		// Total per block
-		totalRowClass := ""
-		totalEffect := ecoRewardInEffect(d)
-		totalVal := orEcoDash(RewardInPerBlockTotal(d))
-		if !economicsHasRewardSource(d) {
-			totalRowClass = ` class="eco-domain__row--warn"`
-		}
-		fmt.Fprintf(&b, `<div%s><div class="eco-domain__param">Total/block</div><div class="eco-domain__value">%s</div><div class="eco-domain__effect">%s</div></div>`,
-			totalRowClass, html.EscapeString(totalVal), html.EscapeString(totalEffect))
+	ecoDomainRow(&b, inflCls, "inflation", inflVal, ecoInflationEffect(d))
+
+	provCls := ""
+	if d.Inflation <= 0 || d.AnnualProvisions == "" {
+		provCls = ` class="eco-domain__row--inactive"`
 	}
-	
+	ecoDomainRow(&b, provCls, "annual provisions", orEcoDash(d.AnnualProvisions), ecoAnnualProvEffect(d))
+
+	ecoDomainRow(&b, "", "bonded vs goal",
+		fmt.Sprintf("%.2f%% vs %.0f%%", d.BondedPct, d.GoalBonded),
+		ecoBondedVsGoalEffect(d))
+
+	ecoDomainDivider(&b)
+	ecoDomainRow(&b, "", "goal bonded", fmt.Sprintf("%.0f%%", d.GoalBonded), "target stake ratio for inflation")
+	if d.BlocksPerYear != "" {
+		ecoDomainRow(&b, "", "blocks / year", d.BlocksPerYear, "mint schedule denominator")
+	}
+	ecoDomainHint(&b, "GET /cosmos/mint/v1beta1/params")
+
 	b.WriteString(`</div></div>`)
-	b.WriteString(`</div>`)
-	
 	return b.String()
 }
+
+func stakingCardHTML(d model.Report, compact bool) string {
+	var b strings.Builder
+	b.WriteString(`<div class="eco-domain eco-domain--staking">`)
+	b.WriteString(`<h3 class="eco-domain__title">Staking <span class="eco-domain__subtitle">x/staking</span></h3>`)
+	b.WriteString(`<div class="eco-domain__rows">`)
+
+	ecoDomainRow(&b, "", "bonded", fmt.Sprintf("%.2f%%", d.BondedPct), "share of supply staked")
+
+	if !compact {
+		if d.BondedAmt != "" {
+			ecoDomainRow(&b, "", "bonded amt", d.BondedAmt, "actively securing chain")
+		}
+		if d.NotBonded != "" {
+			ecoDomainRow(&b, "", "not bonded", d.NotBonded, "unbonded or unbonding")
+		}
+		if d.TotalSupply != "" {
+			ecoDomainRow(&b, "", "total supply", d.TotalSupply, "bank module supply")
+		}
+	}
+
+	ecoDomainDivider(&b)
+	if d.BondDenom != "" {
+		ecoDomainRow(&b, "", "bond denom", d.BondDenom, "staking unit of account")
+	}
+	if d.UnbondingTime != "" {
+		ecoDomainRow(&b, "", "unbonding time", d.UnbondingTime, "time locked after unstaking")
+	}
+	if d.MaxValidators > 0 {
+		ecoDomainRow(&b, "", "max validators", fmt.Sprintf("%d", d.MaxValidators), "active set cap")
+	}
+	if d.SlashWindow != "" && d.SlashWindow != "0" {
+		ecoDomainRow(&b, "", "signed blocks window", d.SlashWindow+" blocks", "downtime tracking window")
+	}
+	if d.MinSigned > 0 {
+		ecoDomainRow(&b, "", "min signed", fmt.Sprintf("%.1f%%", d.MinSigned), "miss more → downtime slash risk")
+	}
+	if d.SlashDowntime != "" {
+		dtCls := ""
+		dtEffect := "fraction slashed for downtime"
+		if d.SlashDTInactive {
+			dtCls = ` class="eco-domain__row--warn"`
+			dtEffect = "inactive — downtime slash disabled"
+		}
+		ecoDomainRow(&b, dtCls, "slash / downtime", d.SlashDowntime, dtEffect)
+	}
+	if d.SlashDS != "" {
+		dsCls := ""
+		dsEffect := "fraction slashed for double-sign"
+		if d.SlashDSInactive {
+			dsCls = ` class="eco-domain__row--warn"`
+			dsEffect = "inactive — double-sign slash disabled"
+		}
+		ecoDomainRow(&b, dsCls, "slash / double-sign", d.SlashDS, dsEffect)
+	}
+	ecoDomainHint(&b, "GET /cosmos/staking/v1beta1/params · GET /cosmos/slashing/v1beta1/params")
+
+	b.WriteString(`</div></div>`)
+	return b.String()
+}
+
+func txFeesCardHTML(d model.Report, compact bool) string {
+	var b strings.Builder
+	b.WriteString(`<div class="eco-domain eco-domain--txfees">`)
+	b.WriteString(`<h3 class="eco-domain__title">Tx Fees</h3>`)
+	b.WriteString(`<div class="eco-domain__rows">`)
+
+	feesCls := ""
+	if d.LastBlockFees == "" {
+		feesCls = ` class="eco-domain__row--inactive"`
+	}
+	ecoDomainRow(&b, feesCls, "last block fees", orEcoDash(trimFeeNote(d.LastBlockFees)), ecoTxFeesEffect(d))
+
+	if !compact {
+		b.WriteString(`<div><div class="eco-domain__param">fee market</div><div class="eco-domain__value">—</div><div class="eco-domain__effect">See <a href="/s/feemarket">Fee Market</a> for base fee and elasticity</div></div>`)
+	}
+
+	b.WriteString(`</div></div>`)
+	return b.String()
+}
+
 func economicsLedgerTableHTML(rows []EcoLedgerRow) string {
 	headers := []string{"Step", "Where", "In this block", "Balance now", "Check"}
 	var b strings.Builder
