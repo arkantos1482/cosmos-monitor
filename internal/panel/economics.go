@@ -59,8 +59,17 @@ func writeEconomicsReference(w Writer, d model.Report) {
 	w.Subsection("Mint / inflation params")
 	w.Hint("`annual provisions` → REST GET /cosmos/mint/v1beta1/annual-provisions; `goal bonded`, `blocks / year` → REST GET …/params.")
 	if d.AnnualProvisions != "" {
-		w.Row("annual provisions", d.AnnualProvisions+"  _(absolute new tokens/year if inflation active)_")
+		prov := d.AnnualProvisions + "  _(absolute new tokens/year if inflation active)_"
+		if d.Inflation <= 0 {
+			prov += "  ⚠ inactive"
+		}
+		w.Row("annual provisions", prov)
 	}
+	inflRow := fmt.Sprintf("%.2f%%  _(current inflation rate)_", d.Inflation)
+	if d.Inflation <= 0 {
+		inflRow += "  ⚠ inactive"
+	}
+	w.Row("inflation", inflRow)
 	w.Row("goal bonded", fmt.Sprintf("%.0f%%  _(target stake ratio — inflation adjusts toward this)_", d.GoalBonded))
 	if d.BlocksPerYear != "" {
 		w.Row("blocks / year", d.BlocksPerYear)
@@ -69,12 +78,22 @@ func writeEconomicsReference(w Writer, d model.Report) {
 	w.Subsection("Distribution params")
 	w.Hint("`community tax` → REST GET /cosmos/distribution/v1beta1/params; live balances, per-block split → ledger.")
 	if d.CommunityTax != "" {
-		w.Row("community tax", d.CommunityTax+"  _(%% of block rewards → community pool)_")
+		taxStr := d.CommunityTax + "  _(%% of block rewards → community pool)_"
+		if d.CommunityTaxZero {
+			taxStr += "  ⚠ inactive"
+		}
+		w.Row("community tax", taxStr)
 	}
 
 	w.Subsection("PMT Rewards  (x/pmtrewards)")
 	w.Hint("`status`, `pool address` → REST GET /cosmos/evm/pmtrewards/v1/params; `per-block rate`, `pool balance` → ledger (Block reward ledger above).")
-	w.Row("status", pmtStatus(d))
+	status := pmtStatus(d)
+	if !d.PMTEnabled {
+		status = "disabled  ⚠ inactive"
+	} else if d.PMTPoolEmpty {
+		status += "  ⚠ pool empty"
+	}
+	w.Row("status", status)
 	if d.PMTAnnual != "" {
 		w.Row("annual emissions", d.PMTAnnual)
 	}

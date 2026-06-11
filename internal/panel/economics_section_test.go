@@ -51,6 +51,10 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		"Block reward ledger",
 		"fee_collector",
 		`class="dash-subheading">Chain parameters (reference)</h3>`,
+		`parameters (reward flow)`,
+		`id="eco-flags"`,
+		`pmtrewards.enabled`,
+		`eco-flags__table`,
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("economics chunk missing %q", want)

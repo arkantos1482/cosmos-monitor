@@ -254,48 +254,77 @@ func economicsPMTPoolCheck(d model.Report) string {
 	return "OK"
 }
 
-func economicsLedgerRows(d model.Report) [][]string {
-	var rows [][]string
+func economicsLedgerRows(d model.Report) []EcoLedgerRow {
+	var rows []EcoLedgerRow
 
-	if d.PMTEnabled && d.PMTRate != "" {
-		poolBal := d.PMTBalance
-		if poolBal == "" {
-			poolBal = "—"
-		}
-		rows = append(rows, []string{
+	pmtInactive := !d.PMTEnabled
+	pmtWarn := d.PMTEnabled && d.PMTPoolEmpty
+	pmtRate := d.PMTRate
+	if pmtRate == "" {
+		pmtRate = "—"
+	}
+	poolBal := d.PMTBalance
+	if poolBal == "" {
+		poolBal = "—"
+	}
+	pmtCheck := economicsPMTPoolCheck(d)
+	if pmtInactive {
+		pmtCheck = "disabled"
+	} else if pmtWarn {
+		pmtCheck = "pool empty"
+	}
+	rows = append(rows, EcoLedgerRow{
+		Cells: []string{
 			"1",
 			"x/pmtrewards → fee_collector",
-			d.PMTRate,
+			pmtRate,
 			poolBal,
-			economicsPMTPoolCheck(d),
-		})
-	}
+			pmtCheck,
+		},
+		Inactive: pmtInactive,
+		Warn:     pmtWarn,
+	})
 
 	if d.InflationPerBlock != "" {
-		rows = append(rows, []string{
-			"2",
-			"x/mint inflation",
-			d.InflationPerBlock,
-			"—",
-			fmt.Sprintf("%.2f%% inflation", d.Inflation),
+		rows = append(rows, EcoLedgerRow{
+			Cells: []string{
+				"2",
+				"x/mint inflation",
+				d.InflationPerBlock,
+				"—",
+				fmt.Sprintf("%.2f%% inflation", d.Inflation),
+			},
 		})
-	} else if d.Inflation == 0 {
-		rows = append(rows, []string{
-			"2",
-			"x/mint inflation",
-			"0",
-			"—",
-			"inactive",
+	} else {
+		check := "inactive"
+		if d.Inflation > 0 {
+			check = fmt.Sprintf("%.2f%% — rate only", d.Inflation)
+		}
+		rows = append(rows, EcoLedgerRow{
+			Cells:    []string{"2", "x/mint inflation", "0", "—", check},
+			Inactive: d.Inflation <= 0,
 		})
 	}
 
 	if d.LastBlockFees != "" {
-		rows = append(rows, []string{
-			"3",
-			"tx fees (parent block)",
-			d.LastBlockFees,
-			"—",
-			"gas used × base fee",
+		feeInactive := false
+		if v, ok := economicsParseAmount(d.LastBlockFees); ok && v <= 0 {
+			feeInactive = true
+		}
+		rows = append(rows, EcoLedgerRow{
+			Cells: []string{
+				"3",
+				"tx fees (parent block)",
+				d.LastBlockFees,
+				"—",
+				"gas used × base fee",
+			},
+			Inactive: feeInactive,
+		})
+	} else {
+		rows = append(rows, EcoLedgerRow{
+			Cells:    []string{"3", "tx fees (parent block)", "—", "—", "no fee income"},
+			Inactive: true,
 		})
 	}
 
@@ -304,65 +333,87 @@ func economicsLedgerRows(d model.Report) [][]string {
 	if feeBal == "" {
 		feeBal = "—"
 	}
+	rewardInactive := !economicsHasRewardSource(d)
 	if inBlock != "—" || feeBal != "—" {
-		rows = append(rows, []string{
-			"4",
-			"fee_collector",
-			inBlock,
-			feeBal,
-			economicsFeeCollectorCheck(d),
+		rows = append(rows, EcoLedgerRow{
+			Cells: []string{
+				"4",
+				"fee_collector",
+				inBlock,
+				feeBal,
+				economicsFeeCollectorCheck(d),
+			},
+			Inactive: rewardInactive,
+			Warn:     rewardInactive,
 		})
 	}
 
 	tax, valPool, op, del, unit, splitOK := economicsPerBlockSplit(d)
-	if splitOK || d.CommunityTax != "" {
+	distInactive := !splitOK && !economicsHasRewardSource(d)
+	taxInactive := d.CommunityTaxZero || distInactive
+	taxCheck := d.CommunityTax + " of rewards"
+	if d.CommunityTaxZero {
+		taxCheck = "0% — no tax"
+	} else if distInactive {
+		taxCheck = "no rewards to tax"
+	}
+	if splitOK || d.CommunityTax != "" || d.CommunityPool != "" {
 		taxStr, valStr := "—", "—"
 		if splitOK {
 			taxStr = economicsFormatPerBlock(tax, unit)
 			valStr = economicsFormatPerBlock(valPool, unit)
 		}
-		rows = append(rows, []string{
-			"5",
-			"community tax → pool",
-			taxStr,
-			d.CommunityPool,
-			d.CommunityTax + " of rewards",
+		pool := d.CommunityPool
+		if pool == "" {
+			pool = "—"
+		}
+		rows = append(rows, EcoLedgerRow{
+			Cells: []string{
+				"5",
+				"community tax → pool",
+				taxStr,
+				pool,
+				taxCheck,
+			},
+			Inactive: taxInactive,
+			Warn:     !d.CommunityTaxZero && distInactive,
 		})
 		distBal := distributionModuleBalance(d)
 		if distBal == "" {
 			distBal = "—"
 		}
-		rows = append(rows, []string{
-			"6",
-			"validator pool (all vals)",
-			valStr,
-			distBal,
-			"escrow until paid out",
+		rows = append(rows, EcoLedgerRow{
+			Cells: []string{
+				"6",
+				"validator pool (all vals)",
+				valStr,
+				distBal,
+				"escrow until paid out",
+			},
+			Inactive: distInactive,
 		})
 		if pct, has := economicsCommissionPct(d); has {
-			rows = append(rows, []string{
-				"7a",
-				"→ operator commission (network)",
-				economicsFormatPerBlock(op, unit),
-				economicsUnclaimedCommission(d),
-				fmt.Sprintf("%.1f%% commission (avg)", pct),
+			rows = append(rows, EcoLedgerRow{
+				Cells: []string{
+					"7a",
+					"→ operator commission (network)",
+					economicsFormatPerBlock(op, unit),
+					economicsUnclaimedCommission(d),
+					fmt.Sprintf("%.1f%% commission (avg)", pct),
+				},
+				Inactive: distInactive,
 			})
-			rows = append(rows, []string{
-				"7b",
-				"→ delegator rewards (network)",
-				economicsFormatPerBlock(del, unit),
-				economicsUnclaimedDelegator(d),
-				economicsUnclaimedCheck(d),
+			rows = append(rows, EcoLedgerRow{
+				Cells: []string{
+					"7b",
+					"→ delegator rewards (network)",
+					economicsFormatPerBlock(del, unit),
+					economicsUnclaimedDelegator(d),
+					economicsUnclaimedCheck(d),
+				},
+				Inactive: distInactive,
 			})
 		}
-	} else if d.CommunityPool != "" {
-		rows = append(rows, []string{
-			"5",
-			"community pool",
-			"—",
-			d.CommunityPool,
-			d.CommunityTax,
-		})
 	}
 
 	return rows

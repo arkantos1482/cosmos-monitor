@@ -1507,6 +1507,100 @@ body::after {
   margin-bottom: 0;
 }
 
+/* ── Economics inactive ledger rows ───────────────────────────── */
+
+.data-table--ledger tr.eco-row--inactive td {
+  color: var(--bad);
+  opacity: 0.72;
+}
+
+.data-table--ledger tr.eco-row--inactive td.data-table__step::before {
+  background: rgba(240, 113, 120, 0.12);
+  border-color: rgba(240, 113, 120, 0.35);
+  color: var(--bad);
+}
+
+.data-table--ledger tr.eco-row--inactive td.data-table__step::after {
+  background: rgba(240, 113, 120, 0.2);
+}
+
+.data-table--ledger tr.eco-row--warn td {
+  color: var(--warn);
+}
+
+.data-table--ledger tr.eco-row--warn td.data-table__step::before {
+  background: rgba(251, 191, 36, 0.12);
+  border-color: rgba(251, 191, 36, 0.35);
+  color: var(--warn);
+}
+
+/* ── Economics flags panel ─────────────────────────────────────── */
+
+.eco-flags {
+  margin: 0.35rem 0 0.55rem;
+}
+
+.eco-flags__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  margin: 0.35rem 0;
+}
+
+.eco-flags__table th,
+.eco-flags__table td {
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.eco-flags__table th {
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.eco-flags__param code {
+  font-size: 0.76rem;
+  color: var(--accent-economics);
+}
+
+.eco-flags__val {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.eco-flags__effect {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+  max-width: 28ch;
+}
+
+.eco-flags__row--inactive td {
+  background: rgba(240, 113, 120, 0.06);
+}
+
+.eco-flags__row--inactive .eco-flags__param code,
+.eco-flags__row--inactive .eco-flags__val {
+  color: var(--bad);
+}
+
+.eco-flags__row--inactive .eco-flags__effect--inactive {
+  color: var(--bad);
+  font-weight: 600;
+}
+
+.eco-flags__row--warn td {
+  background: rgba(251, 191, 36, 0.05);
+}
+
+.eco-flags__row--warn .eco-flags__effect--warn {
+  color: var(--warn);
+  font-weight: 600;
+}
+
 /* ── Fee market hero ──────────────────────────────────────────── */
 
 .fee-hero {

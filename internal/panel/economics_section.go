@@ -12,8 +12,7 @@ func writeEconomicsSummary(w Writer, d model.Report, mode SummaryMode) {
 	w.WriteHTML(`<div class="economics-kpi-band">`)
 	writeEconomicsKPIRows(w, d)
 	w.WriteHTML(`</div>`)
-	b := pmtPoolBadge(d)
-	writeSummaryBadges(w, "eco-summary__badges", b)
+	writeSummaryBadges(w, "eco-summary__badges", economicsSummaryBadges(d)...)
 	w.WriteHTML(fmt.Sprintf(
 		`<p class="eco-summary__secondary">Bonded <strong>%.2f%%</strong> · inflation <strong>%.2f%%</strong></p>`,
 		d.BondedPct, d.Inflation))
@@ -55,6 +54,7 @@ func writeEconomicsKPIRows(w Writer, d model.Report) {
 
 func writeEconomicsOverview(w Writer, d model.Report) {
 	writeEconomicsLedger(w, d)
+	writeEconomicsFlagsPanel(w, d)
 }
 
 func writeEconomicsLedger(w Writer, d model.Report) {
@@ -63,6 +63,16 @@ func writeEconomicsLedger(w Writer, d model.Report) {
 		return
 	}
 	w.Subsection("Block reward ledger")
-	w.Hint("`In this block` → derived (per-block mint, PMT, fees); `Balance now` → module x/bank balances; `Check` → derived (fee_collector cleared, pool drift); `reward flow` → derived (BeginBlock via fee_collector and x/distribution, see table).")
-	w.Table([]string{"Step", "Where", "In this block", "Balance now", "Check"}, rows)
+	w.Hint("`In this block` → derived (per-block mint, PMT, fees); `Balance now` → module x/bank balances; `Check` → derived (fee_collector cleared, pool drift); `reward flow` → derived (BeginBlock via fee_collector and x/distribution, see table). Grey/red rows are inactive on this chain.")
+	w.WriteHTML(economicsLedgerTableHTML(rows))
+}
+
+func writeEconomicsFlagsPanel(w Writer, d model.Report) {
+	flags := economicsFlags(d)
+	if len(flags) == 0 {
+		return
+	}
+	w.Subsection("Flags & parameters (reward flow)")
+	w.Em("Governance and module knobs that determine whether each ledger step is active. Red rows are ineffective on this chain right now.")
+	w.WriteHTML(economicsFlagsTableHTML(flags))
 }
