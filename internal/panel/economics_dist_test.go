@@ -34,6 +34,32 @@ func TestEconomicsDistributionEscrowMerged(t *testing.T) {
 	}
 }
 
+func TestEconomicsCommunityTaxWithAddress(t *testing.T) {
+	wantEVM := "0xEDACCBBFB7DB3278BC72AEEF66CC10A96C272A38"
+	d := model.Report{
+		CommunityTax:    "2.00%",
+		CommunityPool:   "0.50 PMT",
+		CommunityTaxPct: 2,
+		ModuleAccounts: []model.ModuleAccountRow{
+			{Name: "distribution", Address: "cosmos1akkvh0ahmve830rj4mhkdnqs49kzw23c63nhdx", Balance: "0 PMT"},
+		},
+	}
+	out := Build(d)
+	if !strings.Contains(out, "community tax") {
+		t.Fatal("missing community tax row")
+	}
+	for _, want := range []string{
+		`class="eco-acct__addr"`,
+		wantEVM,
+		"2.00%",
+		"pool 0.50 PMT",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("community tax output missing %q", want)
+		}
+	}
+}
+
 func TestEconomicsUnclaimedRewardsWithAddress(t *testing.T) {
 	wantEVM := "0xEDACCBBFB7DB3278BC72AEEF66CC10A96C272A38"
 	d := model.Report{

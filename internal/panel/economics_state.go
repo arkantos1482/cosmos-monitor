@@ -97,6 +97,42 @@ func ecoTaxEffect(d model.Report) string {
 	return "skims % of block rewards → community pool"
 }
 
+type ecoCardStatus struct {
+	cardMod    string
+	badgeClass string
+	label      string
+}
+
+func ecoPMTCardStatus(d model.Report) ecoCardStatus {
+	if !d.PMTEnabled {
+		return ecoCardStatus{"eco-domain--inactive", "badge--bad", "inactive"}
+	}
+	if d.PMTPoolEmpty {
+		return ecoCardStatus{"eco-domain--ineffective", "badge--warn", "ineffective"}
+	}
+	return ecoCardStatus{"eco-domain--active", "badge--ok", "active"}
+}
+
+func ecoInflationCardStatus(d model.Report) ecoCardStatus {
+	if d.Inflation <= 0 {
+		return ecoCardStatus{"eco-domain--inactive", "badge--bad", "inactive"}
+	}
+	return ecoCardStatus{"eco-domain--active", "badge--ok", "active"}
+}
+
+func ecoDomainTitleHTML(name, subtitle, badgeClass, statusLabel string) string {
+	var b strings.Builder
+	b.WriteString(`<h3 class="eco-domain__title">`)
+	b.WriteString(html.EscapeString(name))
+	fmt.Fprintf(&b, ` <span class="eco-domain__subtitle">%s</span>`, html.EscapeString(subtitle))
+	if statusLabel != "" {
+		fmt.Fprintf(&b, ` <span class="eco-domain__status badge %s">%s</span>`,
+			html.EscapeString(badgeClass), html.EscapeString(statusLabel))
+	}
+	b.WriteString(`</h3>`)
+	return b.String()
+}
+
 func ecoBondedVsGoalEffect(d model.Report) string {
 	if d.BondedPct > d.GoalBonded {
 		return fmt.Sprintf("%.1f%% over goal — inflation decreases", d.BondedPct-d.GoalBonded)
@@ -198,8 +234,9 @@ func economicsDomainCardsHTML(d model.Report, compact bool) string {
 
 func pmtRewardsCardHTML(d model.Report, compact bool) string {
 	var b strings.Builder
-	b.WriteString(`<div class="eco-domain eco-domain--pmtrewards">`)
-	b.WriteString(`<h3 class="eco-domain__title">PMT Rewards <span class="eco-domain__subtitle">x/pmtrewards</span></h3>`)
+	st := ecoPMTCardStatus(d)
+	fmt.Fprintf(&b, `<div class="eco-domain eco-domain--pmtrewards %s">`, st.cardMod)
+	b.WriteString(ecoDomainTitleHTML("PMT Rewards", "x/pmtrewards", st.badgeClass, st.label))
 	b.WriteString(`<div class="eco-domain__rows">`)
 
 	enabledCls := ""
@@ -239,8 +276,9 @@ func pmtRewardsCardHTML(d model.Report, compact bool) string {
 
 func inflationCardHTML(d model.Report, compact bool) string {
 	var b strings.Builder
-	b.WriteString(`<div class="eco-domain eco-domain--inflation">`)
-	b.WriteString(`<h3 class="eco-domain__title">Inflation <span class="eco-domain__subtitle">x/mint</span></h3>`)
+	st := ecoInflationCardStatus(d)
+	fmt.Fprintf(&b, `<div class="eco-domain eco-domain--inflation %s">`, st.cardMod)
+	b.WriteString(ecoDomainTitleHTML("Inflation", "x/mint", st.badgeClass, st.label))
 	b.WriteString(`<div class="eco-domain__rows">`)
 
 	inflCls := ""

@@ -107,14 +107,24 @@ func writeEconomicsDistributionModule(w Writer, d model.Report) {
 }
 
 func writeEconomicsCommunityTax(w Writer, d model.Report) {
-	val := orEcoDash(d.CommunityTax)
-	effect := ecoTaxEffect(d)
-	if d.CommunityTaxZero {
-		val += "  _(0% — community pool gets no cut)_"
-	} else {
-		val += "  _(" + effect + ")_"
+	if d.CommunityTax == "" && d.CommunityPool == "" {
+		return
 	}
-	w.Row("community tax", val)
+	effect := ecoTaxEffect(d)
+	if d.CommunityPool != "" {
+		effect += " · pool " + d.CommunityPool
+	}
+	rowCls := ""
+	if d.CommunityTaxZero {
+		rowCls = "eco-domain__row--inactive"
+	}
+	w.WriteHTML(economicsDistItemsHTML([]economicsDistItem{{
+		param:    "community tax",
+		balance:  orEcoDash(d.CommunityTax),
+		addr:     economicsDistributionModuleAddr(d),
+		effect:   effect,
+		rowClass: rowCls,
+	}}))
 }
 
 

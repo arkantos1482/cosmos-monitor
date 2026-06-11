@@ -1562,6 +1562,15 @@ body::after {
   border-left-color: var(--accent-economics);
 }
 
+.eco-domain--pmtrewards.eco-domain--inactive,
+.eco-domain--inflation.eco-domain--inactive {
+  border-left-color: var(--bad);
+}
+
+.eco-domain--pmtrewards.eco-domain--ineffective {
+  border-left-color: var(--warn);
+}
+
 .eco-domain--inflation {
   border-left-color: var(--accent-2);
 }
@@ -1575,6 +1584,10 @@ body::after {
 }
 
 .eco-domain__title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
   font-size: 0.82rem;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -1591,7 +1604,13 @@ body::after {
   letter-spacing: 0.02em;
   text-transform: lowercase;
   color: var(--muted);
-  margin-left: 0.35rem;
+}
+
+.eco-domain__status {
+  margin-left: auto;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
 }
 
 .eco-domain__divider {

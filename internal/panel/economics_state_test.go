@@ -21,6 +21,12 @@ func TestEconomicsInactivePMTDisabled(t *testing.T) {
 	if !strings.Contains(out, `eco-domain--pmtrewards`) {
 		t.Fatal("expected PMT Rewards source card")
 	}
+	if !strings.Contains(out, `eco-domain--pmtrewards eco-domain--inactive`) {
+		t.Fatal("expected inactive PMT rewards card when disabled")
+	}
+	if !strings.Contains(out, `eco-domain__status badge badge--bad">inactive`) {
+		t.Fatal("expected inactive status badge on PMT rewards card")
+	}
 	if !strings.Contains(out, `badge--bad">false`) {
 		t.Fatal("expected false badge for disabled PMT")
 	}
@@ -47,6 +53,12 @@ func TestEconomicsPMTPoolEmptyWarn(t *testing.T) {
 	out := BuildView(ViewEconomics, d)
 	if !strings.Contains(out, `eco-row--warn`) {
 		t.Fatal("expected warn styling for empty PMT pool")
+	}
+	if !strings.Contains(out, `eco-domain--pmtrewards eco-domain--ineffective`) {
+		t.Fatal("expected ineffective PMT rewards card when pool empty")
+	}
+	if !strings.Contains(out, `eco-domain__status badge badge--warn">ineffective`) {
+		t.Fatal("expected ineffective status badge on PMT rewards card")
 	}
 	if !strings.Contains(out, `pool empty`) {
 		t.Fatal("expected pool empty check in ledger")
@@ -130,6 +142,27 @@ func TestStakingCardNoGoalText(t *testing.T) {
 	}
 	if strings.Contains(card, "slash") {
 		t.Fatal("staking card must not contain slashing params")
+	}
+}
+
+func TestInflationCardInactiveWhenZero(t *testing.T) {
+	d := model.Report{Inflation: 0}
+	card := inflationCardHTML(d, false)
+	for _, want := range []string{
+		`eco-domain--inflation eco-domain--inactive`,
+		`eco-domain__status badge badge--bad">inactive`,
+	} {
+		if !strings.Contains(card, want) {
+			t.Fatalf("inflation card missing %q:\n%s", want, card)
+		}
+	}
+}
+
+func TestInflationCardActiveWhenMinting(t *testing.T) {
+	d := model.Report{Inflation: 5, InflationPerBlock: "0.01 PMT/block"}
+	card := inflationCardHTML(d, false)
+	if !strings.Contains(card, `eco-domain__status badge badge--ok">active`) {
+		t.Fatalf("expected active inflation badge:\n%s", card)
 	}
 }
 
