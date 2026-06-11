@@ -19,9 +19,11 @@ func TestBuildOverviewStack(t *testing.T) {
 	out := BuildView(ViewHome, d)
 	for _, want := range []string{
 		`class="dash-overview"`,
-		`dash-overview__group--chain`,
 		`dash-overview__group--node`,
+		`dash-overview__group--chain`,
 		`dash-overview__stack`,
+		`class="dash-overview__card-title">Infrastructure</p>`,
+		`class="dash-overview__card-title">Validator set</p>`,
 		`dash-overview__card--validators`,
 		`dash-overview__card--economics`,
 		`dash-overview__card--feemarket`,
@@ -54,6 +56,11 @@ func TestBuildOverviewStack(t *testing.T) {
 	}
 	if strings.Contains(out, `dash-overview__footer`) || strings.Contains(out, `View section →`) {
 		t.Fatal("overview cards should not include footer CTA bar")
+	}
+	nodeIdx := strings.Index(out, `dash-overview__group--node`)
+	chainIdx := strings.Index(out, `dash-overview__group--chain`)
+	if nodeIdx < 0 || chainIdx < 0 || nodeIdx > chainIdx {
+		t.Fatal("overview should show This node group before Chain group")
 	}
 }
 

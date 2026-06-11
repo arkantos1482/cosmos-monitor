@@ -63,6 +63,15 @@ func TestNavLinksPlainHref(t *testing.T) {
 	}
 }
 
+func TestNavGroupOrder(t *testing.T) {
+	out := navHTML(panel.ViewHome)
+	nodeIdx := strings.Index(out, `>This node</p>`)
+	chainIdx := strings.Index(out, `>Chain</p>`)
+	if nodeIdx < 0 || chainIdx < 0 || nodeIdx > chainIdx {
+		t.Fatal("nav should list This node group before Chain group")
+	}
+}
+
 func TestDataURL(t *testing.T) {
 	if dataURL(panel.ViewHome) != "/" {
 		t.Fatal("home data URL should be /")

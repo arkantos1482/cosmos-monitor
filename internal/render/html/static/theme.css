@@ -396,6 +396,15 @@ body::after {
 .dash-overview__card--node { --card-accent: var(--accent-node); }
 .dash-overview__card--evm { --card-accent: var(--accent-evm); }
 
+.dash-overview__card-title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--card-accent, var(--accent)) 65%, var(--muted));
+  margin: 0 0 0.45rem 0.15rem;
+}
+
 /* ── Section summaries ────────────────────────────────────────── */
 
 .dash-section__summary {

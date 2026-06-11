@@ -22,6 +22,9 @@ func summaryWrapStart(w Writer, mode SummaryMode, slug string) {
 	case SummaryOverviewClickable:
 		w.WriteHTML(fmt.Sprintf(`<a class="dash-overview__card dash-overview__card--%s" href="/s/%s">`,
 			html.EscapeString(slug), html.EscapeString(slug)))
+		if title := NavLabelForSlug(slug); title != "" {
+			w.WriteHTML(fmt.Sprintf(`<p class="dash-overview__card-title">%s</p>`, html.EscapeString(title)))
+		}
 	case SummaryEmbedded:
 		w.WriteHTML(`<div class="dash-section__summary">`)
 	}

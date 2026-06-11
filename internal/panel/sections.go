@@ -44,16 +44,27 @@ type NavItem struct {
 	Scope NavScope // empty for Overview only
 }
 
-// Nav lists home plus monitoring sections (chain group, then this node).
+// Nav lists home plus monitoring sections (this node group, then chain).
 var Nav = []NavItem{
 	{ViewHome, "Overview", "/", ""},
+	{ViewInfra, "Infrastructure", "/s/infra", NavScopeNode},
+	{ViewNode, "Validator", "/s/node", NavScopeNode},
+	{ViewEVM, "EVM JSON-RPC", "/s/evm", NavScopeNode},
 	{ViewValidators, "Validator set", "/s/validators", NavScopeChain},
 	{ViewEconomics, "Economics", "/s/economics", NavScopeChain},
 	{ViewFeemarket, "Fee market", "/s/feemarket", NavScopeChain},
 	{ViewGovernance, "Governance", "/s/governance", NavScopeChain},
-	{ViewInfra, "Infrastructure", "/s/infra", NavScopeNode},
-	{ViewNode, "Validator", "/s/node", NavScopeNode},
-	{ViewEVM, "EVM JSON-RPC", "/s/evm", NavScopeNode},
+}
+
+// NavLabelForSlug returns the sidebar label for a section slug (e.g. "validators").
+func NavLabelForSlug(slug string) string {
+	path := "/s/" + slug
+	for _, item := range Nav {
+		if item.Path == path {
+			return item.Label
+		}
+	}
+	return ""
 }
 
 // ParseView maps a URL segment or query value to a View. Unknown values become ViewHome.
