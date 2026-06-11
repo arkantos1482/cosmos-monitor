@@ -298,9 +298,6 @@ body::after {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.22);
-  position: sticky;
-  top: 0;
-  z-index: 20;
 }
 
 .dash-status__pill {
@@ -1691,59 +1688,6 @@ body::after {
   color: var(--muted);
   font-size: 0.76rem;
   max-width: 12rem;
-}
-
-/* ── Economics advanced/collapsible section ───────────────────── */
-
-.eco-advanced {
-  margin: 1rem 0 0.55rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-2);
-}
-
-.eco-advanced[open] {
-  background: var(--surface);
-}
-
-.eco-advanced__summary {
-  cursor: pointer;
-  padding: 0.65rem 0.85rem 0.65rem 1.85rem;
-  font-size: 0.84rem;
-  font-weight: 600;
-  color: var(--muted);
-  list-style: none;
-  user-select: none;
-  position: relative;
-  border-bottom: 1px solid transparent;
-}
-
-.eco-advanced__summary::before {
-  content: "▸";
-  position: absolute;
-  left: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 0.72rem;
-  color: var(--accent);
-  transition: transform 0.15s;
-}
-
-.eco-advanced[open] .eco-advanced__summary::before {
-  content: "▾";
-}
-
-.eco-advanced__summary::-webkit-details-marker {
-  display: none;
-}
-
-.eco-advanced[open] .eco-advanced__summary {
-  color: var(--fg);
-  border-bottom-color: var(--border);
-}
-
-.eco-advanced__body {
-  padding: 0.75rem 0.85rem 0.85rem;
 }
 
 /* ── Economics flags panel ─────────────────────────────────────── */

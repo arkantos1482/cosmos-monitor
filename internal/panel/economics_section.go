@@ -159,9 +159,7 @@ func writeEconomicsFlagsPanel(w Writer, d model.Report) {
 	if len(flags) == 0 {
 		return
 	}
-	w.WriteHTML(`<details class="eco-advanced">`)
-	w.WriteHTML(`<summary>Advanced parameters (reward flow)</summary>`)
+	w.Subsection("Advanced parameters (reward flow)")
 	w.Em("Governance and module knobs that determine whether each ledger step is active. Red rows are ineffective on this chain right now.")
 	w.WriteHTML(economicsFlagsTableHTML(flags))
-	w.WriteHTML(`</details>`)
 }

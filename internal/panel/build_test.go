@@ -55,8 +55,8 @@ func TestBuildEconomicsUsesTablesNotMermaid(t *testing.T) {
 	if !strings.Contains(eco, "Module accounts") {
 		t.Fatal("economics should include Module accounts table")
 	}
-	if !strings.Contains(eco, `<details class="eco-advanced">`) {
-		t.Fatal("economics should have collapsible advanced parameters section")
+	if !strings.Contains(eco, `class="dash-subheading">Advanced parameters (reward flow)</h3>`) {
+		t.Fatal("economics should include advanced parameters subsection")
 	}
 }
 

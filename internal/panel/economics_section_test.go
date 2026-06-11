@@ -55,8 +55,7 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		"Block reward ledger",
 		"Module accounts",                               // New unified module accounts table
 		`class="dash-subheading">Chain parameters (reference)</h3>`,
-		`<details class="eco-advanced">`,               // Collapsible flags section
-		`Advanced parameters (reward flow)`,           // Collapsible section title 
+		`class="dash-subheading">Advanced parameters (reward flow)</h3>`,
 		`id="eco-flags"`,
 		`pmtrewards.enabled`,
 		`eco-flags__table`,
@@ -93,11 +92,6 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 	communityTaxMatches := strings.Count(chunk, "community tax") + strings.Count(chunk, "Community")
 	if communityTaxMatches < 1 {
 		t.Fatal("economics should show community tax in Distribution domain card")
-	}
-	
-	// Verify flags are in collapsible section (should not be immediately visible)
-	if !strings.Contains(chunk, `<summary>Advanced parameters`) {
-		t.Fatal("flags should be in collapsible details section")
 	}
 }
 
