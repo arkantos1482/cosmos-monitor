@@ -93,19 +93,17 @@ func writeEconomicsOverview(w Writer, d model.Report) {
 
 func writeEconomicsDistributionModule(w Writer, d model.Report) {
 	bal := distributionModuleBalance(d)
-	addr := moduleAccountDisplayAddress(d, "distribution")
+	addr := economicsDistributionModuleAddr(d)
 	if bal == "" && addr == "" {
 		return
 	}
-	val := orEcoDash(bal)
-	if addr != "" {
-		if val != "—" {
-			val += " @ " + addr
-		} else {
-			val = addr
-		}
-	}
-	w.Row("distribution escrow", val)
+	html := economicsDistItemsHTML([]economicsDistItem{{
+		param:   "distribution escrow",
+		balance: orEcoDash(bal),
+		addr:    addr,
+		effect:  "x/distribution module escrow (often ~0 after BeginBlock payout)",
+	}})
+	w.WriteHTML(html)
 }
 
 func writeEconomicsCommunityTax(w Writer, d model.Report) {
@@ -123,26 +121,45 @@ func writeEconomicsCommunityTax(w Writer, d model.Report) {
 func writeEconomicsUnclaimedBalances(w Writer, d model.Report) {
 	del := economicsUnclaimedDelegator(d)
 	comm := economicsUnclaimedCommission(d)
-	if del == "" && comm == "" {
+	total := economicsUnclaimedTotal(d)
+	if del == "" && comm == "" && total == "" {
 		return
 	}
 	w.Subsection("Unclaimed rewards")
+	addr := economicsDistributionModuleAddr(d)
+	var items []economicsDistItem
 	if del != "" {
-		w.Row("delegator share", del)
+		items = append(items, economicsDistItem{
+			param:   "delegator share",
+			balance: del,
+			addr:    addr,
+			effect:  "summed outstanding_rewards across validators",
+		})
 	}
 	if comm != "" {
-		w.Row("validator commission", comm)
+		items = append(items, economicsDistItem{
+			param:   "validator commission",
+			balance: comm,
+			addr:    addr,
+			effect:  "summed validator commission across validators",
+		})
 	}
-	if total := economicsUnclaimedTotal(d); total != "" {
-		val := total
+	if total != "" {
+		effect := "delegator share + validator commission"
 		if _, suffix := splitOutstandingSuffix(d.TotalOutstanding); suffix != "" {
-			val += "  _(" + suffix + ")_"
+			effect += " · " + suffix
 		}
 		if check := economicsUnclaimedCheck(d); check != "" && check != "—" {
-			val += "  _[" + check + "]_"
+			effect += " · " + check
 		}
-		w.Row("total outstanding", val)
+		items = append(items, economicsDistItem{
+			param:   "total outstanding",
+			balance: total,
+			addr:    addr,
+			effect:  effect,
+		})
 	}
+	w.WriteHTML(economicsDistItemsHTML(items))
 }
 
 func writeEconomicsLedger(w Writer, d model.Report) {

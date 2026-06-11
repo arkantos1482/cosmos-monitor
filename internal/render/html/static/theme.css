@@ -1698,6 +1698,14 @@ body::after {
   border-radius: 4px;
 }
 
+.eco-dist {
+  margin: 0.25rem 0 0.65rem;
+}
+
+.eco-dist .eco-domain__rows {
+  gap: 0.55rem;
+}
+
 /* ── Economics module accounts table ──────────────────────────── */
 
 .eco-module-accounts {

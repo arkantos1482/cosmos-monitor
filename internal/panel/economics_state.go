@@ -138,6 +138,28 @@ func ecoDomainRowHTML(b *strings.Builder, rowClass, param, valueHTML, effect str
 		cls, html.EscapeString(param), valueHTML, html.EscapeString(effect))
 }
 
+type economicsDistItem struct {
+	param, balance, addr, effect, rowClass string
+}
+
+func economicsDistItemsHTML(items []economicsDistItem) string {
+	if len(items) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString(`<div class="eco-dist"><div class="eco-domain__rows">`)
+	for _, item := range items {
+		val := ecoBalanceAddrHTML(item.balance, item.addr)
+		ecoDomainRowHTML(&b, item.rowClass, item.param, val, item.effect)
+	}
+	b.WriteString(`</div></div>`)
+	return b.String()
+}
+
+func economicsDistributionModuleAddr(d model.Report) string {
+	return moduleAccountDisplayAddress(d, "distribution")
+}
+
 func ecoBalanceAddrHTML(balance, addr string) string {
 	bal := strings.TrimSpace(balance)
 	if bal == "" || bal == "—" {

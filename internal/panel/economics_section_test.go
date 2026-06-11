@@ -25,7 +25,7 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		LastBlockFees:       "0.001 PMT  _(parent block gas × base fee)_",
 		ModuleAccounts: []model.ModuleAccountRow{
 			{Name: "fee_collector", Balance: "0 PMT", Role: "fees"},
-			{Name: "distribution", Balance: "0 PMT", Role: "escrow"},
+			{Name: "distribution", Address: "cosmos1akkvh0ahmve830rj4mhkdnqs49kzw23c63nhdx", Balance: "0 PMT", Role: "escrow"},
 			{Name: "bonded_tokens_pool", Balance: "12.5M PMT", Role: "staking"},
 			{Name: "not_bonded_tokens_pool", Balance: "5.8M PMT", Role: "staking"},
 		},
@@ -68,7 +68,11 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		"not_bonded_tokens_pool",
 		"fee_collector",
 		"distribution escrow",
+		`class="eco-dist"`,
+		`class="eco-acct__addr"`,
 		"Unclaimed rewards",
+		"delegator share",
+		"validator commission",
 		"community tax",
 	} {
 		if !strings.Contains(chunk, want) {
