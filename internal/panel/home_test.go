@@ -31,7 +31,6 @@ func TestBuildOverviewStack(t *testing.T) {
 		`dash-overview__card--evm`,
 		`href="/s/infra"`,
 		`href="/s/evm"`,
-		`View section →`,
 		`class="val-summary"`,
 		`class="eco-summary"`,
 		`class="fee-summary"`,
@@ -52,6 +51,9 @@ func TestBuildOverviewStack(t *testing.T) {
 	}
 	if strings.Contains(out, `dash-cards--bento`) {
 		t.Fatal("overview should not use legacy bento cards")
+	}
+	if strings.Contains(out, `dash-overview__footer`) || strings.Contains(out, `View section →`) {
+		t.Fatal("overview cards should not include footer CTA bar")
 	}
 }
 
@@ -81,6 +83,11 @@ func TestBuildViewSingleSection(t *testing.T) {
 	}
 	if strings.Contains(out, `dash-overview__card`) {
 		t.Fatal("section view summary should be embedded, not overview card link")
+	}
+	idx := strings.Index(out, `class="dash-heading">2. VALIDATOR</h2>`)
+	sumIdx := strings.Index(out, `class="node-summary"`)
+	if idx < 0 || sumIdx < 0 || sumIdx < idx {
+		t.Fatal("node summary should appear after section heading")
 	}
 }
 
@@ -142,5 +149,17 @@ func TestSectionSummariesEmbedded(t *testing.T) {
 		if tc.gone != "" && strings.Contains(out, tc.gone) {
 			t.Fatalf("view %s should not contain duplicate %q", tc.view, tc.gone)
 		}
+		if !summaryAfterHeading(out) {
+			t.Fatalf("view %s summary should follow section heading", tc.view)
+		}
 	}
+}
+
+func summaryAfterHeading(out string) bool {
+	heading := strings.Index(out, `class="dash-heading"`)
+	summary := strings.Index(out, `-summary`)
+	if heading < 0 || summary < 0 {
+		return heading < 0 && summary < 0
+	}
+	return summary > heading
 }

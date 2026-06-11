@@ -63,8 +63,8 @@ func chipClass(v model.Validator) string {
 }
 
 func writeValidators(w Writer, d model.Report) {
-	writeValidatorsSummary(w, d, SummaryEmbedded)
 	w.Section("1. VALIDATOR SET")
+	writeValidatorsSummary(w, d, SummaryEmbedded)
 	w.Em("Chain-wide validator set — summary counts, stake and slashing tables, then P2P identity per validator.")
 
 	w.Subsection("Stake")

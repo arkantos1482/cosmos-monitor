@@ -35,6 +35,7 @@ func TestWriteFeemarketLadderLayout(t *testing.T) {
 		`id="fee-L5"`,
 		`class="fee-level"`,
 		`class="fee-nav"`,
+		`class="fee-summary"`,
 		"What you pay now",
 		"Why the fee moved",
 		"What the chain measured",
@@ -64,11 +65,12 @@ func TestWriteFeemarketLadderLayout(t *testing.T) {
 		}
 	}
 
+	l1Start := strings.Index(chunk, `id="fee-L1"`)
 	l1End := strings.Index(chunk, `id="fee-L2"`)
-	if l1End < 0 {
-		t.Fatal("missing L2")
+	if l1Start < 0 || l1End < 0 {
+		t.Fatal("missing L1 or L2")
 	}
-	l1 := chunk[:l1End]
+	l1 := chunk[l1Start:l1End]
 	for _, forbidden := range []string{">W<", "gas_used", "target"} {
 		if strings.Contains(strings.ToLower(l1), forbidden) {
 			t.Fatalf("L1 should not expose %q", forbidden)

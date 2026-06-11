@@ -18,15 +18,21 @@ const (
 )
 
 func summaryWrapStart(w Writer, mode SummaryMode, slug string) {
-	if mode == SummaryOverviewClickable {
+	switch mode {
+	case SummaryOverviewClickable:
 		w.WriteHTML(fmt.Sprintf(`<a class="dash-overview__card dash-overview__card--%s" href="/s/%s">`,
 			html.EscapeString(slug), html.EscapeString(slug)))
+	case SummaryEmbedded:
+		w.WriteHTML(`<div class="dash-section__summary">`)
 	}
 }
 
 func summaryWrapEnd(w Writer, mode SummaryMode) {
-	if mode == SummaryOverviewClickable {
-		w.WriteHTML(`<div class="dash-overview__footer">View section →</div></a>`)
+	switch mode {
+	case SummaryOverviewClickable:
+		w.WriteHTML(`</a>`)
+	case SummaryEmbedded:
+		w.WriteHTML(`</div>`)
 	}
 }
 

@@ -35,8 +35,8 @@ func writeInfraSummary(w Writer, d model.Report, mode SummaryMode) {
 }
 
 func writeInfra(w Writer, d model.Report) {
-	writeInfraSummary(w, d, SummaryEmbedded)
 	w.Section("1. INFRASTRUCTURE")
+	writeInfraSummary(w, d, SummaryEmbedded)
 	w.Em("Host and container for this node.")
 
 	w.Subsection("OS")

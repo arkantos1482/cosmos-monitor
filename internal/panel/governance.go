@@ -55,8 +55,8 @@ func writeGovernanceSummary(w Writer, d model.Report, mode SummaryMode) {
 }
 
 func writeGovernance(w Writer, d model.Report) {
-	writeGovernanceSummary(w, d, SummaryEmbedded)
 	w.Section("4. GOVERNANCE")
+	writeGovernanceSummary(w, d, SummaryEmbedded)
 
 	if len(d.Proposals) > 0 {
 		w.Subsection(fmt.Sprintf("Active Proposals  (%d)", len(d.Proposals)))

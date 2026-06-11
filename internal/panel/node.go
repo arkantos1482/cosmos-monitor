@@ -65,8 +65,8 @@ func writeNode(w Writer, d model.Report) {
 		syncStr = "CATCHING UP"
 	}
 
-	writeNodeSummary(w, d, SummaryEmbedded)
 	w.Section("2. VALIDATOR")
+	writeNodeSummary(w, d, SummaryEmbedded)
 	w.Em("This validator on this node — identities, application staking, and CometBFT live state.")
 
 	writeIdentityBoard(w, d, lv)

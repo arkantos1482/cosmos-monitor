@@ -22,8 +22,8 @@ func writeFeemarketSummary(w Writer, d model.Report, mode SummaryMode) {
 		formatGasAmount(c.Wanted, d.ParentBlockResultsOK) + " W"
 
 	summaryWrapStart(w, mode, "feemarket")
-	w.WriteHTML(`<div class="fee-summary"><div class="fee-hero">`)
-	w.WriteHTML(`<div class="fee-hero__top">`)
+	w.WriteHTML(`<div class="fee-summary">`)
+	w.WriteHTML(`<div class="fee-summary__top">`)
 	badgeCls := c.Badge.Class
 	if badgeCls == "" {
 		badgeCls = "stable"
@@ -33,20 +33,20 @@ func writeFeemarketSummary(w Writer, d model.Report, mode SummaryMode) {
 	w.WriteHTML(fmt.Sprintf(`<span class="fee-summary__base">%s</span>`, html.EscapeString(baseFee)))
 	w.WriteHTML(`</div>`)
 	w.WriteHTML(`<div class="fee-summary__meta">`)
-	w.WriteHTML(fmt.Sprintf(`<span class="fee-hero-meta">%s</span>`, html.EscapeString(verdict)))
+	w.WriteHTML(fmt.Sprintf(`<span class="fee-summary__pill">%s</span>`, html.EscapeString(verdict)))
 	if c.UtilPct != "" {
-		w.WriteHTML(fmt.Sprintf(`<span class="fee-hero-meta">%s of target</span>`, html.EscapeString(c.UtilPct)))
+		w.WriteHTML(fmt.Sprintf(`<span class="fee-summary__pill">%s of target</span>`, html.EscapeString(c.UtilPct)))
 	}
-	w.WriteHTML(fmt.Sprintf(`<span class="fee-hero-meta">transfer %s</span>`, html.EscapeString(transfer)))
+	w.WriteHTML(fmt.Sprintf(`<span class="fee-summary__pill">transfer %s</span>`, html.EscapeString(transfer)))
 	w.WriteHTML(`</div>`)
 	w.WriteHTML(fmt.Sprintf(`<p class="fee-summary__gas">%s</p>`, html.EscapeString(gasLine)))
-	w.WriteHTML(`</div></div>`)
+	w.WriteHTML(`</div>`)
 	summaryWrapEnd(w, mode)
 }
 
 func writeFeemarket(w Writer, d model.Report) {
-	writeFeemarketSummary(w, d, SummaryEmbedded)
 	w.Section("3. FEE MARKET")
+	writeFeemarketSummary(w, d, SummaryEmbedded)
 	w.Em("Chain-wide EIP-1559 fee market — live base fee, demand, and governance parameters.")
 	writeFeemarketPage(w, d)
 	w.BlankLine()
