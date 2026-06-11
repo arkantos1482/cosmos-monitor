@@ -49,15 +49,18 @@ func TestBuildEconomicsUsesTablesNotMermaid(t *testing.T) {
 		"eco-domain--pmtrewards",
 		"eco-domain--inflation",
 		"eco-domain--staking",
-		"eco-domain--txfees",
+		"eco-domain--slashing",
 		`class="dash-subheading">Distribution</h3>`,
-		"Module accounts",
 	} {
 		if !strings.Contains(eco, want) {
 			t.Fatalf("economics should include %q", want)
 		}
 	}
+	if strings.Contains(eco, "Module accounts") || strings.Contains(eco, "eco-module-accounts") {
+		t.Fatal("economics should not include unified module accounts table")
+	}
 	for _, gone := range []string{
+		"eco-domain--txfees",
 		"eco-domain--distribution",
 		"eco-domain--rewards",
 		`class="dash-subheading">Advanced parameters (reward flow)</h3>`,

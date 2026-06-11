@@ -48,12 +48,6 @@ func writeEconomicsCompactSummary(w Writer, d model.Report) {
 
 	w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">Staking: %.2f%% bonded</div>`, d.BondedPct))
 
-	feesStatus := "none"
-	if d.LastBlockFees != "" {
-		feesStatus = trimFeeNote(d.LastBlockFees)
-	}
-	w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">Tx fees: %s</div>`, html.EscapeString(feesStatus)))
-
 	w.WriteHTML(`</div>`)
 }
 
@@ -90,11 +84,28 @@ func writeEconomicsKPIRows(w Writer, d model.Report) {
 }
 
 func writeEconomicsOverview(w Writer, d model.Report) {
-	w.Subsection("Distribution")
-	w.Hint("`x/distribution` live state — rewards flow `fee_collector` → community tax → escrow → validator payouts. Steps 1–3 (PMT, mint, tx fees) are summarized in the source cards above.")
 	writeEconomicsLedger(w, d)
-	writeEconomicsModuleAccountsTable(w, d)
+	w.Subsection("Distribution")
+	writeEconomicsDistributionModule(w, d)
+	writeEconomicsUnclaimedBalances(w, d)
 	writeEconomicsCommunityTax(w, d)
+}
+
+func writeEconomicsDistributionModule(w Writer, d model.Report) {
+	bal := distributionModuleBalance(d)
+	addr := moduleAccountDisplayAddress(d, "distribution")
+	if bal == "" && addr == "" {
+		return
+	}
+	val := orEcoDash(bal)
+	if addr != "" {
+		if val != "—" {
+			val += " @ " + addr
+		} else {
+			val = addr
+		}
+	}
+	w.Row("distribution escrow", val)
 }
 
 func writeEconomicsCommunityTax(w Writer, d model.Report) {
@@ -109,55 +120,29 @@ func writeEconomicsCommunityTax(w Writer, d model.Report) {
 }
 
 
-func writeEconomicsModuleAccountsTable(w Writer, d model.Report) {
-	if len(d.ModuleAccounts) == 0 {
+func writeEconomicsUnclaimedBalances(w Writer, d model.Report) {
+	del := economicsUnclaimedDelegator(d)
+	comm := economicsUnclaimedCommission(d)
+	if del == "" && comm == "" {
 		return
 	}
-	w.Subsection("Module accounts")
-	w.Hint("Live balances from x/bank, addresses from x/auth module accounts, ledger step mapping shows where each appears in the reward flow.")
-	
-	// Build ledger step mapping
-	stepMap := map[string]string{
-		"fee_collector":          "4",
-		"distribution":           "6", 
-		"bonded_tokens_pool":     "—",
-		"not_bonded_tokens_pool": "—",
+	w.Subsection("Unclaimed rewards")
+	if del != "" {
+		w.Row("delegator share", del)
 	}
-	
-	w.WriteHTML(writeEconomicsModuleAccountsTableHTML(d.ModuleAccounts, stepMap))
-}
-
-func writeEconomicsModuleAccountsTableHTML(accounts []model.ModuleAccountRow, stepMap map[string]string) string {
-	headers := []string{"Module", "Balance", "Address", "Ledger step", "Role"}
-	var b strings.Builder
-	b.WriteString(`<div class="eco-module-accounts"><div class="table-scroll">`)
-	b.WriteString(`<table class="data-table"><thead><tr>`)
-	for i, h := range headers {
-		thCls := ""
-		if i == 1 || i == 3 { // Balance and Ledger step columns
-			thCls = ` class="data-table__num"`
+	if comm != "" {
+		w.Row("validator commission", comm)
+	}
+	if total := economicsUnclaimedTotal(d); total != "" {
+		val := total
+		if _, suffix := splitOutstandingSuffix(d.TotalOutstanding); suffix != "" {
+			val += "  _(" + suffix + ")_"
 		}
-		fmt.Fprintf(&b, `<th%s>%s</th>`, thCls, html.EscapeString(h))
-	}
-	b.WriteString(`</tr></thead><tbody>`)
-	
-	for _, acc := range accounts {
-		step, hasStep := stepMap[acc.Name]
-		if !hasStep {
-			step = "—"
+		if check := economicsUnclaimedCheck(d); check != "" && check != "—" {
+			val += "  _[" + check + "]_"
 		}
-		
-		b.WriteString(`<tr>`)
-		fmt.Fprintf(&b, `<td class="eco-module-accounts__module"><code>%s</code></td>`, html.EscapeString(acc.Name))
-		fmt.Fprintf(&b, `<td class="eco-module-accounts__balance data-table__num">%s</td>`, html.EscapeString(acc.Balance))
-		fmt.Fprintf(&b, `<td class="eco-module-accounts__address">%s</td>`, html.EscapeString(acc.Address))
-		fmt.Fprintf(&b, `<td class="eco-module-accounts__ledger data-table__num">%s</td>`, html.EscapeString(step))
-		fmt.Fprintf(&b, `<td class="eco-module-accounts__role">%s</td>`, html.EscapeString(acc.Role))
-		b.WriteString(`</tr>`)
+		w.Row("total outstanding", val)
 	}
-	
-	b.WriteString(`</tbody></table></div></div>`)
-	return b.String()
 }
 
 func writeEconomicsLedger(w Writer, d model.Report) {
@@ -166,7 +151,25 @@ func writeEconomicsLedger(w Writer, d model.Report) {
 		return
 	}
 	w.Subsection("Block reward ledger")
-	w.Hint("`In this block` → derived (per-block mint, PMT, fees); `Balance now` → module x/bank balances; `Check` → derived (fee_collector cleared, pool drift); `reward flow` → derived (BeginBlock via fee_collector and x/distribution, see table). Grey/red rows are inactive on this chain.")
+	if intro := economicsLedgerIntro(d); intro != "" {
+		w.Em(intro)
+	}
 	w.WriteHTML(economicsLedgerTableHTML(rows))
+}
+
+func economicsLedgerIntro(d model.Report) string {
+	addr := moduleAccountDisplayAddress(d, "fee_collector")
+	bal := FeeCollectorBalance(d)
+	if addr == "" && bal == "" {
+		return ""
+	}
+	var parts []string
+	if addr != "" {
+		parts = append(parts, "fee_collector "+addr)
+	}
+	if bal != "" {
+		parts = append(parts, "balance "+bal)
+	}
+	return strings.Join(parts, " · ")
 }
 

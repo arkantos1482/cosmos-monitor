@@ -56,6 +56,33 @@ func moduleAccountBalance(d model.Report, name string) string {
 	return ""
 }
 
+func moduleAccountAddress(d model.Report, name string) string {
+	for _, m := range d.ModuleAccounts {
+		if m.Name == name {
+			return m.Address
+		}
+	}
+	return ""
+}
+
+// displayAddress prefers EVM hex (0x…) for module account addresses; falls back to bech32.
+func displayAddress(addr string) string {
+	if addr == "" {
+		return ""
+	}
+	if strings.HasPrefix(strings.ToLower(addr), "0x") {
+		return addr
+	}
+	if evm := fetch.AccBech32ToEVM(addr); evm != "" {
+		return evm
+	}
+	return addr
+}
+
+func moduleAccountDisplayAddress(d model.Report, name string) string {
+	return displayAddress(moduleAccountAddress(d, name))
+}
+
 func FeeCollectorBalance(d model.Report) string {
 	return moduleAccountBalance(d, "fee_collector")
 }
@@ -161,10 +188,11 @@ func economicsCommissionPct(d model.Report) (pct float64, ok bool) {
 }
 
 // economicsPerBlockSplit estimates per-block community tax and per-validator op/delegator
-// slices from PMTRate (Cosmos: tax first, then VP-weighted validator share, then commission).
+// slices from total block rewards (PMT + inflation + fees). Uses equal per-validator split,
+// not VP-weighted distribution (Cosmos applies VP weighting on chain).
 func economicsPerBlockSplit(d model.Report) (tax, valPool, op, del float64, unit string, ok bool) {
-	perBlock, unit, ok := economicsPMTPerBlock(d)
-	if !ok {
+	perBlock, unit, parts := rewardInPerBlockAmounts(d)
+	if parts == 0 || perBlock <= 0 {
 		return 0, 0, 0, 0, "", false
 	}
 	tax = perBlock * d.CommunityTaxPct / 100
@@ -263,22 +291,20 @@ func economicsLedgerRows(d model.Report) []EcoLedgerRow {
 	if pmtRate == "" {
 		pmtRate = "—"
 	}
-	poolBal := d.PMTBalance
-	if poolBal == "" {
-		poolBal = "—"
-	}
 	pmtCheck := economicsPMTPoolCheck(d)
 	if pmtInactive {
 		pmtCheck = "disabled"
 	} else if pmtWarn {
 		pmtCheck = "pool empty"
+	} else if d.PMTBalance != "" {
+		pmtCheck = "pool on PMT Rewards card"
 	}
 	rows = append(rows, EcoLedgerRow{
 		Cells: []string{
 			"1",
 			"x/pmtrewards → fee_collector",
 			pmtRate,
-			poolBal,
+			"—",
 			pmtCheck,
 		},
 		Inactive: pmtInactive,
@@ -292,16 +318,16 @@ func economicsLedgerRows(d model.Report) []EcoLedgerRow {
 				"x/mint inflation",
 				d.InflationPerBlock,
 				"—",
-				fmt.Sprintf("%.2f%% inflation", d.Inflation),
+				fmt.Sprintf("%.2f%% · mints to fee_collector", d.Inflation),
 			},
 		})
 	} else {
 		check := "inactive"
 		if d.Inflation > 0 {
-			check = fmt.Sprintf("%.2f%% — rate only", d.Inflation)
+			check = fmt.Sprintf("%.2f%% — rate only, no /block", d.Inflation)
 		}
 		rows = append(rows, EcoLedgerRow{
-			Cells:    []string{"2", "x/mint inflation", "0", "—", check},
+			Cells:    []string{"2", "x/mint inflation", "—", "—", check},
 			Inactive: d.Inflation <= 0,
 		})
 	}
@@ -317,7 +343,7 @@ func economicsLedgerRows(d model.Report) []EcoLedgerRow {
 				"tx fees (parent block)",
 				d.LastBlockFees,
 				"—",
-				"gas used × base fee",
+				"parent block fees → fee_collector",
 			},
 			Inactive: feeInactive,
 		})
@@ -349,14 +375,17 @@ func economicsLedgerRows(d model.Report) []EcoLedgerRow {
 	}
 
 	tax, valPool, op, del, unit, splitOK := economicsPerBlockSplit(d)
-	distInactive := !splitOK && !economicsHasRewardSource(d)
-	taxInactive := d.CommunityTaxZero || distInactive
+	distInactive := !splitOK
+	taxInactive := d.CommunityTaxZero || !splitOK
 	taxCheck := d.CommunityTax + " of rewards"
 	if d.CommunityTaxZero {
 		taxCheck = "0% — no tax"
-	} else if distInactive {
+	} else if !splitOK {
 		taxCheck = "no rewards to tax"
+	} else {
+		taxCheck += " · estimated"
 	}
+	estNote := "estimated · equal per-validator split"
 	if splitOK || d.CommunityTax != "" || d.CommunityPool != "" {
 		taxStr, valStr := "—", "—"
 		if splitOK {
@@ -376,11 +405,15 @@ func economicsLedgerRows(d model.Report) []EcoLedgerRow {
 				taxCheck,
 			},
 			Inactive: taxInactive,
-			Warn:     !d.CommunityTaxZero && distInactive,
+			Warn:     !d.CommunityTaxZero && !splitOK,
 		})
 		distBal := distributionModuleBalance(d)
 		if distBal == "" {
 			distBal = "—"
+		}
+		distCheck := "escrow until paid out"
+		if splitOK {
+			distCheck = estNote
 		}
 		rows = append(rows, EcoLedgerRow{
 			Cells: []string{
@@ -388,18 +421,25 @@ func economicsLedgerRows(d model.Report) []EcoLedgerRow {
 				"validator pool (all vals)",
 				valStr,
 				distBal,
-				"escrow until paid out",
+				distCheck,
 			},
 			Inactive: distInactive,
 		})
 		if pct, has := economicsCommissionPct(d); has {
+			commCheck := fmt.Sprintf("estimated · %.1f%% commission (network avg)", pct)
+			delCheck := economicsUnclaimedCheck(d)
+			if splitOK && delCheck == "—" {
+				delCheck = estNote
+			} else if splitOK {
+				delCheck += " · per-block estimated"
+			}
 			rows = append(rows, EcoLedgerRow{
 				Cells: []string{
 					"7a",
 					"→ operator commission (network)",
 					economicsFormatPerBlock(op, unit),
 					economicsUnclaimedCommission(d),
-					fmt.Sprintf("%.1f%% commission (avg)", pct),
+					commCheck,
 				},
 				Inactive: distInactive,
 			})
@@ -409,7 +449,7 @@ func economicsLedgerRows(d model.Report) []EcoLedgerRow {
 					"→ delegator rewards (network)",
 					economicsFormatPerBlock(del, unit),
 					economicsUnclaimedDelegator(d),
-					economicsUnclaimedCheck(d),
+					delCheck,
 				},
 				Inactive: distInactive,
 			})

@@ -50,16 +50,25 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		t.Fatal("economics section should not use mermaid")
 	}
 	
+	ledgerIdx := strings.Index(chunk, "Block reward ledger")
+	distIdx := strings.Index(chunk, `class="dash-subheading">Distribution</h3>`)
+	if ledgerIdx < 0 || distIdx < 0 || ledgerIdx > distIdx {
+		t.Fatal("Block reward ledger should appear before Distribution subsection")
+	}
+
 	for _, want := range []string{
 		"Block reward ledger",
-		"Module accounts",
 		`class="dash-subheading">Distribution</h3>`,
 		"eco-domains",
 		"eco-domain--pmtrewards",
 		"eco-domain--inflation",
 		"eco-domain--staking",
-		"eco-domain--txfees",
-		"eco-module-accounts",
+		"eco-domain--slashing",
+		"bonded_tokens_pool",
+		"not_bonded_tokens_pool",
+		"fee_collector",
+		"distribution escrow",
+		"Unclaimed rewards",
 		"community tax",
 	} {
 		if !strings.Contains(chunk, want) {
@@ -68,7 +77,18 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 	}
 
 	for _, gone := range []string{
+		"Module accounts",
+		"eco-module-accounts",
+	} {
+		if strings.Contains(chunk, gone) {
+			t.Fatalf("economics chunk should not contain %q", gone)
+		}
+	}
+
+	for _, gone := range []string{
+		"eco-domain--txfees",
 		`class="dash-subheading">Chain parameters (reference)</h3>`,
+		"eco-domain__hint",
 		`class="dash-subheading">Advanced parameters (reward flow)</h3>`,
 		`id="eco-flags"`,
 		"eco-domain--distribution",
@@ -172,6 +192,85 @@ func TestLocalValidatorRewardsOnNodeSection(t *testing.T) {
 		if !strings.Contains(out, want) {
 			t.Fatalf("validator section missing %q", want)
 		}
+	}
+}
+
+func TestEconomicsSourcesProvenance(t *testing.T) {
+	d := model.Report{
+		PMTEnabled:          true,
+		PMTRate:             "0.1 PMT/block",
+		UnclaimedDelegator:  "0.006 PMT",
+		UnclaimedCommission: "0.0006 PMT",
+		ModuleAccounts: []model.ModuleAccountRow{
+			{Name: "fee_collector", Balance: "0 PMT"},
+		},
+	}
+	out := BuildWithOptions(d, Options{ShowSources: true})
+	idx := strings.Index(out, "2. ECONOMICS")
+	end := strings.Index(out, `class="dash-heading">3. FEE MARKET</h2>`)
+	if idx < 0 || end < 0 {
+		t.Fatal("expected economics section")
+	}
+	chunk := out[idx:end]
+	for _, want := range []string{
+		`class="dash-sources"`,
+		`>Data sources</summary>`,
+		`class="hint-provenance"`,
+		"pmtrewards/v1/params",
+		"distribution/v1beta1/validators",
+		"outstanding_rewards",
+	} {
+		if !strings.Contains(chunk, want) {
+			t.Fatalf("economics data sources missing %q", want)
+		}
+	}
+	for _, gone := range []string{
+		"eco-domain__hint",
+		"Tx fees:",
+	} {
+		if strings.Contains(chunk, gone) {
+			t.Fatalf("economics should not contain %q", gone)
+		}
+	}
+}
+
+func TestModuleAccountDisplayAddress(t *testing.T) {
+	bech := "cosmos1akkvh0ahmve830rj4mhkdnqs49kzw23c63nhdx"
+	wantEVM := "0xEDACCBBFB7DB3278BC72AEEF66CC10A96C272A38"
+	d := model.Report{
+		ModuleAccounts: []model.ModuleAccountRow{
+			{Name: "fee_collector", Address: bech, Balance: "0 PMT"},
+		},
+	}
+	if got := moduleAccountDisplayAddress(d, "fee_collector"); got != wantEVM {
+		t.Fatalf("moduleAccountDisplayAddress = %q want %q", got, wantEVM)
+	}
+	out := Build(d)
+	if strings.Contains(out, bech) {
+		t.Fatal("economics should prefer EVM hex over bech32 for module addresses")
+	}
+	if !strings.Contains(out, wantEVM) {
+		t.Fatalf("economics should show EVM address %q", wantEVM)
+	}
+}
+
+func TestEconomicsPerBlockSplitInflationOnly(t *testing.T) {
+	d := model.Report{
+		Inflation:         5,
+		InflationPerBlock: "0.01 PMT/block",
+		CommunityTaxPct:   2,
+		BondedCount:       4,
+		Validators:        []model.Validator{{CommissionFloat: 10}},
+	}
+	tax, valPool, _, _, unit, ok := economicsPerBlockSplit(d)
+	if !ok || unit != "apmt" {
+		t.Fatalf("split not ok: ok=%v unit=%q", ok, unit)
+	}
+	if tax < 0.00019 || tax > 0.00021 {
+		t.Fatalf("tax want ~0.0002 got %v", tax)
+	}
+	if valPool < 0.0097 || valPool > 0.0099 {
+		t.Fatalf("valPool want ~0.0098 got %v", valPool)
 	}
 }
 

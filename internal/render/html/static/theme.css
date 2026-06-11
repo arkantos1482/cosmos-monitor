@@ -1576,8 +1576,8 @@ body::after {
   border-left-color: var(--accent-validators);
 }
 
-.eco-domain--txfees {
-  border-left-color: var(--accent-feemarket, var(--accent));
+.eco-domain--slashing {
+  border-left-color: var(--bad);
 }
 
 .eco-domain__title {
@@ -1609,16 +1609,6 @@ body::after {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
-}
-
-.eco-domain__hint {
-  margin-top: 0.45rem;
-  font-size: 0.7rem;
-  color: var(--muted);
-}
-
-.eco-domain__hint code {
-  font-size: 0.68rem;
 }
 
 .eco-domain__rows {

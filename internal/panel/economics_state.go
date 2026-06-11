@@ -97,17 +97,6 @@ func ecoTaxEffect(d model.Report) string {
 	return "skims % of block rewards → community pool"
 }
 
-func ecoTxFeesEffect(d model.Report) string {
-	if d.LastBlockFees == "" {
-		return "no parent-block fee data"
-	}
-	v, ok := economicsParseAmount(d.LastBlockFees)
-	if !ok || v <= 0 {
-		return "no tx fee income this block"
-	}
-	return "gas × base fee → fee_collector"
-}
-
 func ecoBondedVsGoalEffect(d model.Report) string {
 	if d.BondedPct > d.GoalBonded {
 		return fmt.Sprintf("%.1f%% over goal — inflation decreases", d.BondedPct-d.GoalBonded)
@@ -116,13 +105,6 @@ func ecoBondedVsGoalEffect(d model.Report) string {
 		return fmt.Sprintf("%.1f%% under goal — inflation increases", d.GoalBonded-d.BondedPct)
 	}
 	return "at goal — inflation stable"
-}
-
-func trimFeeNote(s string) string {
-	if i := strings.Index(s, "  _"); i >= 0 {
-		return strings.TrimSpace(s[:i])
-	}
-	return s
 }
 
 func orEcoDash(s string) string {
@@ -152,17 +134,13 @@ func ecoDomainDivider(b *strings.Builder) {
 	b.WriteString(`<div class="eco-domain__divider">Governance params</div>`)
 }
 
-func ecoDomainHint(b *strings.Builder, hint string) {
-	fmt.Fprintf(b, `<div class="eco-domain__hint"><code>%s</code></div>`, html.EscapeString(hint))
-}
-
 func economicsDomainCardsHTML(d model.Report, compact bool) string {
 	var b strings.Builder
 	b.WriteString(`<div class="eco-domains">`)
 	b.WriteString(pmtRewardsCardHTML(d, compact))
 	b.WriteString(inflationCardHTML(d, compact))
 	b.WriteString(stakingCardHTML(d, compact))
-	b.WriteString(txFeesCardHTML(d, compact))
+	b.WriteString(slashingCardHTML(d, compact))
 	b.WriteString(`</div>`)
 	return b.String()
 }
@@ -204,10 +182,9 @@ func pmtRewardsCardHTML(d model.Report, compact bool) string {
 	}
 
 	ecoDomainDivider(&b)
-	if d.PMTPoolAddress != "" {
-		ecoDomainRow(&b, "", "pool address", d.PMTPoolAddress, "funding source for block rewards")
+	if addr := displayAddress(d.PMTPoolAddress); addr != "" {
+		ecoDomainRow(&b, "", "pool address", addr, "funding source for block rewards")
 	}
-	ecoDomainHint(&b, "GET /cosmos/evm/pmtrewards/v1/params")
 
 	b.WriteString(`</div></div>`)
 	return b.String()
@@ -244,7 +221,6 @@ func inflationCardHTML(d model.Report, compact bool) string {
 	if d.BlocksPerYear != "" {
 		ecoDomainRow(&b, "", "blocks / year", d.BlocksPerYear, "mint schedule denominator")
 	}
-	ecoDomainHint(&b, "GET /cosmos/mint/v1beta1/params")
 
 	b.WriteString(`</div></div>`)
 	return b.String()
@@ -270,6 +246,8 @@ func stakingCardHTML(d model.Report, compact bool) string {
 		}
 	}
 
+	writeStakingModuleAccountRows(&b, d)
+
 	ecoDomainDivider(&b)
 	if d.BondDenom != "" {
 		ecoDomainRow(&b, "", "bond denom", d.BondDenom, "staking unit of account")
@@ -280,6 +258,17 @@ func stakingCardHTML(d model.Report, compact bool) string {
 	if d.MaxValidators > 0 {
 		ecoDomainRow(&b, "", "max validators", fmt.Sprintf("%d", d.MaxValidators), "active set cap")
 	}
+
+	b.WriteString(`</div></div>`)
+	return b.String()
+}
+
+func slashingCardHTML(d model.Report, _ bool) string {
+	var b strings.Builder
+	b.WriteString(`<div class="eco-domain eco-domain--slashing">`)
+	b.WriteString(`<h3 class="eco-domain__title">Slashing <span class="eco-domain__subtitle">x/slashing</span></h3>`)
+	b.WriteString(`<div class="eco-domain__rows">`)
+
 	if d.SlashWindow != "" && d.SlashWindow != "0" {
 		ecoDomainRow(&b, "", "signed blocks window", d.SlashWindow+" blocks", "downtime tracking window")
 	}
@@ -304,30 +293,33 @@ func stakingCardHTML(d model.Report, compact bool) string {
 		}
 		ecoDomainRow(&b, dsCls, "slash / double-sign", d.SlashDS, dsEffect)
 	}
-	ecoDomainHint(&b, "GET /cosmos/staking/v1beta1/params · GET /cosmos/slashing/v1beta1/params")
 
 	b.WriteString(`</div></div>`)
 	return b.String()
 }
 
-func txFeesCardHTML(d model.Report, compact bool) string {
-	var b strings.Builder
-	b.WriteString(`<div class="eco-domain eco-domain--txfees">`)
-	b.WriteString(`<h3 class="eco-domain__title">Tx Fees</h3>`)
-	b.WriteString(`<div class="eco-domain__rows">`)
-
-	feesCls := ""
-	if d.LastBlockFees == "" {
-		feesCls = ` class="eco-domain__row--inactive"`
+func writeStakingModuleAccountRows(b *strings.Builder, d model.Report) {
+	for _, mod := range []struct {
+		name, effect string
+	}{
+		{"bonded_tokens_pool", "staked tokens escrow"},
+		{"not_bonded_tokens_pool", "unbonded / unbonding escrow"},
+	} {
+		bal := moduleAccountBalance(d, mod.name)
+		addr := moduleAccountDisplayAddress(d, mod.name)
+		if bal == "" && addr == "" {
+			continue
+		}
+		val := orEcoDash(bal)
+		if addr != "" {
+			if val != "—" {
+				val += " @ " + addr
+			} else {
+				val = addr
+			}
+		}
+		ecoDomainRow(b, "", mod.name, val, mod.effect)
 	}
-	ecoDomainRow(&b, feesCls, "last block fees", orEcoDash(trimFeeNote(d.LastBlockFees)), ecoTxFeesEffect(d))
-
-	if !compact {
-		b.WriteString(`<div><div class="eco-domain__param">fee market</div><div class="eco-domain__value">—</div><div class="eco-domain__effect">See <a href="/s/feemarket">Fee Market</a> for base fee and elasticity</div></div>`)
-	}
-
-	b.WriteString(`</div></div>`)
-	return b.String()
 }
 
 func economicsLedgerTableHTML(rows []EcoLedgerRow) string {
