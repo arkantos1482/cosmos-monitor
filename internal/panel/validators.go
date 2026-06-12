@@ -8,12 +8,6 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/report"
 )
 
-func writeValidatorsSummary(w Writer, d model.Report, mode SummaryMode) {
-	summaryWrapStart(w, mode, "validators")
-	writeValidatorP2PSummaryBody(w, d)
-	summaryWrapEnd(w, mode)
-}
-
 func writeValidatorP2PSummaryBody(w Writer, d model.Report) {
 	w.WriteHTML(`<div class="val-summary val-summary--p2p">`)
 	if n := len(d.Validators); n > 0 {
@@ -61,11 +55,8 @@ func chipClass(v model.Validator) string {
 	return ""
 }
 
-func writeValidators(w Writer, d model.Report) {
-	w.Section("2. VALIDATOR SET")
-	writeValidatorsSummary(w, d, SummaryEmbedded)
-	w.Em("P2P dial strings and operator identities per validator. Stake, slashing, and pool params → § Staking.")
-
+func writeValidatorP2PNetwork(w Writer, d model.Report) {
+	w.Layer("Validator set")
 	w.Subsection("Network (P2P)")
 	w.Hint("`p2p dial`, `node ID` → CometBFT GET /status (local) or GET /net_info (peers); `operator`, `consensus` → REST GET /cosmos/staking/v1beta1/validators.")
 	p2pRows := make([][]string, 0, len(d.Validators))
@@ -84,7 +75,6 @@ func writeValidators(w Writer, d model.Report) {
 		})
 	}
 	w.Table([]string{"moniker", "operator", "p2p dial", "node ID", "consensus", "local"}, p2pRows)
-	w.BlankLine()
 }
 
 func identityCell(s string) string {

@@ -46,11 +46,11 @@ func writeFeemarketSummary(w Writer, d model.Report, mode SummaryMode) {
 
 func writeFeemarket(w Writer, d model.Report) {
 	c := feemarket.LoadContext(d)
-	w.Section("5. FEE MARKET")
+	w.Section("4. FEE MARKET")
 	writeFeemarketSummary(w, d, SummaryEmbedded)
 	w.Em("Chain-wide EIP-1559 fee market — live base fee, demand, and governance parameters.")
-	writeFeemarketPage(w, d)
 	writeFeemarketFeeAcceptance(w, d)
+	writeFeemarketPage(w, d)
 	w.Hint(feemarketSourcesHint(c))
 	w.BlankLine()
 }
@@ -62,7 +62,7 @@ func writeFeemarketFeeAcceptance(w Writer, d model.Report) {
 		return
 	}
 	w.Subsection("Fee acceptance (app.toml)")
-	w.Hint("`minimum-gas-prices`, `evm.min-tip`, `evm.mempool.price-limit`, `evm.max-tx-gas-wanted` → local app.toml (APPTOML_PATH or ~/.evmd/config/app.toml). This node's local policy — chain-wide fee params are in L5.")
+	w.Hint("`minimum-gas-prices`, `evm.min-tip`, `evm.mempool.price-limit`, `evm.max-tx-gas-wanted` → local app.toml (APPTOML_PATH or ~/.evmd/config/app.toml). This node's local policy — chain-wide fee params are below.")
 	for _, row := range feeAcceptanceRows(c) {
 		w.Row(row[0], row[1])
 	}
@@ -94,7 +94,7 @@ func feemarketSourcesHint(c feemarket.Context) string {
 			"`no_base_fee`, `elasticity`, `min_gas_*`, … → REST GET /cosmos/evm/feemarket/v1/params; "+
 			"`evm_denom` → REST GET /cosmos/evm/vm/v1/params; "+
 			"`london_block` → REST GET /cosmos/evm/vm/v1/config; "+
-			"node fee acceptance (app.toml) → %s (subsection below).",
+			"node fee acceptance (app.toml) → %s (subsection above).",
 		c.ParentBlock, c.CurrentBlock, appToml,
 	)
 }

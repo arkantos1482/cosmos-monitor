@@ -46,7 +46,11 @@ func writeNodeSummary(w Writer, d model.Report, mode SummaryMode) {
 				`<span class="node-summary__val">%s</span></div>`,
 			html.EscapeString(row.label), html.EscapeString(row.val)))
 	}
-	w.WriteHTML(`</div></div>`)
+	w.WriteHTML(`</div>`)
+	if len(d.Validators) > 0 {
+		writeValidatorP2PSummaryBody(w, d)
+	}
+	w.WriteHTML(`</div>`)
 	summaryWrapEnd(w, mode)
 }
 
@@ -66,7 +70,7 @@ func writeNode(w Writer, d model.Report) {
 
 	w.Section("2. VALIDATOR")
 	writeNodeSummary(w, d, SummaryEmbedded)
-	w.Em("This validator on this node — identities and CometBFT live state. Stake → § Staking. Rewards → § Rewards.")
+	w.Em("This validator on this node — identities, CometBFT live state, and the full validator set (P2P). Stake → § Staking. Rewards → § Rewards.")
 
 	writeIdentityBoard(w, d, lv)
 
@@ -78,6 +82,8 @@ func writeNode(w Writer, d model.Report) {
 	}
 
 	writeNodeCometBFT(w, d, lv, syncStr)
+	writeValidatorP2PNetwork(w, d)
+	w.BlankLine()
 }
 
 func writeNodeCometBFT(w Writer, d model.Report, lv model.LocalValidator, syncStr string) {

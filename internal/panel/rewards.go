@@ -8,7 +8,7 @@ import (
 )
 
 func writeRewards(w Writer, d model.Report) {
-	w.Section("3. REWARDS")
+	w.Section("2. REWARDS")
 	writeRewardsSummary(w, d, SummaryEmbedded)
 	w.Em("Block reward sources (PMT emissions and mint inflation) and this validator's unclaimed share. Distribution routing → § Economics.")
 

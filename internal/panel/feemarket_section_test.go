@@ -9,8 +9,8 @@ import (
 
 func feemarketChunk(t *testing.T, out string) string {
 	t.Helper()
-	idx := strings.Index(out, `class="dash-heading">5. FEE MARKET</h2>`)
-	end := strings.Index(out, "6. GOVERNANCE")
+	idx := strings.Index(out, `class="dash-heading">4. FEE MARKET</h2>`)
+	end := strings.Index(out, "5. GOVERNANCE")
 	if idx < 0 || end < 0 {
 		t.Fatal("expected fee market and governance sections")
 	}
@@ -29,21 +29,17 @@ func TestWriteFeemarketLadderLayout(t *testing.T) {
 
 	for _, want := range []string{
 		`id="fee-L1"`,
-		`id="fee-L2"`,
-		`id="fee-L3"`,
 		`id="fee-L4"`,
 		`id="fee-L5"`,
 		`class="fee-level"`,
 		`class="fee-nav"`,
 		`class="fee-summary"`,
 		"What you pay now",
-		"Why the fee moved",
-		"What the chain measured",
 		"When each value is written",
 		"Formula &amp; parameters",
-		"Illustrative example: when W ≠ gas_used",
 		"Three pools",
 		"In-block accumulator",
+		"Chain state &amp; parameters",
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("fee market chunk missing %q", want)
@@ -51,6 +47,8 @@ func TestWriteFeemarketLadderLayout(t *testing.T) {
 	}
 
 	for _, gone := range []string{
+		`id="fee-L2"`,
+		`id="fee-L3"`,
 		`class="fee-flow"`,
 		`class="fee-hero"`,
 		`id="feemarket-ref"`,
@@ -58,6 +56,10 @@ func TestWriteFeemarketLadderLayout(t *testing.T) {
 		"Finance",
 		"Operator",
 		"Developer",
+		"Why the fee moved",
+		"What the chain measured",
+		"Illustrative example: when W ≠ gas_used",
+		`aria-label="Demand vs target"`,
 		"6. FEE MARKET",
 	} {
 		if strings.Contains(chunk, gone) {
@@ -66,9 +68,9 @@ func TestWriteFeemarketLadderLayout(t *testing.T) {
 	}
 
 	l1Start := strings.Index(chunk, `id="fee-L1"`)
-	l1End := strings.Index(chunk, `id="fee-L2"`)
+	l1End := strings.Index(chunk, `id="fee-L4"`)
 	if l1Start < 0 || l1End < 0 {
-		t.Fatal("missing L1 or L2")
+		t.Fatal("missing L1 or L4")
 	}
 	l1 := chunk[l1Start:l1End]
 	for _, forbidden := range []string{">W<", "gas_used", "target"} {
@@ -125,19 +127,6 @@ func TestWriteFeemarketUnlimitedMaxGas(t *testing.T) {
 	}
 	if strings.Contains(chunk, `aria-label="Demand vs capacity"`) {
 		t.Fatal("unlimited max_gas should not show legacy demand meter label")
-	}
-}
-
-func TestWriteFeemarketFiniteMaxGasMeter(t *testing.T) {
-	d := model.Report{
-		BlockHeight: "100", BaseFeeRaw: "1000",
-		BlockGasLimit: 30_000_000, Elasticity: 2,
-		BaseFeeChangeDenominator: 8,
-		ParentBlockGasWanted: 12_400_000,
-	}
-	chunk := feemarketChunk(t, Build(d))
-	if !strings.Contains(chunk, `aria-label="Demand vs target"`) {
-		t.Fatal("finite max_gas should show demand meter")
 	}
 }
 

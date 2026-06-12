@@ -9,7 +9,7 @@ import (
 
 func governanceChunk(t *testing.T, out string) string {
 	t.Helper()
-	idx := strings.Index(out, `class="dash-heading">6. GOVERNANCE</h2>`)
+	idx := strings.Index(out, `class="dash-heading">5. GOVERNANCE</h2>`)
 	if idx < 0 {
 		t.Fatal("expected governance section")
 	}

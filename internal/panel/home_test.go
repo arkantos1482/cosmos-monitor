@@ -32,8 +32,6 @@ func TestBuildOverviewStack(t *testing.T) {
 		`class="dash-overview__card-title">Infrastructure</p>`,
 		`class="dash-overview__card-title">Staking</p>`,
 		`dash-overview__card--staking`,
-		`class="dash-overview__card-title">Validator set</p>`,
-		`dash-overview__card--validators`,
 		`dash-overview__card--rewards`,
 		`dash-overview__card--economics`,
 		`dash-overview__card--feemarket`,
@@ -44,7 +42,6 @@ func TestBuildOverviewStack(t *testing.T) {
 		`href="/s/infra"`,
 		`href="/s/evm"`,
 		`staking-summary`,
-		`val-summary--p2p`,
 		`eco-summary`,
 		`class="fee-summary"`,
 		`class="gov-summary"`,
@@ -106,6 +103,7 @@ func TestBuildViewSingleSection(t *testing.T) {
 	for _, sub := range []string{
 		`class="id-board"`,
 		"CometBFT (consensus + networking)",
+		`class="dash-layer__title">Validator set</h3>`,
 	} {
 		if !strings.Contains(out, sub) {
 			t.Fatalf("node view missing subsection %q", sub)
@@ -174,13 +172,12 @@ func TestSectionSummariesEmbedded(t *testing.T) {
 		gone string
 	}{
 		{ViewStaking, `staking-summary`, `class="dash-subheading">Summary</h3>`},
-		{ViewValidators, `val-summary--p2p`, `class="dash-subheading">Summary</h3>`},
 		{ViewRewards, `eco-domains`, "At a glance"},
 		{ViewEconomics, `eco-summary--compact`, "At a glance"},
 		{ViewFeemarket, `class="fee-summary"`, ""},
 		{ViewGovernance, `class="gov-summary"`, ""},
 		{ViewInfra, `class="infra-summary"`, ""},
-		{ViewNode, `class="node-summary"`, ""},
+		{ViewNode, `class="node-summary"`, `class="dash-subheading">Summary</h3>`},
 		{ViewEVM, `evm-summary__probe`, "<strong>RPC:"},
 	} {
 		out := BuildView(tc.view, d)

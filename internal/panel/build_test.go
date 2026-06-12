@@ -20,9 +20,9 @@ func TestBuildEconomicsUsesTablesNotMermaid(t *testing.T) {
 		CommunityPool: "0.5 PMT",
 	}
 	out := Build(d)
-	rewardsIdx := strings.Index(out, "3. REWARDS")
-	ecoIdx := strings.Index(out, "4. ECONOMICS")
-	end := strings.Index(out, `class="dash-heading">5. FEE MARKET</h2>`)
+	rewardsIdx := strings.Index(out, "2. REWARDS")
+	ecoIdx := strings.Index(out, "3. ECONOMICS")
+	end := strings.Index(out, `class="dash-heading">4. FEE MARKET</h2>`)
 	if rewardsIdx < 0 || ecoIdx < 0 || end < 0 {
 		t.Fatal("expected rewards, economics, and fee market sections")
 	}
@@ -97,8 +97,8 @@ func TestBuildFeeMarketPanel(t *testing.T) {
 	if strings.Contains(out, `class="fee-flow"`) {
 		t.Fatal("fee market section should not use legacy fee-flow")
 	}
-	idx := strings.Index(out, `class="dash-heading">5. FEE MARKET</h2>`)
-	end := strings.Index(out, "6. GOVERNANCE")
+	idx := strings.Index(out, `class="dash-heading">4. FEE MARKET</h2>`)
+	end := strings.Index(out, "5. GOVERNANCE")
 	if idx < 0 || end < 0 {
 		t.Fatal("expected fee market and governance sections")
 	}
@@ -134,15 +134,15 @@ func TestContentInventory(t *testing.T) {
 		PMTEnabled: true, PMTRate: "0.1 PMT/block",
 		EVMHTTPEndpoint: "http://localhost:8545", EVMChainID: 290290,
 		ModuleAccounts: []model.ModuleAccountRow{{Name: "fee_collector", Balance: "1 PMT"}},
+		Validators: []model.Validator{{Moniker: "node1", Operator: "cosmosvaloper1abc"}},
 	}
 	out := Build(d)
 	for _, want := range []string{
 		`class="dash-heading">1. STAKING</h2>`,
-		`class="dash-heading">2. VALIDATOR SET</h2>`,
-		`class="dash-heading">3. REWARDS</h2>`,
-		`class="dash-heading">4. ECONOMICS</h2>`,
-		`class="dash-heading">5. FEE MARKET</h2>`,
-		`class="dash-heading">6. GOVERNANCE</h2>`,
+		`class="dash-heading">2. REWARDS</h2>`,
+		`class="dash-heading">3. ECONOMICS</h2>`,
+		`class="dash-heading">4. FEE MARKET</h2>`,
+		`class="dash-heading">5. GOVERNANCE</h2>`,
 		`class="dash-heading">1. INFRASTRUCTURE</h2>`,
 		`class="dash-heading">2. VALIDATOR</h2>`,
 		`class="dash-heading">3. EVM JSON-RPC</h2>`,
@@ -152,6 +152,7 @@ func TestContentInventory(t *testing.T) {
 		`class="kpi-tile"`,
 		`class="data-table"`,
 		`val-summary--p2p`,
+		`class="dash-layer__title">Validator set</h3>`,
 		"Block reward ledger",
 		`class="dash-subheading">Distribution</h3>`,
 		"eco-domain--pmtrewards",

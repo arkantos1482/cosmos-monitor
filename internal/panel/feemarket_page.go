@@ -12,6 +12,7 @@ import (
 
 func writeFeemarketPage(w Writer, d model.Report) {
 	c := feemarket.LoadContext(d)
+	w.Subsection("Chain state & parameters")
 	w.WriteHTML(feemarketDomainCardsHTML(d))
 	levels := buildFeeLevels(c, d)
 	writeFeeNav(w, c)
@@ -26,10 +27,8 @@ func writeFeeNav(w Writer, c feemarket.Context) {
 	b.WriteString(`<nav class="fee-nav" aria-label="Fee market levels">`)
 	for _, link := range []struct{ id, label string }{
 		{"fee-L1", "L1 Outcome"},
-		{"fee-L2", "L2 Cause"},
-		{"fee-L3", "L3 Demand"},
-		{"fee-L4", "L4 Timeline"},
-		{"fee-L5", "L5 Precision"},
+		{"fee-L4", "L2 Timeline"},
+		{"fee-L5", "L3 Formula"},
 	} {
 		fmt.Fprintf(&b, `<a class="fee-nav__link" href="#%s">%s</a>`, link.id, html.EscapeString(link.label))
 	}
@@ -41,8 +40,6 @@ func writeFeeNav(w Writer, c feemarket.Context) {
 func buildFeeLevels(c feemarket.Context, d model.Report) []feeLevel {
 	return []feeLevel{
 		buildFeeL1(c, d),
-		buildFeeL2(c, d),
-		buildFeeL3(c, d),
 		buildFeeL4(c, d),
 		buildFeeL5(c, d),
 	}
@@ -66,104 +63,6 @@ func buildFeeL1(c feemarket.Context, d model.Report) feeLevel {
 		lv.Banner = fmt.Sprintf("Fees disabled below block %s (enable_height).", formatInt(c.EnableHeight))
 	}
 	return lv
-}
-
-func buildFeeL2(c feemarket.Context, d model.Report) feeLevel {
-	verdictLabel := map[string]string{
-		"busy": "BUSY", "quiet": "QUIET", "balanced": "BALANCED", "unknown": "UNKNOWN",
-	}[c.Verdict]
-	verdictDetail := ""
-	switch c.Verdict {
-	case "busy":
-		verdictDetail = "(W above target)"
-	case "quiet":
-		verdictDetail = "(W below target)"
-	case "balanced":
-		verdictDetail = "(W at target)"
-	}
-
-	maxGasVal := feemarket.FormatUint(c.BlockGasLimit)
-	maxGasNote := "consensus max_gas"
-	if c.UnlimitedBlockGas {
-		maxGasVal = "unlimited (−1)"
-	}
-
-	nextAdj := c.NextAdj
-	switch c.Badge.Label {
-	case "AT FLOOR":
-		nextAdj = "HOLD at floor"
-	case "FALLING":
-		if !c.DecreaseStep.IsNil() && c.DecreaseStep.IsPositive() {
-			nextAdj = fmt.Sprintf("FALLING — Δbase ≈ %s/gas", fetch.FormatFeeDec(c.DecreaseStep, c.Denom))
-		} else {
-			nextAdj = "FALLING — base fee drops next block"
-		}
-	case "RISING":
-		nextAdj = "RISING — base fee increases next block"
-	case "STABLE":
-		nextAdj = "STABLE — base fee holds"
-	}
-
-	rows := [][]string{
-		{fmt.Sprintf("Verdict (block %s)", c.ParentBlock), verdictLabel + "  " + verdictDetail},
-		{"Target", c.TargetDisplay()},
-		{"max_gas (consensus)", maxGasVal + "  _(" + maxGasNote + ")_"},
-		{fmt.Sprintf("Base at BeginBlock %s", c.CurrentBlock), feeAmount(d, c.BaseFee, c.BaseFeeRaw)},
-		{"Next adjustment", nextAdj},
-	}
-	if c.UnlimitedBlockGas {
-		rows = append(rows, []string{
-			"Demand meter", "— (target is sentinel, not real capacity)",
-			"Why quiet with sentinel", fmt.Sprintf("W (%s gas) ≪ sentinel target", feemarket.FormatUint(c.Wanted)),
-		})
-	} else if c.HasTarget && c.UtilPct != "" {
-		rows = append(rows, []string{"Demand meter", c.UtilPct + " of target"})
-	}
-
-	var extra strings.Builder
-	if !c.UnlimitedBlockGas && c.HasTarget {
-		extra.WriteString(feeDemandMeter(c.LoadBarPct, c.UtilPct))
-	}
-
-	return feeLevel{
-		ID:      "fee-L2",
-		Title:   "L2 · Why the fee moved",
-		Concept: "Fees move because last-block demand was above, below, or at the network target. Adjustment lags one block.",
-		Rows:    rows,
-		Extra:   extra.String(),
-	}
-}
-
-func buildFeeL3(c feemarket.Context, d model.Report) feeLevel {
-	mult := c.MinGasMultiplier
-	if mult == "" {
-		mult = "0.5"
-	}
-	example := fmt.Sprintf(
-		`<div class="fee-example">`+
-			`<div class="fee-example__title">Illustrative example: when W ≠ gas_used</div>`+
-			`<p class="fee-example__note">Hypothetical numbers — not live chain data for this block.</p>`+
-			`<table class="fee-table"><tbody>`+
-			`<tr><th>In-block accumulator</th><td>42,000 gas</td><td class="fee-table__note">sum of tx gas limits in block</td></tr>`+
-			`<tr><th>× min_gas_multiplier %s</th><td>21,000 gas</td><td></td></tr>`+
-			`<tr><th>gas_used</th><td>18,000 gas</td><td class="fee-table__note">e.g. partial revert</td></tr>`+
-			`<tr><th>W = max(21,000, 18,000)</th><td><strong>21,000 gas</strong></td><td class="fee-table__note">fee math uses this value</td></tr>`+
-			`</tbody></table></div>`,
-		html.EscapeString(mult),
-	)
-
-	return feeLevel{
-		ID:      "fee-L3",
-		Title:   "L3 · What the chain measured as demand",
-		Concept: "Demand for the formula is W (stored block_gas), which can differ from gas_used.",
-		Rows: [][]string{
-			{fmt.Sprintf("Parent block %s", c.ParentBlock), "fee algorithm reads W, not raw gas_used alone"},
-			{"gas_used", formatGasAmount(c.GasUsed, d.ParentBlockResultsOK)},
-			{"W", formatGasAmount(c.Wanted, d.ParentBlockResultsOK)},
-			{"Relationship", c.WGasUsedRelation()},
-		},
-		Extra: example,
-	}
 }
 
 func buildFeeL4(c feemarket.Context, d model.Report) feeLevel {
@@ -208,7 +107,7 @@ func buildFeeL4(c feemarket.Context, d model.Report) feeLevel {
 
 	return feeLevel{
 		ID:      "fee-L4",
-		Title:   "L4 · When each value is written",
+		Title:   "L2 · When each value is written",
 		Concept: "Block lifecycle timing: EndBlock stores W; BeginBlock applies base fee.",
 		Extra:   timeline.String() + pools,
 	}
@@ -254,8 +153,8 @@ func buildFeeL5(c feemarket.Context, d model.Report) feeLevel {
 
 	return feeLevel{
 		ID:      "fee-L5",
-		Title:   "L5 · Formula & parameters",
-		Concept: "Full computation and governance knobs (local node fee acceptance → subsection below).",
+		Title:   "L3 · Formula & parameters",
+		Concept: "Full computation and governance knobs for the chain-wide fee market.",
 		Extra:   extra.String(),
 	}
 }
@@ -327,22 +226,6 @@ func feeAmount(d model.Report, display, raw string) string {
 		return fetch.FormatFeeAmount(raw, denom)
 	}
 	return display
-}
-
-func feeDemandMeter(barPct float64, label string) string {
-	if label == "" {
-		label = "—"
-	}
-	if barPct < 0 {
-		barPct = 0
-	}
-	return fmt.Sprintf(
-		`<div class="fee-meter" role="meter" aria-valuenow="%.0f" aria-valuemin="0" aria-valuemax="100" aria-label="Demand vs target">`+
-			`<div class="fee-meter__label"><span>Demand vs target</span><span>%s</span></div>`+
-			`<div class="fee-meter__track"><div class="fee-meter__fill" style="width:%.1f%%"></div></div>`+
-			`</div>`,
-		barPct, html.EscapeString(label), barPct,
-	)
 }
 
 func formatInt(n int64) string {

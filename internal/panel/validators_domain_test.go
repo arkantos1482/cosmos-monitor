@@ -12,11 +12,12 @@ func TestValidatorsNoDomainCards(t *testing.T) {
 		BondedCount: 4, JailedCount: 1, TombstonedCount: 0, BelowThreshold: 2,
 		BondedPct: 55.5, SlashWindow: "10000", MinSigned: 50,
 		UnbondingTime: "21d", MaxValidators: 100,
+		Validators: []model.Validator{{Moniker: "node1"}},
 		ModuleAccounts: []model.ModuleAccountRow{
 			{Name: "bonded_tokens_pool", Balance: "10M PMT", Address: "cosmos1bonded"},
 		},
 	}
-	chunk := validatorsChunk(t, Build(d))
+	chunk := validatorsChunk(t, BuildView(ViewNode, d))
 	for _, want := range []string{
 		`val-summary--p2p`,
 		`class="dash-subheading">Network (P2P)</h3>`,

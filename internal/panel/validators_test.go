@@ -18,7 +18,7 @@ func TestValidatorsP2PNetworkTable(t *testing.T) {
 			IsLocal:         true,
 		}},
 	}
-	chunk := validatorsChunk(t, Build(d))
+	chunk := validatorsChunk(t, BuildView(ViewNode, d))
 
 	for _, want := range []string{
 		`class="dash-subheading">Network (P2P)</h3>`,
@@ -46,10 +46,9 @@ func TestValidatorsP2PNetworkTable(t *testing.T) {
 
 func validatorsChunk(t *testing.T, out string) string {
 	t.Helper()
-	idx := strings.Index(out, `class="dash-heading">2. VALIDATOR SET</h2>`)
-	end := strings.Index(out, `class="dash-heading">3. REWARDS</h2>`)
-	if idx < 0 || end < 0 {
-		t.Fatal("expected validator set and economics sections")
+	idx := strings.Index(out, `class="dash-heading">2. VALIDATOR</h2>`)
+	if idx < 0 {
+		t.Fatal("expected validator section")
 	}
-	return out[idx:end]
+	return out[idx:]
 }

@@ -5,7 +5,7 @@ import (
 )
 
 func writeEconomics(w Writer, d model.Report) {
-	w.Section("4. ECONOMICS")
+	w.Section("3. ECONOMICS")
 	writeEconomicsSummary(w, d, SummaryEmbedded)
 	w.Em("Chain-wide distribution — how block rewards route through `fee_collector` and `x/distribution` to the community pool and validators. Reward sources → § Rewards.")
 

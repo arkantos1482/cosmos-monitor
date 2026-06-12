@@ -40,8 +40,8 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		},
 	}
 	out := Build(d)
-	idx := strings.Index(out, "4. ECONOMICS")
-	end := strings.Index(out, `class="dash-heading">5. FEE MARKET</h2>`)
+	idx := strings.Index(out, "3. ECONOMICS")
+	end := strings.Index(out, `class="dash-heading">4. FEE MARKET</h2>`)
 	if idx < 0 || end < 0 {
 		t.Fatal("expected economics and fee market sections")
 	}
@@ -169,8 +169,8 @@ func TestEconomicsSourcesProvenance(t *testing.T) {
 		},
 	}
 	out := BuildWithOptions(d, Options{ShowSources: true})
-	idx := strings.Index(out, "4. ECONOMICS")
-	end := strings.Index(out, `class="dash-heading">5. FEE MARKET</h2>`)
+	idx := strings.Index(out, "3. ECONOMICS")
+	end := strings.Index(out, `class="dash-heading">4. FEE MARKET</h2>`)
 	if idx < 0 || end < 0 {
 		t.Fatal("expected economics section")
 	}

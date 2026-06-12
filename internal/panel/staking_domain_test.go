@@ -114,9 +114,9 @@ func TestStakingSectionNoDuplicateFields(t *testing.T) {
 func stakingChunk(t *testing.T, out string) string {
 	t.Helper()
 	idx := strings.Index(out, `class="dash-heading">1. STAKING</h2>`)
-	end := strings.Index(out, `class="dash-heading">2. VALIDATOR SET</h2>`)
+	end := strings.Index(out, `class="dash-heading">2. REWARDS</h2>`)
 	if idx < 0 || end < 0 {
-		t.Fatal("expected staking and validator set sections")
+		t.Fatal("expected staking and rewards sections")
 	}
 	return out[idx:end]
 }
