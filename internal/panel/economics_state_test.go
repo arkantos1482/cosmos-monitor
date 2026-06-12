@@ -14,7 +14,7 @@ func TestEconomicsInactivePMTDisabled(t *testing.T) {
 		CommunityTax:    "2.00%",
 		CommunityTaxPct: 2,
 	}
-	out := BuildView(ViewEconomics, d)
+	out := BuildView(ViewRewards, d)
 	if !strings.Contains(out, `eco-row--inactive`) {
 		t.Fatal("expected inactive ledger rows when PMT disabled and inflation off")
 	}
@@ -50,7 +50,7 @@ func TestEconomicsPMTPoolEmptyWarn(t *testing.T) {
 		BondedCount:       4,
 		Validators:        []model.Validator{{CommissionFloat: 10}},
 	}
-	out := BuildView(ViewEconomics, d)
+	out := BuildView(ViewRewards, d)
 	if !strings.Contains(out, `eco-row--warn`) {
 		t.Fatal("expected warn styling for empty PMT pool")
 	}

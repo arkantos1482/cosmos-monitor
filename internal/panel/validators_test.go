@@ -47,7 +47,7 @@ func TestValidatorsP2PNetworkTable(t *testing.T) {
 func validatorsChunk(t *testing.T, out string) string {
 	t.Helper()
 	idx := strings.Index(out, `class="dash-heading">2. VALIDATOR SET</h2>`)
-	end := strings.Index(out, `class="dash-heading">3. ECONOMICS</h2>`)
+	end := strings.Index(out, `class="dash-heading">3. REWARDS</h2>`)
 	if idx < 0 || end < 0 {
 		t.Fatal("expected validator set and economics sections")
 	}

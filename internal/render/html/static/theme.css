@@ -16,6 +16,7 @@
   --accent-staking: #a78bfa;
   --accent-validators: #c4b5fd;
   --accent-local: #f0abfc;
+  --accent-rewards: #f472b6;
   --accent-economics: #fbbf24;
   --accent-feemarket: #2dd4bf;
   --accent-governance: #fb923c;
@@ -220,6 +221,7 @@ body::after {
 .dash-nav__link--staking { --nav-accent: var(--accent-staking); }
 .dash-nav__link--validators { --nav-accent: var(--accent-validators); }
 .dash-nav__link--local { --nav-accent: var(--accent-local); }
+.dash-nav__link--rewards { --nav-accent: var(--accent-rewards); }
 .dash-nav__link--economics { --nav-accent: var(--accent-economics); }
 .dash-nav__link--feemarket { --nav-accent: var(--accent-feemarket); }
 .dash-nav__link--governance { --nav-accent: var(--accent-governance); }
@@ -389,6 +391,7 @@ body::after {
 
 .dash-overview__card--staking { --card-accent: var(--accent-staking); }
 .dash-overview__card--validators { --card-accent: var(--accent-validators); }
+.dash-overview__card--rewards { --card-accent: var(--accent-rewards); }
 .dash-overview__card--economics { --card-accent: var(--accent-economics); }
 .dash-overview__card--feemarket { --card-accent: var(--accent-feemarket); }
 .dash-overview__card--governance { --card-accent: var(--accent-governance); }
@@ -794,6 +797,7 @@ body::after {
 .dash-section--staking { --section-accent: var(--accent-staking); }
 .dash-section--validators { --section-accent: var(--accent-validators); }
 .dash-section--local { --section-accent: var(--accent-local); }
+.dash-section--rewards { --section-accent: var(--accent-rewards); }
 .dash-section--economics { --section-accent: var(--accent-economics); }
 .dash-section--feemarket { --section-accent: var(--accent-feemarket); }
 .dash-section--governance { --section-accent: var(--accent-governance); }

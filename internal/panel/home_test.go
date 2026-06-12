@@ -34,6 +34,7 @@ func TestBuildOverviewStack(t *testing.T) {
 		`dash-overview__card--staking`,
 		`class="dash-overview__card-title">Validator set</p>`,
 		`dash-overview__card--validators`,
+		`dash-overview__card--rewards`,
 		`dash-overview__card--economics`,
 		`dash-overview__card--feemarket`,
 		`dash-overview__card--governance`,
@@ -73,12 +74,17 @@ func TestBuildOverviewStack(t *testing.T) {
 		t.Fatal("overview should show This node group before Chain group")
 	}
 	
-	// Verify economics overview card shows compact domain summary instead of KPI tiles
-	if !strings.Contains(out, `eco-summary--compact`) {
-		t.Fatal("economics overview card should show compact domain summary")
+	// Verify rewards overview card shows PMT/inflation compact summary
+	rewardsCard := strings.Index(out, `dash-overview__card--rewards`)
+	ecoCard := strings.Index(out, `dash-overview__card--economics`)
+	if rewardsCard < 0 || ecoCard < 0 {
+		t.Fatal("overview should include rewards and economics cards")
 	}
-	if strings.Contains(out, `kpi-tile`) && strings.Index(out, `dash-overview__card--economics`) >= 0 {
-		t.Fatal("economics overview card should not use KPI tiles, use compact domain layout")
+	if !strings.Contains(out[rewardsCard:ecoCard], `eco-summary--compact`) {
+		t.Fatal("rewards overview card should show compact domain summary")
+	}
+	if !strings.Contains(out[ecoCard:], `eco-summary--compact`) {
+		t.Fatal("economics overview card should show compact distribution summary")
 	}
 }
 
@@ -99,7 +105,6 @@ func TestBuildViewSingleSection(t *testing.T) {
 	}
 	for _, sub := range []string{
 		`class="id-board"`,
-		"Application (Cosmos SDK / ABCI state)",
 		"CometBFT (consensus + networking)",
 	} {
 		if !strings.Contains(out, sub) {
@@ -170,7 +175,8 @@ func TestSectionSummariesEmbedded(t *testing.T) {
 	}{
 		{ViewStaking, `staking-summary`, `class="dash-subheading">Summary</h3>`},
 		{ViewValidators, `val-summary--p2p`, `class="dash-subheading">Summary</h3>`},
-		{ViewEconomics, `eco-domains`, "At a glance"},
+		{ViewRewards, `eco-domains`, "At a glance"},
+		{ViewEconomics, `eco-summary--compact`, "At a glance"},
 		{ViewFeemarket, `class="fee-summary"`, ""},
 		{ViewGovernance, `class="gov-summary"`, ""},
 		{ViewInfra, `class="infra-summary"`, ""},

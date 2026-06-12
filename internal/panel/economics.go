@@ -5,9 +5,9 @@ import (
 )
 
 func writeEconomics(w Writer, d model.Report) {
-	w.Section("3. ECONOMICS")
+	w.Section("4. ECONOMICS")
 	writeEconomicsSummary(w, d, SummaryEmbedded)
-	w.Em("Chain-wide tokenomics — block rewards flow through `fee_collector` and `x/distribution` to the community pool and validators.")
+	w.Em("Chain-wide distribution — how block rewards route through `fee_collector` and `x/distribution` to the community pool and validators. Reward sources → § Rewards.")
 
 	writeEconomicsOverview(w, d)
 	w.Hint(economicsSourcesHint())
@@ -15,14 +15,10 @@ func writeEconomics(w Writer, d model.Report) {
 }
 
 func economicsSourcesHint() string {
-	return "`PMT rewards` → REST GET /cosmos/evm/pmtrewards/v1/params; " +
-		"`inflation`, `annual provisions` → REST GET /cosmos/mint/v1beta1/inflation, /cosmos/mint/v1beta1/annual-provisions; " +
-		"`blocks / year`, mint params → REST GET /cosmos/mint/v1beta1/params; " +
-		"`community tax`, `community pool` → REST GET /cosmos/distribution/v1beta1/params, /cosmos/distribution/v1beta1/community_pool; " +
+	return "`community tax`, `community pool` → REST GET /cosmos/distribution/v1beta1/params, /cosmos/distribution/v1beta1/community_pool; " +
 		"`unclaimed delegator`, `unclaimed commission` → REST GET /cosmos/distribution/v1beta1/validators/{valoper}/outstanding_rewards, …/commission (summed across validators); " +
 		"`module account balances` → REST GET /cosmos/bank/v1beta1/balances/{address}; " +
 		"`module account addresses` → REST GET /cosmos/auth/v1beta1/module_accounts; " +
-		"`ledger per-block amounts` → derived (PMT rate, mint inflation/block, parent-block fees); " +
 		"`fee_collector cleared`, `unclaimed check` → derived (x/bank balances, outstanding sums)."
 }
 

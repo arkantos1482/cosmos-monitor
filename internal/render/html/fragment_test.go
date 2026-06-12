@@ -28,9 +28,10 @@ func TestRenderFragmentEconomicsTables(t *testing.T) {
 	}
 	out := RenderFragment(d)
 	if !strings.Contains(out, "Block reward ledger") {
-		t.Fatal("rendered fragment should include economics ledger")
+		t.Fatal("rendered fragment should include rewards ledger")
 	}
 	for _, want := range []string{
+		`class="dash-heading">3. REWARDS</h2>`,
 		`class="dash-subheading">Distribution</h3>`,
 		"eco-domain--pmtrewards",
 		"eco-domain--inflation",

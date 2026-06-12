@@ -20,39 +20,43 @@ func TestBuildEconomicsUsesTablesNotMermaid(t *testing.T) {
 		CommunityPool: "0.5 PMT",
 	}
 	out := Build(d)
-	idx := strings.Index(out, "3. ECONOMICS")
-	end := strings.Index(out, `class="dash-heading">4. FEE MARKET</h2>`)
-	if idx < 0 || end < 0 {
-		t.Fatal("expected economics and governance sections")
+	rewardsIdx := strings.Index(out, "3. REWARDS")
+	ecoIdx := strings.Index(out, "4. ECONOMICS")
+	end := strings.Index(out, `class="dash-heading">5. FEE MARKET</h2>`)
+	if rewardsIdx < 0 || ecoIdx < 0 || end < 0 {
+		t.Fatal("expected rewards, economics, and fee market sections")
 	}
-	eco := out[idx:end]
+	rewards := out[rewardsIdx:ecoIdx]
+	eco := out[ecoIdx:end]
 	if strings.Contains(eco, `class="diagram-panel mermaid"`) || strings.Contains(eco, "graph LR") {
 		t.Fatal("economics section should not use mermaid")
 	}
-	if !strings.Contains(eco, "Block reward ledger") {
-		t.Fatal("economics should use block reward ledger")
+	if !strings.Contains(rewards, "Block reward ledger") {
+		t.Fatal("rewards should use block reward ledger")
 	}
 	if strings.Contains(eco, "At a glance") {
 		t.Fatal("economics should not duplicate at-a-glance subsection")
 	}
-	if !strings.Contains(out, `eco-domains`) {
-		t.Fatal("economics summary should use domain cards")
+	if !strings.Contains(rewards, `eco-domains`) {
+		t.Fatal("rewards summary should use domain cards")
 	}
-	if !strings.Contains(out, `class="eco-summary"`) {
-		t.Fatal("economics should include embedded summary")
+	if !strings.Contains(rewards, `class="eco-summary"`) {
+		t.Fatal("rewards should include embedded summary")
 	}
-	if !strings.Contains(eco, `data-table--ledger`) {
+	if !strings.Contains(rewards, `data-table--ledger`) {
 		t.Fatal("ledger table should use ledger styling")
 	}
-	
+
 	for _, want := range []string{
 		"eco-domain--pmtrewards",
 		"eco-domain--inflation",
-		`class="dash-subheading">Distribution</h3>`,
 	} {
-		if !strings.Contains(eco, want) {
-			t.Fatalf("economics should include %q", want)
+		if !strings.Contains(rewards, want) {
+			t.Fatalf("rewards should include %q", want)
 		}
+	}
+	if !strings.Contains(eco, `class="dash-subheading">Distribution</h3>`) {
+		t.Fatal("economics should include distribution subsection")
 	}
 	for _, gone := range []string{
 		"eco-domain--staking",
@@ -93,8 +97,8 @@ func TestBuildFeeMarketPanel(t *testing.T) {
 	if strings.Contains(out, `class="fee-flow"`) {
 		t.Fatal("fee market section should not use legacy fee-flow")
 	}
-	idx := strings.Index(out, `class="dash-heading">4. FEE MARKET</h2>`)
-	end := strings.Index(out, "5. GOVERNANCE")
+	idx := strings.Index(out, `class="dash-heading">5. FEE MARKET</h2>`)
+	end := strings.Index(out, "6. GOVERNANCE")
 	if idx < 0 || end < 0 {
 		t.Fatal("expected fee market and governance sections")
 	}
@@ -135,9 +139,10 @@ func TestContentInventory(t *testing.T) {
 	for _, want := range []string{
 		`class="dash-heading">1. STAKING</h2>`,
 		`class="dash-heading">2. VALIDATOR SET</h2>`,
-		`class="dash-heading">3. ECONOMICS</h2>`,
-		`class="dash-heading">4. FEE MARKET</h2>`,
-		`class="dash-heading">5. GOVERNANCE</h2>`,
+		`class="dash-heading">3. REWARDS</h2>`,
+		`class="dash-heading">4. ECONOMICS</h2>`,
+		`class="dash-heading">5. FEE MARKET</h2>`,
+		`class="dash-heading">6. GOVERNANCE</h2>`,
 		`class="dash-heading">1. INFRASTRUCTURE</h2>`,
 		`class="dash-heading">2. VALIDATOR</h2>`,
 		`class="dash-heading">3. EVM JSON-RPC</h2>`,
@@ -150,6 +155,7 @@ func TestContentInventory(t *testing.T) {
 		"Block reward ledger",
 		`class="dash-subheading">Distribution</h3>`,
 		"eco-domain--pmtrewards",
+		`dash-section--rewards`,
 		`dash-section--feemarket`,
 	} {
 		if !strings.Contains(out, want) {

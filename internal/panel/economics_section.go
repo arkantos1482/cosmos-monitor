@@ -10,43 +10,37 @@ import (
 
 func writeEconomicsSummary(w Writer, d model.Report, mode SummaryMode) {
 	summaryWrapStart(w, mode, "economics")
-	
+
 	if mode == SummaryOverviewClickable {
-		// Compact variant for home overview card
 		writeEconomicsCompactSummary(w, d)
 	} else {
-		// Full domain cards for economics page (SummaryEmbedded)
-		w.WriteHTML(`<div class="eco-summary">`)
-		w.WriteHTML(economicsDomainCardsHTML(d, false))
+		w.WriteHTML(`<div class="eco-summary eco-summary--compact">`)
+		writeEconomicsDistributionSummaryRows(w, d)
 		w.WriteHTML(`</div>`)
 	}
-	
+
 	summaryWrapEnd(w, mode)
 }
 
 func writeEconomicsCompactSummary(w Writer, d model.Report) {
 	w.WriteHTML(`<div class="eco-summary eco-summary--compact">`)
-
-	pmtStatus := "disabled"
-	if d.PMTEnabled {
-		switch {
-		case d.PMTPoolEmpty:
-			pmtStatus = "pool empty"
-		case d.PMTRate != "":
-			pmtStatus = d.PMTRate
-		default:
-			pmtStatus = "enabled"
-		}
-	}
-	w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">PMT: %s</div>`, html.EscapeString(pmtStatus)))
-
-	inflStatus := "off"
-	if d.Inflation > 0 {
-		inflStatus = fmt.Sprintf("%.2f%%", d.Inflation)
-	}
-	w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">Inflation: %s</div>`, html.EscapeString(inflStatus)))
-
+	writeEconomicsDistributionSummaryRows(w, d)
 	w.WriteHTML(`</div>`)
+}
+
+func writeEconomicsDistributionSummaryRows(w Writer, d model.Report) {
+	if d.CommunityPool != "" {
+		w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">Community pool: %s</div>`, html.EscapeString(d.CommunityPool)))
+	}
+	if d.CommunityTax != "" {
+		w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">Community tax: %s</div>`, html.EscapeString(d.CommunityTax)))
+	}
+	if total := economicsUnclaimedTotal(d); total != "" {
+		w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">Unclaimed: %s</div>`, html.EscapeString(total)))
+	}
+	if bal := FeeCollectorBalance(d); bal != "" {
+		w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">fee_collector: %s</div>`, html.EscapeString(bal)))
+	}
 }
 
 func writeEconomicsKPIRows(w Writer, d model.Report) {
@@ -82,7 +76,6 @@ func writeEconomicsKPIRows(w Writer, d model.Report) {
 }
 
 func writeEconomicsOverview(w Writer, d model.Report) {
-	writeEconomicsLedger(w, d)
 	w.Subsection("Distribution")
 	writeEconomicsDistributionModule(w, d)
 	writeEconomicsUnclaimedBalances(w, d)

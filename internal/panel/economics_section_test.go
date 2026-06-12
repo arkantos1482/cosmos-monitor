@@ -40,28 +40,18 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		},
 	}
 	out := Build(d)
-	idx := strings.Index(out, "3. ECONOMICS")
-	end := strings.Index(out, `class="dash-heading">4. FEE MARKET</h2>`)
+	idx := strings.Index(out, "4. ECONOMICS")
+	end := strings.Index(out, `class="dash-heading">5. FEE MARKET</h2>`)
 	if idx < 0 || end < 0 {
-		t.Fatal("expected economics and governance sections")
+		t.Fatal("expected economics and fee market sections")
 	}
 	chunk := out[idx:end]
 	if strings.Contains(chunk, `class="diagram-panel mermaid"`) {
 		t.Fatal("economics section should not use mermaid")
 	}
-	
-	ledgerIdx := strings.Index(chunk, "Block reward ledger")
-	distIdx := strings.Index(chunk, `class="dash-subheading">Distribution</h3>`)
-	if ledgerIdx < 0 || distIdx < 0 || ledgerIdx > distIdx {
-		t.Fatal("Block reward ledger should appear before Distribution subsection")
-	}
 
 	for _, want := range []string{
-		"Block reward ledger",
 		`class="dash-subheading">Distribution</h3>`,
-		"eco-domains",
-		"eco-domain--pmtrewards",
-		"eco-domain--inflation",
 		"fee_collector",
 		"distribution escrow",
 		`class="eco-dist"`,
@@ -77,19 +67,16 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 	}
 
 	for _, gone := range []string{
+		"Block reward ledger",
+		"eco-domains",
+		"eco-domain--pmtrewards",
+		"eco-domain--inflation",
 		"eco-domain--staking",
 		"eco-domain--slashing",
 		"bonded_tokens_pool",
 		"not_bonded_tokens_pool",
 		"Module accounts",
 		"eco-module-accounts",
-	} {
-		if strings.Contains(chunk, gone) {
-			t.Fatalf("economics chunk should not contain %q", gone)
-		}
-	}
-
-	for _, gone := range []string{
 		"eco-domain--txfees",
 		`class="dash-subheading">Chain parameters (reference)</h3>`,
 		"eco-domain__hint",
@@ -98,6 +85,7 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		"eco-domain--distribution",
 		"eco-domain--rewards",
 		"Total/block",
+		"per-block commission",
 	} {
 		if strings.Contains(chunk, gone) {
 			t.Fatalf("economics chunk should not contain %q", gone)
@@ -170,35 +158,6 @@ func TestFeeCollectorBalanceAndChecks(t *testing.T) {
 	}
 }
 
-func TestLocalValidatorRewardsOnNodeSection(t *testing.T) {
-	d := model.Report{
-		PMTEnabled:      true,
-		PMTRate:         "0.1000 PMT/block",
-		CommunityTaxPct: 2,
-		BondedCount:     4,
-		Validators:      []model.Validator{{CommissionFloat: 10}},
-		Local: model.LocalValidator{
-			IsValidator:      true,
-			Moniker:          "node1",
-			Commission:       10,
-			VPPercent:        25,
-			Outstanding:      "0.001 PMT",
-			CommissionEarned: "0.0001 PMT",
-		},
-	}
-	out := BuildView(ViewNode, d)
-	for _, want := range []string{
-		"per-block commission",
-		"per-block delegators",
-		"outstanding rewards",
-		"commission earned",
-	} {
-		if !strings.Contains(out, want) {
-			t.Fatalf("validator section missing %q", want)
-		}
-	}
-}
-
 func TestEconomicsSourcesProvenance(t *testing.T) {
 	d := model.Report{
 		PMTEnabled:          true,
@@ -210,8 +169,8 @@ func TestEconomicsSourcesProvenance(t *testing.T) {
 		},
 	}
 	out := BuildWithOptions(d, Options{ShowSources: true})
-	idx := strings.Index(out, "3. ECONOMICS")
-	end := strings.Index(out, `class="dash-heading">4. FEE MARKET</h2>`)
+	idx := strings.Index(out, "4. ECONOMICS")
+	end := strings.Index(out, `class="dash-heading">5. FEE MARKET</h2>`)
 	if idx < 0 || end < 0 {
 		t.Fatal("expected economics section")
 	}
@@ -220,12 +179,19 @@ func TestEconomicsSourcesProvenance(t *testing.T) {
 		`class="dash-sources"`,
 		`>Data sources</summary>`,
 		`class="hint-provenance"`,
-		"pmtrewards/v1/params",
 		"distribution/v1beta1/validators",
 		"outstanding_rewards",
+		"distribution/v1beta1/community_pool",
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("economics data sources missing %q", want)
+		}
+	}
+	for _, gone := range []string{
+		"pmtrewards/v1/params",
+	} {
+		if strings.Contains(chunk, gone) {
+			t.Fatalf("economics should not contain rewards source %q", gone)
 		}
 	}
 	for _, gone := range []string{

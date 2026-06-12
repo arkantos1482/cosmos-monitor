@@ -18,13 +18,13 @@ func TestNodePageLocalStateOnly(t *testing.T) {
 		},
 	}
 	out := BuildView(ViewNode, d)
-	for _, want := range []string{
+	for _, gone := range []string{
 		`class="dash-subheading">Rewards</h3>`,
 		"outstanding rewards",
 		"commission earned",
 	} {
-		if !strings.Contains(out, want) {
-			t.Fatalf("node view missing local state %q", want)
+		if strings.Contains(out, gone) {
+			t.Fatalf("node view should not show rewards content %q", gone)
 		}
 	}
 	for _, gone := range []string{

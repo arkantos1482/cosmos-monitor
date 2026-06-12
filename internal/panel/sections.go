@@ -2,7 +2,7 @@ package panel
 
 import "github.com/arkantos1482/cosmos-monitor/internal/model"
 
-// View identifies a dashboard page (home or one of seven sections).
+// View identifies a dashboard page (home or one of eight sections).
 type View string
 
 const (
@@ -11,6 +11,7 @@ const (
 	ViewNode       View = "node"
 	ViewStaking    View = "staking"
 	ViewValidators View = "validators"
+	ViewRewards    View = "rewards"
 	ViewEconomics  View = "economics"
 	ViewFeemarket  View = "feemarket"
 	ViewGovernance View = "governance"
@@ -53,6 +54,7 @@ var Nav = []NavItem{
 	{ViewEVM, "EVM JSON-RPC", "/s/evm", NavScopeNode},
 	{ViewStaking, "Staking", "/s/staking", NavScopeChain},
 	{ViewValidators, "Validator set", "/s/validators", NavScopeChain},
+	{ViewRewards, "Rewards", "/s/rewards", NavScopeChain},
 	{ViewEconomics, "Economics", "/s/economics", NavScopeChain},
 	{ViewFeemarket, "Fee market", "/s/feemarket", NavScopeChain},
 	{ViewGovernance, "Governance", "/s/governance", NavScopeChain},
@@ -74,7 +76,7 @@ func ParseView(s string) View {
 	switch View(s) {
 	case "local": // legacy path — merged into Validator
 		return ViewNode
-	case ViewHome, ViewInfra, ViewNode, ViewStaking, ViewValidators, ViewEconomics, ViewFeemarket, ViewGovernance, ViewEVM:
+	case ViewHome, ViewInfra, ViewNode, ViewStaking, ViewValidators, ViewRewards, ViewEconomics, ViewFeemarket, ViewGovernance, ViewEVM:
 		return View(s)
 	default:
 		return ViewHome
@@ -91,6 +93,8 @@ func writeView(w Writer, v View, d model.Report) {
 		writeStaking(w, d)
 	case ViewValidators:
 		writeValidators(w, d)
+	case ViewRewards:
+		writeRewards(w, d)
 	case ViewEconomics:
 		writeEconomics(w, d)
 	case ViewFeemarket:
