@@ -44,13 +44,12 @@ func TestBuildOverviewStack(t *testing.T) {
 		`href="/s/infra"`,
 		`href="/s/evm"`,
 		`staking-summary`,
-		`eco-summary`,
+		`rewards-summary`,
 		`class="fee-summary"`,
 		`class="gov-summary"`,
 		`class="infra-summary"`,
 		`class="node-summary"`,
 		`class="evm-summary"`,
-		`eco-summary`,
 		`mini-gauge`,
 		`evm-summary__probe`,
 	} {
@@ -91,8 +90,8 @@ func TestBuildOverviewStack(t *testing.T) {
 	if !strings.Contains(out[feeCard:rewardsCard], `fee-summary`) {
 		t.Fatal("fee market overview card should include fee summary")
 	}
-	if !strings.Contains(out[rewardsCard:distCard], `eco-summary--compact`) {
-		t.Fatal("rewards overview card should show compact PMT/inflation summary")
+	if !strings.Contains(out[rewardsCard:distCard], `rewards-summary`) {
+		t.Fatal("rewards overview card should show rewards summary KPIs")
 	}
 	if !strings.Contains(out[distCard:], `dist-summary__kpi-label">community pool`) {
 		t.Fatal("distribution overview card should include community pool summary")
@@ -245,7 +244,7 @@ func TestSectionSummariesEmbedded(t *testing.T) {
 	}{
 		{ViewStaking, `staking-summary`, "At a glance"},
 		{ViewSlashing, `slashing-summary`, "At a glance"},
-		{ViewRewards, `eco-summary--compact`, "At a glance"},
+		{ViewRewards, `rewards-summary`, "At a glance"},
 		{ViewDistribution, `dist-summary`, "At a glance"},
 		{ViewFeemarket, `class="fee-summary"`, "At a glance"},
 		{ViewGovernance, `class="gov-summary"`, "At a glance"},

@@ -9,18 +9,20 @@ import (
 
 func writeRewards(w Writer, d model.Report) {
 	w.Section("4. REWARDS")
-	writeEmbeddedSectionIntro(w, "PMT emission pool and mint inflation parameters, with per-block reward estimates for this validator when applicable.")
+	writeEmbeddedSectionIntro(w, "Block emission from the PMT rewards pool (x/pmtrewards) and SDK inflation (x/mint); both land in fee_collector before x/distribution splits.")
 	writeRewardsSummary(w, d, SummaryEmbedded)
 
 	if d.Local.IsValidator {
 		w.Subsection("This validator")
-		writeRewardsLocalValidator(w, d)
+		writeRewardsLocal(w, d)
 	}
 
-	w.WriteHTML(ecoDomainsWrap(
-		pmtRewardsCardHTML(d, false),
-		inflationCardHTML(d, false),
-	))
+	w.Subsection("Network-wide")
+	w.WriteHTML(rewardsDomainCardsHTML(d))
+
+	w.Subsection("Emission sources")
+	w.Hint("Per-block amounts from module queries; x/pmtrewards transfers run inside x/mint BeginBlock via evmd's custom MintFn.")
+	w.WriteHTML(rewardsEmissionTableHTML(d))
 
 	w.Hint(rewardsSourcesHint())
 	w.BlankLine()
@@ -28,56 +30,63 @@ func writeRewards(w Writer, d model.Report) {
 
 func writeRewardsSummary(w Writer, d model.Report, mode SummaryMode) {
 	summaryWrapStart(w, mode, "rewards")
-	writeRewardsCompactSummary(w, d)
+	writeRewardsSummaryBody(w, d)
 	summaryWrapEnd(w, mode)
 }
 
-func writeRewardsCompactSummary(w Writer, d model.Report) {
-	w.WriteHTML(`<div class="eco-summary eco-summary--compact">`)
-	writeRewardsChainStatusRows(w, d)
-	if d.Local.IsValidator {
-		if op, del, _, ok := localValidatorPerBlockRewards(d); ok {
-			w.WriteHTML(fmt.Sprintf(
-				`<div class="eco-summary__row">Per-block: %s commission · %s delegators</div>`,
-				html.EscapeString(op), html.EscapeString(del)))
+func writeRewardsSummaryBody(w Writer, d model.Report) {
+	w.WriteHTML(`<div class="rewards-summary">`)
+	w.WriteHTML(`<div class="rewards-summary__kpis">`)
+
+	label, val, tone := rewardsSummaryPMT(d)
+	writeRewardsSummaryKPI(w, label, val, tone)
+
+	label, val, tone = rewardsSummaryInflation(d)
+	writeRewardsSummaryKPI(w, label, val, tone)
+
+	if emit := rewardsEmissionPerBlock(d); emit != "—" {
+		writeRewardsSummaryKPI(w, "combined emission", emit, "ok")
+	}
+	if d.PMTEnabled && !d.PMTPoolEmpty && d.PMTBalance != "" {
+		writeRewardsSummaryKPI(w, "reward pool", d.PMTBalance, "")
+		if d.PMTRunway != "" {
+			writeRewardsSummaryKPI(w, "pool runway", d.PMTRunway, "")
 		}
 	}
-	w.WriteHTML(`</div>`)
+
+	w.WriteHTML(`</div></div>`)
 }
 
-func writeRewardsChainStatusRows(w Writer, d model.Report) {
-	pmtStatus := "disabled"
-	if d.PMTEnabled {
-		switch {
-		case d.PMTPoolEmpty:
-			pmtStatus = "pool empty"
-		case d.PMTRate != "":
-			pmtStatus = d.PMTRate
-		default:
-			pmtStatus = "enabled"
-		}
+func writeRewardsSummaryKPI(w Writer, label, value, tone string) {
+	if value == "" {
+		return
 	}
-	w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">PMT: %s</div>`, html.EscapeString(pmtStatus)))
-
-	inflStatus := "off"
-	if d.Inflation > 0 {
-		inflStatus = fmt.Sprintf("%.2f%%", d.Inflation)
+	valCls := "rewards-summary__kpi-val"
+	if tone != "" {
+		valCls += " rewards-summary__kpi-val--" + tone
 	}
-	w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">Inflation: %s</div>`, html.EscapeString(inflStatus)))
+	w.WriteHTML(fmt.Sprintf(
+		`<div class="rewards-summary__kpi"><span class="rewards-summary__kpi-label">%s</span>`+
+			`<span class="%s">%s</span></div>`,
+		html.EscapeString(label), valCls, html.EscapeString(value)))
 }
 
-func writeRewardsLocalValidator(w Writer, d model.Report) {
+func writeRewardsLocal(w Writer, d model.Report) {
 	lv := d.Local
-	w.Hint("`per-block` → derived (network reward flow × VP% × commission).")
+	w.Hint("`per-block` → estimated from combined emission × VP% × commission (x/distribution applies VP weighting on chain).")
 	if op, del, _, ok := localValidatorPerBlockRewards(d); ok {
-		w.Row("per-block commission", op+fmt.Sprintf("  (%.2f%% VP · %.2f%% commission)", lv.VPPercent, lv.Commission))
+		w.Row("per-block commission", op+fmt.Sprintf("  (%.2f%% VP · %.1f%% commission)", lv.VPPercent, lv.Commission))
 		w.Row("per-block delegators", del)
+	} else if emit := rewardsEmissionPerBlock(d); emit != "—" {
+		w.Row("per-block emission", "—  _(no VP or no active emission)_")
 	}
 }
 
 func rewardsSourcesHint() string {
-	return "`PMT rewards` → REST GET /cosmos/evm/pmtrewards/v1/params; " +
-		"`inflation`, `annual provisions` → REST GET /cosmos/mint/v1beta1/inflation, /cosmos/mint/v1beta1/annual-provisions; " +
-		"`blocks / year`, mint params → REST GET /cosmos/mint/v1beta1/params; " +
-		"`per-block amounts` → derived (PMT rate, mint inflation/block, parent-block fees)."
+	return "`enabled`, `reward_per_block`, `pool_address` → REST GET /cosmos/evm/pmtrewards/v1/params; " +
+		"`pool balance` → REST GET /cosmos/bank/v1beta1/balances/{pool_address}; " +
+		"`inflation`, `annual_provisions` → REST GET /cosmos/mint/v1beta1/inflation, /cosmos/mint/v1beta1/annual-provisions; " +
+		"`goal_bonded`, `blocks_per_year` → REST GET /cosmos/mint/v1beta1/params; " +
+		"`bonded %` → REST GET /cosmos/staking/v1beta1/pool; " +
+		"`per-block estimates` → derived (annual_provisions ÷ blocks_per_year, reward_per_block, block interval)."
 }

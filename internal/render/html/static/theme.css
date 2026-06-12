@@ -454,6 +454,7 @@ body::after {
 
 .val-summary,
 .eco-summary,
+.rewards-summary,
 .dist-summary,
 .fee-summary,
 .gov-summary,
@@ -472,6 +473,7 @@ body::after {
 
 .dash-section__summary-card .val-summary,
 .dash-section__summary-card .eco-summary,
+.dash-section__summary-card .rewards-summary,
 .dash-section__summary-card .dist-summary,
 .dash-section__summary-card .fee-summary,
 .dash-section__summary-card .gov-summary,
@@ -491,6 +493,7 @@ body::after {
 
 .dash-overview__card .val-summary,
 .dash-overview__card .eco-summary,
+.dash-overview__card .rewards-summary,
 .dash-overview__card .dist-summary,
 .dash-overview__card .fee-summary,
 .dash-overview__card .gov-summary,
@@ -502,20 +505,23 @@ body::after {
   border-radius: var(--radius);
 }
 
-.dist-summary__kpis {
+.dist-summary__kpis,
+.rewards-summary__kpis {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
   gap: 0.55rem;
 }
 
-.dist-summary__kpi {
+.dist-summary__kpi,
+.rewards-summary__kpi {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
   min-width: 0;
 }
 
-.dist-summary__kpi-label {
+.dist-summary__kpi-label,
+.rewards-summary__kpi-label {
   font-size: 0.68rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -523,17 +529,20 @@ body::after {
   color: var(--muted);
 }
 
-.dist-summary__kpi-val {
+.dist-summary__kpi-val,
+.rewards-summary__kpi-val {
   font-size: 0.92rem;
   font-weight: 600;
   color: var(--text);
 }
 
-.dist-summary__kpi-val--ok {
+.dist-summary__kpi-val--ok,
+.rewards-summary__kpi-val--ok {
   color: var(--ok);
 }
 
-.dist-summary__kpi-val--warn {
+.dist-summary__kpi-val--warn,
+.rewards-summary__kpi-val--warn {
   color: var(--warn);
 }
 

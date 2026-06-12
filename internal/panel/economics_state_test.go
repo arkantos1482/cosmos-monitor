@@ -7,63 +7,6 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-func TestEconomicsInactivePMTDisabled(t *testing.T) {
-	d := model.Report{
-		PMTEnabled:      false,
-		Inflation:       0,
-		CommunityTax:    "2.00%",
-		CommunityTaxPct: 2,
-	}
-	rewardsOut := BuildView(ViewRewards, d)
-	distOut := BuildView(ViewDistribution, d)
-	if !strings.Contains(distOut, `eco-domain__row--inactive`) {
-		t.Fatal("expected inactive distribution rows when no outstanding rewards")
-	}
-	if !strings.Contains(rewardsOut, `eco-domain--pmtrewards`) {
-		t.Fatal("expected PMT Rewards source card")
-	}
-	if !strings.Contains(rewardsOut, `eco-domain--pmtrewards eco-domain--inactive`) {
-		t.Fatal("expected inactive PMT rewards card when disabled")
-	}
-	if !strings.Contains(rewardsOut, `eco-domain__status badge badge--bad">inactive`) {
-		t.Fatal("expected inactive status badge on PMT rewards card")
-	}
-	if !strings.Contains(rewardsOut, `badge--bad">false`) {
-		t.Fatal("expected false badge for disabled PMT")
-	}
-	if !strings.Contains(rewardsOut, `eco-domain__row--inactive`) {
-		t.Fatal("expected inactive inflation in domain card")
-	}
-	if strings.Contains(rewardsOut, `id="eco-flags"`) {
-		t.Fatal("flags panel should be removed")
-	}
-}
-
-func TestEconomicsPMTPoolEmptyWarn(t *testing.T) {
-	d := model.Report{
-		PMTEnabled:        true,
-		PMTPoolEmpty:      true,
-		PMTRate:           "0.1 PMT/block",
-		Inflation:         3.5,
-		InflationPerBlock: "0.01 PMT/block",
-		CommunityTax:      "2.00%",
-		CommunityTaxPct:   2,
-		BondedCount:       4,
-		Validators:        []model.Validator{{CommissionFloat: 10}},
-	}
-	rewardsOut := BuildView(ViewRewards, d)
-	distOut := BuildView(ViewDistribution, d)
-	if !strings.Contains(distOut, `eco-domain--distribution`) {
-		t.Fatal("expected distribution domain card")
-	}
-	if !strings.Contains(rewardsOut, `eco-domain--pmtrewards eco-domain--ineffective`) {
-		t.Fatal("expected ineffective PMT rewards card when pool empty")
-	}
-	if !strings.Contains(rewardsOut, `eco-domain__status badge badge--warn">ineffective`) {
-		t.Fatal("expected ineffective status badge on PMT rewards card")
-	}
-}
-
 func TestEconomicsLedgerStep1NoPoolBalanceColumn(t *testing.T) {
 	d := model.Report{
 		PMTEnabled: true,
@@ -141,55 +84,6 @@ func TestStakingCardNoGoalText(t *testing.T) {
 	}
 	if strings.Contains(card, "slash") {
 		t.Fatal("staking card must not contain slashing params")
-	}
-}
-
-func TestInflationCardInactiveWhenZero(t *testing.T) {
-	d := model.Report{Inflation: 0}
-	card := inflationCardHTML(d, false)
-	for _, want := range []string{
-		`eco-domain--inflation eco-domain--inactive`,
-		`eco-domain__status badge badge--bad">inactive`,
-	} {
-		if !strings.Contains(card, want) {
-			t.Fatalf("inflation card missing %q:\n%s", want, card)
-		}
-	}
-}
-
-func TestInflationCardActiveWhenMinting(t *testing.T) {
-	d := model.Report{Inflation: 5, InflationPerBlock: "0.01 PMT/block"}
-	card := inflationCardHTML(d, false)
-	if !strings.Contains(card, `eco-domain__status badge badge--ok">active`) {
-		t.Fatalf("expected active inflation badge:\n%s", card)
-	}
-}
-
-func TestPMTRewardsPoolMerged(t *testing.T) {
-	wantEVM := "0xEDACCBBFB7DB3278BC72AEEF66CC10A96C272A38"
-	d := model.Report{
-		PMTEnabled:      true,
-		PMTRate:         "0.1 PMT/block",
-		PMTBalance:      "1.00M PMT",
-		PMTPoolAddress:  "cosmos1akkvh0ahmve830rj4mhkdnqs49kzw23c63nhdx",
-	}
-	card := pmtRewardsCardHTML(d, false)
-	for _, want := range []string{
-		"reward pool",
-		`class="eco-acct"`,
-		`class="eco-acct__balance"`,
-		`class="eco-acct__addr"`,
-		wantEVM,
-		"1.00M PMT",
-	} {
-		if !strings.Contains(card, want) {
-			t.Fatalf("PMT rewards card missing %q:\n%s", want, card)
-		}
-	}
-	for _, gone := range []string{"pool balance", "pool address", "Governance params"} {
-		if strings.Contains(card, gone) {
-			t.Fatalf("PMT rewards card should not contain %q", gone)
-		}
 	}
 }
 

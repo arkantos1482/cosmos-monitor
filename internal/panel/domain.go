@@ -64,9 +64,19 @@ func ecoDomainDivider(b *strings.Builder) {
 
 func ecoDomainCardOpen(b *strings.Builder, modClass, title, subtitle string) {
 	fmt.Fprintf(b, `<div class="eco-domain %s">`, modClass)
-	fmt.Fprintf(b, `<h3 class="eco-domain__title">%s <span class="eco-domain__subtitle">%s</span></h3>`,
-		html.EscapeString(title), html.EscapeString(subtitle))
+	ecoDomainCardTitle(b, title, subtitle, "", "")
 	b.WriteString(`<div class="eco-domain__rows">`)
+}
+
+func ecoDomainCardTitle(b *strings.Builder, title, subtitle, badgeClass, statusLabel string) {
+	b.WriteString(`<h3 class="eco-domain__title">`)
+	b.WriteString(html.EscapeString(title))
+	fmt.Fprintf(b, ` <span class="eco-domain__subtitle">%s</span>`, html.EscapeString(subtitle))
+	if statusLabel != "" {
+		fmt.Fprintf(b, ` <span class="eco-domain__status badge %s">%s</span>`,
+			html.EscapeString(badgeClass), html.EscapeString(statusLabel))
+	}
+	b.WriteString(`</h3>`)
 }
 
 func ecoDomainCardClose(b *strings.Builder) {

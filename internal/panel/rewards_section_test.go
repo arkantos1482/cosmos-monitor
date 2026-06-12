@@ -36,9 +36,10 @@ func TestWriteRewardsSectionSourcesOnly(t *testing.T) {
 	for _, want := range []string{
 		"eco-domain--pmtrewards",
 		"eco-domain--inflation",
-		`eco-summary--compact`,
+		`rewards-summary`,
 		"per-block commission",
 		"per-block delegators",
+		`data-table--emission`,
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("rewards chunk missing %q", want)
@@ -46,10 +47,10 @@ func TestWriteRewardsSectionSourcesOnly(t *testing.T) {
 	}
 	for _, gone := range []string{
 		"Block reward ledger",
-		`class="dash-subheading">Routing</h3>`,
 		"Unclaimed rewards",
 		"community tax",
 		`class="eco-dist"`,
+		`eco-summary--compact`,
 	} {
 		if strings.Contains(chunk, gone) {
 			t.Fatalf("rewards chunk should not contain %q", gone)

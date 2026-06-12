@@ -38,8 +38,8 @@ func TestBuildRewardsUsesTablesNotMermaid(t *testing.T) {
 	if !strings.Contains(rewards, `eco-domains`) {
 		t.Fatal("rewards should use domain cards")
 	}
-	if !strings.Contains(rewards, `eco-summary--compact`) {
-		t.Fatal("rewards should include compact embedded summary")
+	if !strings.Contains(rewards, `rewards-summary`) {
+		t.Fatal("rewards should include embedded summary KPIs")
 	}
 
 	for _, want := range []string{
