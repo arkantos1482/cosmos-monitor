@@ -83,7 +83,7 @@ func writeStaking(w Writer, d model.Report) {
 
 	w.Subsection("This validator")
 	if lv.IsValidator {
-		writeStakingAccounts(w, lv)
+		writeStakingDelegators(w, lv)
 	} else {
 		w.Hint("`role` → CometBFT GET /status; derived when consensus address is absent from x/staking.")
 		w.Row("role", lv.SigningStatus)

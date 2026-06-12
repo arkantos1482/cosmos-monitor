@@ -435,8 +435,6 @@ func buildLocalValidator(chain fetch.ChainSnapshot, v *fetch.ValidatorInfo, maxM
 	if lv.AccountAddr != "" {
 		lv.EVMAddr = fetch.AccBech32ToEVM(lv.AccountAddr)
 	}
-	lv.AccountBalance = fetch.FormatCoin(chain.LocalAccountBalanceAmt, chain.LocalAccountBalanceDenom)
-	lv.OperatorBalance = fetch.FormatCoin(chain.LocalOperatorBalanceAmt, chain.LocalOperatorBalanceDenom)
 	if v == nil {
 		if chain.LocalVotingPower > 0 || chain.LocalConsensusAddr != "" {
 			lv.IsValidator = true
@@ -445,11 +443,19 @@ func buildLocalValidator(chain fetch.ChainSnapshot, v *fetch.ValidatorInfo, maxM
 		} else {
 			lv.SigningStatus = "this node is not a validator (full node / observer)"
 		}
+		lv.Delegations = buildDelegationRows(chain.LocalDelegations, lv.AccountAddr)
 		return lv
 	}
 
 	lv.IsValidator = true
 	lv.OperatorAddr = v.OperatorAddr
+	if lv.AccountAddr == "" {
+		lv.AccountAddr = fetch.ValOperToAcc(v.OperatorAddr)
+		if lv.AccountAddr != "" {
+			lv.EVMAddr = fetch.AccBech32ToEVM(lv.AccountAddr)
+		}
+	}
+	lv.Delegations = buildDelegationRows(chain.LocalDelegations, lv.AccountAddr)
 	if lv.ConsensusAddr == "" {
 		lv.ConsensusAddr = v.ConsensusAddr
 	}
@@ -486,6 +492,22 @@ func buildLocalValidator(chain fetch.ChainSnapshot, v *fetch.ValidatorInfo, maxM
 		lv.SigningStatus = "ok  (no missed blocks in current window)"
 	}
 	return lv
+}
+
+func buildDelegationRows(delegations []fetch.DelegationInfo, localAccount string) []model.DelegationRow {
+	if len(delegations) == 0 {
+		return nil
+	}
+	rows := make([]model.DelegationRow, 0, len(delegations))
+	for _, d := range delegations {
+		rows = append(rows, model.DelegationRow{
+			Delegator: d.DelegatorAddr,
+			EVMAddr:   fetch.AccBech32ToEVM(d.DelegatorAddr),
+			Balance:   fetch.FormatCoin(d.BalanceAmt, d.BalanceDenom),
+			IsLocal:   localAccount != "" && d.DelegatorAddr == localAccount,
+		})
+	}
+	return rows
 }
 
 func moduleAccountRole(name string) string {

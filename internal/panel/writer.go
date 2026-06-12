@@ -418,7 +418,17 @@ func (d *docWriter) TableWithRowClasses(headers []string, rows [][]string, rowCl
 	if isIdentityTable(headers) {
 		tableCls += " data-table--identity"
 	}
-	fmt.Fprintf(d.w, `<div class="table-scroll"><table class="%s"><thead><tr>`, tableCls)
+	if isStakingSetTable(headers) {
+		tableCls += " data-table--staking-set"
+	}
+	if isDelegationsTable(headers) {
+		tableCls += " data-table--delegations"
+	}
+	scrollCls := "table-scroll"
+	if strings.Contains(tableCls, "data-table--staking-set") || strings.Contains(tableCls, "data-table--delegations") {
+		scrollCls += " table-scroll--fit"
+	}
+	fmt.Fprintf(d.w, `<div class="%s"><table class="%s"><thead><tr>`, scrollCls, tableCls)
 	for i, h := range headers {
 		thCls := ""
 		switch {
@@ -489,6 +499,20 @@ func isStakingOperatorTable(headers []string) bool {
 	return len(headers) == 2 &&
 		strings.EqualFold(headers[0], "moniker") &&
 		strings.EqualFold(headers[1], "operator")
+}
+
+func isStakingSetTable(headers []string) bool {
+	return len(headers) >= 5 &&
+		strings.EqualFold(headers[0], "moniker") &&
+		strings.EqualFold(headers[1], "operator") &&
+		strings.EqualFold(headers[2], "vp%")
+}
+
+func isDelegationsTable(headers []string) bool {
+	return len(headers) == 3 &&
+		strings.EqualFold(headers[0], "delegator") &&
+		strings.EqualFold(headers[1], "evm") &&
+		strings.EqualFold(headers[2], "delegated")
 }
 
 // isReferenceTable marks 3-column glossary tables: reference | value | meaning.

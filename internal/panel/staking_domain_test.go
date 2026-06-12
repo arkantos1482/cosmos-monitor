@@ -23,8 +23,11 @@ func TestStakingSectionLocalAndNetwork(t *testing.T) {
 		Local: model.LocalValidator{
 			IsValidator: true, Status: "BONDED", VPPercent: 25, Commission: 10,
 			VotingPower: "100 PMT", SigningStatus: "ok", Missed: 2,
-			AccountAddr: "cosmos1delegator", EVMAddr: "0xDELEGATOR",
-			OperatorAddr: "cosmosvaloper1abc",
+			OperatorAddr: "cosmosvaloper1abc", CommissionEarned: "0.1 PMT",
+			Delegations: []model.DelegationRow{{
+				Delegator: "cosmos1delegator", EVMAddr: "0xDELEGATOR",
+				Balance: "100 PMT", IsLocal: true,
+			}},
 		},
 	}
 	chunk := stakingChunk(t, Build(d))
@@ -41,10 +44,11 @@ func TestStakingSectionLocalAndNetwork(t *testing.T) {
 		`class="data-table__row--local" title="this node"`,
 		`staking-summary__kpi`,
 		`staking-summary__kpis--network`,
-		`data-table staking-accounts`,
-		`staking-accounts__row--delegator`,
-		`staking-accounts__row--operator`,
+		`data-table--delegations`,
+		`<th>delegated</th>`,
 		`0xDELEGATOR`,
+		`data-table--staking-set`,
+		`100 PMT`,
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("staking section missing %q", want)

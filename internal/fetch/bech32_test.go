@@ -25,6 +25,14 @@ func TestConsHexToBech32(t *testing.T) {
 	}
 }
 
+func TestValOperToAcc(t *testing.T) {
+	valoper := "cosmosvaloper1vmr9wxpldngnh0tvpr8h2pk2aycts3v7z8pdxh"
+	want := "cosmos1vmr9wxpldngnh0tvpr8h2pk2aycts3v78n4c2y"
+	if got := ValOperToAcc(valoper); got != want {
+		t.Fatalf("ValOperToAcc = %q want %q", got, want)
+	}
+}
+
 func TestAccBech32ToEVM(t *testing.T) {
 	bech := "cosmos1akkvh0ahmve830rj4mhkdnqs49kzw23c63nhdx"
 	evm := AccBech32ToEVM(bech)

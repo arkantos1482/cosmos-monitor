@@ -27,6 +27,7 @@ All endpoints are polled from the node itself (localhost). Endpoints that return
 | `GET /cosmos/staking/v1beta1/validators?status=BOND_STATUS_BONDED&pagination.limit=100` | bonded validators | `validators[].{operator_address,description.moniker,status,tokens,commission.commission_rates.rate,jailed,consensus_pubkey.key}` |
 | `GET /cosmos/staking/v1beta1/validators?status=BOND_STATUS_UNBONDING&...` | unbonding validators | same |
 | `GET /cosmos/staking/v1beta1/validators?status=BOND_STATUS_UNBONDED&...` | unbonded validators | same |
+| `GET /cosmos/staking/v1beta1/validators/{valoper}/delegations` | delegators to a validator | `delegation_responses[].{delegation.delegator_address,balance.{denom,amount}}` |
 | `GET /cosmos/staking/v1beta1/pool` | bonded/not-bonded totals | `pool.{bonded_tokens,not_bonded_tokens}` |
 | `GET /cosmos/staking/v1beta1/params` | staking params | `params.{unbonding_time,max_validators,bond_denom}` |
 | `GET /cosmos/slashing/v1beta1/signing_infos?pagination.limit=100` | missed blocks, tombstone | `info[].{address,missed_blocks_counter,tombstoned}` |
@@ -69,7 +70,7 @@ All endpoints are polled from the node itself (localhost). Endpoints that return
 | `GET /cosmos/evm/vm/v1/config` | EVM chain config (hardfork heights, etc.) | `config` (ChainConfig object) |
 | `GET /cosmos/evm/vm/v1/account/{address}` | Ethereum account (EVM-facing view) | `balance`, `code_hash`, `nonce` |
 | `GET /cosmos/evm/vm/v1/cosmos_account/{address}` | Cosmos account info for an Ethereum address | `cosmos_address`, `sequence`, `account_number` |
-| `GET /cosmos/evm/vm/v1/validator_account/{cons_address}` | Cosmos account info for a validator consensus address | `account_address`, `sequence`, `account_number` |
+| `GET /cosmos/evm/vm/v1/validator_account/{cons_address}` | Cosmos account info for a validator consensus address (cosmos-evm convenience) | `account_address`, `sequence`, `account_number` |
 | `GET /cosmos/evm/vm/v1/balances/{address}` | EVM denom balance | `balance` |
 | `GET /cosmos/evm/vm/v1/storage/{address}/{key}` | contract storage slot value | `value` (hex hash) |
 | `GET /cosmos/evm/vm/v1/codes/{address}` | contract bytecode | `code` (bytes) |

@@ -49,6 +49,16 @@ func ConsHexToBech32(hexStr string) string {
 	return hexToBech32(Bech32PrefixCons, hexStr)
 }
 
+// ValOperToAcc maps a validator operator bech32 address to the cosmos account
+// bech32 with the same underlying bytes (cosmos-evm / ethsecp256k1 validators).
+func ValOperToAcc(valoper string) string {
+	b, err := bech32ToBytes(valoper)
+	if err != nil || len(b) == 0 {
+		return ""
+	}
+	return hexToBech32(Bech32PrefixAcc, hex.EncodeToString(b))
+}
+
 // AccBech32ToEVM derives the EVM hex address from a Cosmos account bech32 address.
 func AccBech32ToEVM(bech string) string {
 	b, err := bech32ToBytes(bech)

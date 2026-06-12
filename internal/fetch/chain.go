@@ -32,12 +32,9 @@ type ChainSnapshot struct {
 	// This node's validator identity from /status (empty if full node).
 	LocalConsensusAddr   string
 	LocalConsensusBech32 string
-	LocalAccountAddr          string
-	LocalAccountBalanceAmt    string
-	LocalAccountBalanceDenom  string
-	LocalOperatorBalanceAmt   string
-	LocalOperatorBalanceDenom string
-	LocalP2PDial              string
+	LocalAccountAddr   string
+	LocalDelegations   []DelegationInfo
+	LocalP2PDial       string
 	LocalVotingPower          int64
 
 	Validators []ValidatorInfo
@@ -378,10 +375,6 @@ type validatorCommissionResp struct {
 			Amount string `json:"amount"`
 		} `json:"commission"`
 	} `json:"commission"`
-}
-
-type validatorAccountResp struct {
-	AccountAddress string `json:"account_address"`
 }
 
 // --- params response types ---
@@ -1054,29 +1047,28 @@ func FetchChain(rpc, rest string, opts ChainOpts) ChainSnapshot {
 		} else {
 			snap.LocalConsensusBech32 = hexToBech32(Bech32PrefixCons, hexLocal)
 		}
-		if snap.LocalConsensusBech32 != "" {
-			var va validatorAccountResp
-			url := fmt.Sprintf("%s/cosmos/evm/vm/v1/validator_account/%s", rest, snap.LocalConsensusBech32)
-			if err := doJSON(url, &va); err == nil && va.AccountAddress != "" {
-				snap.LocalAccountAddr = va.AccountAddress
-			}
-		}
-		preferDenom := snap.Params.BondDenom
-		var localOperator string
+	}
+
+	var localOperator string
+	if snap.LocalConsensusAddr != "" {
 		for _, v := range valList {
 			if strings.EqualFold(v.ConsensusAddr, snap.LocalConsensusAddr) {
 				localOperator = v.OperatorAddr
 				break
 			}
 		}
-		if snap.LocalAccountAddr != "" {
-			snap.LocalAccountBalanceAmt, snap.LocalAccountBalanceDenom =
-				FetchAddressBalance(rest, snap.LocalAccountAddr, preferDenom)
+	}
+	if localOperator == "" && snap.Moniker != "" {
+		for _, v := range valList {
+			if v.Moniker == snap.Moniker {
+				localOperator = v.OperatorAddr
+				break
+			}
 		}
-		if localOperator != "" {
-			snap.LocalOperatorBalanceAmt, snap.LocalOperatorBalanceDenom =
-				FetchAddressBalance(rest, localOperator, preferDenom)
-		}
+	}
+	if localOperator != "" {
+		snap.LocalDelegations = FetchValidatorDelegations(rest, localOperator)
+		snap.LocalAccountAddr = ValOperToAcc(localOperator)
 	}
 
 	// next proposer: validator with the highest proposer priority

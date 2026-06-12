@@ -177,6 +177,14 @@ type Validator struct {
 	IsLocal         bool
 }
 
+// DelegationRow is a delegator to the local validator (from x/staking delegations).
+type DelegationRow struct {
+	Delegator string
+	EVMAddr   string
+	Balance   string
+	IsLocal   bool
+}
+
 type LocalValidator struct {
 	IsValidator      bool
 	Moniker          string
@@ -184,11 +192,10 @@ type LocalValidator struct {
 	ConsensusAddr    string
 	ConsensusBech32  string
 	AccountAddr      string
-	AccountBalance   string
 	EVMAddr          string
 	P2PDial          string
 	OperatorAddr     string
-	OperatorBalance  string
+	Delegations      []DelegationRow
 	VotingPower      string
 	VPPercent        float64
 	Commission       float64

@@ -39,49 +39,49 @@ func TestValidatorIdentityBoardHTML_consensusAndP2P(t *testing.T) {
 	}
 }
 
-func TestStakingAccountsTableHTML_delegatorAndOperator(t *testing.T) {
-	lv := model.LocalValidator{
-		AccountAddr:     "cosmos1akkvh0ahmve830rj4mhkdnqs49kzw23c63nhdx",
-		EVMAddr:         "0xEDaCcbBfB7dB3278bc72AeeF66Cc10A96C272a38",
-		AccountBalance:  "1.5M PMT",
-		OperatorAddr:    "cosmosvaloper1akkvh0ahmve830rj4mhkdnqs49kzw23cl98zp4",
-		OperatorBalance: "0.05 PMT",
+func TestStakingDelegatorsTable(t *testing.T) {
+	d := model.Report{
+		Local: model.LocalValidator{
+			IsValidator:      true,
+			OperatorAddr:     "cosmosvaloper1akkvh0ahmve830rj4mhkdnqs49kzw23cl98zp4",
+			CommissionEarned: "0.05 PMT",
+			Delegations: []model.DelegationRow{{
+				Delegator: "cosmos1akkvh0ahmve830rj4mhkdnqs49kzw23c63nhdx",
+				EVMAddr:   "0xEDaCcbBfB7dB3278bc72AeeF66Cc10A96C272a38",
+				Balance:   "100M PMT",
+				IsLocal:   true,
+			}, {
+				Delegator: "cosmos1otherdelegator",
+				EVMAddr:   "0xOTHER",
+				Balance:   "5M PMT",
+			}},
+		},
 	}
-	out := stakingAccountsTableHTML(lv)
+	chunk := stakingChunk(t, Build(d))
 	for _, want := range []string{
-		`data-table staking-accounts`,
-		`staking-accounts__row--delegator`,
-		`staking-accounts__row--operator`,
-		`<th>cosmos</th>`,
+		`<th>delegator</th>`,
 		`<th>evm</th>`,
-		`<th>balance</th>`,
-		`cosmos1akkvh0ahmve830rj4mhkdnqs49kzw23c63nhdx`,
+		`<th>delegated</th>`,
+		`data-table--delegations`,
+		`table-scroll--fit`,
 		`cosmosvaloper1akkvh0ahmve830rj4mhkdnqs49kzw23cl98zp4`,
-		`0xEDaCcbBfB7dB3278bc72AeeF66Cc10A96C272a38`,
-		`1.5M PMT`,
-		`0.05 PMT`,
+		`cosmos1akkvh0ahmve830rj4mhkdnqs49kzw23c63nhdx`,
+		`cosmos1otherdelegator`,
+		`100M PMT`,
+		`5M PMT`,
+		`class="data-table__row--local" title="this node"`,
 	} {
-		if !strings.Contains(out, want) {
-			t.Fatalf("staking accounts table missing %q\n%s", want, out)
+		if !strings.Contains(chunk, want) {
+			t.Fatalf("staking delegators missing %q", want)
 		}
 	}
 	for _, gone := range []string{
-		`class="id-board"`,
-		`<th>bech32</th>`,
-		`<th>hex</th>`,
+		`validator_account`,
+		`data-table staking-accounts`,
 	} {
-		if strings.Contains(out, gone) {
-			t.Fatalf("staking accounts table should not include %q", gone)
+		if strings.Contains(chunk, gone) {
+			t.Fatalf("staking section should not include %q", gone)
 		}
-	}
-}
-
-func TestStakingAccountsTableHTML_operatorNoEVM(t *testing.T) {
-	out := stakingAccountsTableHTML(model.LocalValidator{
-		OperatorAddr: "cosmosvaloper1test",
-	})
-	if strings.Count(out, `<span class="id-empty">—</span>`) < 2 {
-		t.Fatalf("operator row should show dashes for empty evm/balance, got:\n%s", out)
 	}
 }
 
