@@ -23,9 +23,9 @@ func localConsensusBech32(lv model.LocalValidator) string {
 	return consBech
 }
 
-func writeStakingIdentityBoard(w Writer, d model.Report, lv model.LocalValidator) {
-	w.WriteHTML(stakingIdentityBoardHTML(d, lv))
-	w.Hint("`account`, `operator` → x/staking + GET /cosmos/evm/vm/v1/validator_account/{cons_address}.")
+func writeStakingAccounts(w Writer, lv model.LocalValidator) {
+	w.WriteHTML(stakingAccountsTableHTML(lv))
+	w.Hint("`delegator`, `operator` balances → REST GET /cosmos/bank/v1beta1/balances/{address}; delegator EVM → AccBech32ToEVM.")
 }
 
 func validatorIdentityBoardHTML(d model.Report, lv model.LocalValidator) string {
@@ -35,21 +35,55 @@ func validatorIdentityBoardHTML(d model.Report, lv model.LocalValidator) string 
 	}, "")
 }
 
-func stakingIdentityBoardHTML(d model.Report, lv model.LocalValidator) string {
-	accountBech := lv.AccountAddr
-	accountHex := lv.EVMAddr
-	if accountHex == "" && accountBech != "" {
-		accountHex = fetch.AccBech32ToEVM(accountBech)
+type stakingAccountRow struct {
+	role    string
+	cosmos  string
+	evm     string
+	balance string
+}
+
+func stakingAccountsTableHTML(lv model.LocalValidator) string {
+	evm := lv.EVMAddr
+	if evm == "" && lv.AccountAddr != "" {
+		evm = fetch.AccBech32ToEVM(lv.AccountAddr)
 	}
-	rows := []identityRow{
-		{role: "account", bech32: accountBech, hex: accountHex},
-		{role: "operator", bech32: lv.OperatorAddr, hex: ""},
+	rows := []stakingAccountRow{
+		{role: "delegator", cosmos: lv.AccountAddr, evm: evm, balance: lv.AccountBalance},
+		{role: "operator", cosmos: lv.OperatorAddr, balance: lv.OperatorBalance},
 	}
-	sharedStem := longestCommonPrefix(bech32DataPart(rows[0].bech32), bech32DataPart(rows[1].bech32))
-	if len(sharedStem) < 8 {
-		sharedStem = ""
+	var b strings.Builder
+	b.WriteString(`<div class="table-scroll"><table class="data-table staking-accounts"><thead><tr>`)
+	b.WriteString(`<th>role</th><th>cosmos</th><th>evm</th><th>balance</th></tr></thead><tbody>`)
+	for _, row := range rows {
+		if row.cosmos == "" && row.evm == "" && row.balance == "" {
+			continue
+		}
+		fmt.Fprintf(&b, `<tr class="staking-accounts__row staking-accounts__row--%s">`, html.EscapeString(row.role))
+		fmt.Fprintf(&b, `<td class="staking-accounts__role">%s</td>`, html.EscapeString(row.role))
+		b.WriteString(`<td class="staking-accounts__cosmos">`)
+		b.WriteString(stakingAddrCell(row.cosmos))
+		b.WriteString(`</td><td class="staking-accounts__evm">`)
+		b.WriteString(stakingAddrCell(row.evm))
+		b.WriteString(`</td><td class="staking-accounts__balance">`)
+		b.WriteString(stakingBalanceCell(row.balance))
+		b.WriteString(`</td></tr>`)
 	}
-	return identityBoardHTML(d, lv, rows, sharedStem)
+	b.WriteString(`</tbody></table></div>`)
+	return b.String()
+}
+
+func stakingAddrCell(addr string) string {
+	if addr == "" {
+		return `<span class="id-empty">—</span>`
+	}
+	return `<code>` + html.EscapeString(addr) + `</code>`
+}
+
+func stakingBalanceCell(bal string) string {
+	if bal == "" || bal == "0" {
+		return `<span class="id-empty">—</span>`
+	}
+	return `<span class="staking-accounts__bal">` + html.EscapeString(bal) + `</span>`
 }
 
 func identityBoardHTML(d model.Report, lv model.LocalValidator, rows []identityRow, sharedStem string) string {

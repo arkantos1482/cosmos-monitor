@@ -182,9 +182,11 @@ type LocalValidator struct {
 	ConsensusAddr    string
 	ConsensusBech32  string
 	AccountAddr      string
+	AccountBalance   string
 	EVMAddr          string
 	P2PDial          string
 	OperatorAddr     string
+	OperatorBalance  string
 	VotingPower      string
 	VPPercent        float64
 	Commission       float64

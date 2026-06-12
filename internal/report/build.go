@@ -431,6 +431,8 @@ func buildLocalValidator(chain fetch.ChainSnapshot, v *fetch.ValidatorInfo, maxM
 	if lv.AccountAddr != "" {
 		lv.EVMAddr = fetch.AccBech32ToEVM(lv.AccountAddr)
 	}
+	lv.AccountBalance = fetch.FormatCoin(chain.LocalAccountBalanceAmt, chain.LocalAccountBalanceDenom)
+	lv.OperatorBalance = fetch.FormatCoin(chain.LocalOperatorBalanceAmt, chain.LocalOperatorBalanceDenom)
 	if v == nil {
 		if chain.LocalVotingPower > 0 || chain.LocalConsensusAddr != "" {
 			lv.IsValidator = true

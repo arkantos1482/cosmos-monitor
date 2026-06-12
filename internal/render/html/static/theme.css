@@ -526,6 +526,64 @@ body::after {
   font-weight: 600;
 }
 
+.staking-summary__kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: 0.55rem;
+  margin-bottom: 0.55rem;
+}
+
+.staking-summary__kpis--network {
+  margin-bottom: 0;
+}
+
+.staking-summary__kpi {
+  padding: 0.45rem 0.55rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.staking-summary__kpi-label {
+  display: block;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.staking-summary__kpi-val {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.staking-summary__role {
+  margin: 0 0 0.55rem;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.staking-accounts__role {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.staking-accounts__bal {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.staking-accounts__cosmos code,
+.staking-accounts__evm code {
+  font-size: 0.72rem;
+  word-break: break-all;
+}
+
 .val-summary__proposer {
   margin: 0 0 0.45rem;
   font-size: 0.84rem;

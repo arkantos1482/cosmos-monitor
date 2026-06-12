@@ -39,44 +39,49 @@ func TestValidatorIdentityBoardHTML_consensusAndP2P(t *testing.T) {
 	}
 }
 
-func TestStakingIdentityBoardHTML_accountAndOperator(t *testing.T) {
+func TestStakingAccountsTableHTML_delegatorAndOperator(t *testing.T) {
 	lv := model.LocalValidator{
-		Moniker:      "node1",
-		AccountAddr:  "cosmos1akkvh0ahmve830rj4mhkdnqs49kzw23c63nhdx",
-		EVMAddr:      "0xEDaCcbBfB7dB3278bc72AeeF66Cc10A96C272a38",
-		OperatorAddr: "cosmosvaloper1akkvh0ahmve830rj4mhkdnqs49kzw23cl98zp4",
+		AccountAddr:     "cosmos1akkvh0ahmve830rj4mhkdnqs49kzw23c63nhdx",
+		EVMAddr:         "0xEDaCcbBfB7dB3278bc72AeeF66Cc10A96C272a38",
+		AccountBalance:  "1.5M PMT",
+		OperatorAddr:    "cosmosvaloper1akkvh0ahmve830rj4mhkdnqs49kzw23cl98zp4",
+		OperatorBalance: "0.05 PMT",
 	}
-	out := stakingIdentityBoardHTML(model.Report{Moniker: "node1"}, lv)
+	out := stakingAccountsTableHTML(lv)
 	for _, want := range []string{
-		`class="id-board"`,
-		`id-board__row--account`,
-		`id-board__row--operator`,
-		`<span class="id-hrp">cosmos</span>`,
-		`<span class="id-hrp">cosmosvaloper</span>`,
-		`class="id-hex id-hex--evm"`,
+		`data-table staking-accounts`,
+		`staking-accounts__row--delegator`,
+		`staking-accounts__row--operator`,
+		`<th>cosmos</th>`,
+		`<th>evm</th>`,
+		`<th>balance</th>`,
+		`cosmos1akkvh0ahmve830rj4mhkdnqs49kzw23c63nhdx`,
+		`cosmosvaloper1akkvh0ahmve830rj4mhkdnqs49kzw23cl98zp4`,
 		`0xEDaCcbBfB7dB3278bc72AeeF66Cc10A96C272a38`,
-		`<span class="id-shared">`,
+		`1.5M PMT`,
+		`0.05 PMT`,
 	} {
 		if !strings.Contains(out, want) {
-			t.Fatalf("staking identity board missing %q\n%s", want, out)
+			t.Fatalf("staking accounts table missing %q\n%s", want, out)
 		}
 	}
 	for _, gone := range []string{
-		`id-board__row--consensus`,
-		`id-board__row--p2p`,
+		`class="id-board"`,
+		`<th>bech32</th>`,
+		`<th>hex</th>`,
 	} {
 		if strings.Contains(out, gone) {
-			t.Fatalf("staking identity board should not include %q", gone)
+			t.Fatalf("staking accounts table should not include %q", gone)
 		}
 	}
 }
 
-func TestStakingIdentityBoardHTML_operatorHexEmpty(t *testing.T) {
-	out := stakingIdentityBoardHTML(model.Report{}, model.LocalValidator{
+func TestStakingAccountsTableHTML_operatorNoEVM(t *testing.T) {
+	out := stakingAccountsTableHTML(model.LocalValidator{
 		OperatorAddr: "cosmosvaloper1test",
 	})
-	if strings.Count(out, `<span class="id-empty">—</span>`) < 1 {
-		t.Fatalf("operator hex empty expected, got:\n%s", out)
+	if strings.Count(out, `<span class="id-empty">—</span>`) < 2 {
+		t.Fatalf("operator row should show dashes for empty evm/balance, got:\n%s", out)
 	}
 }
 

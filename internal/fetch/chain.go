@@ -32,9 +32,13 @@ type ChainSnapshot struct {
 	// This node's validator identity from /status (empty if full node).
 	LocalConsensusAddr   string
 	LocalConsensusBech32 string
-	LocalAccountAddr     string
-	LocalP2PDial         string
-	LocalVotingPower     int64
+	LocalAccountAddr          string
+	LocalAccountBalanceAmt    string
+	LocalAccountBalanceDenom  string
+	LocalOperatorBalanceAmt   string
+	LocalOperatorBalanceDenom string
+	LocalP2PDial              string
+	LocalVotingPower          int64
 
 	Validators []ValidatorInfo
 
@@ -1054,6 +1058,22 @@ func FetchChain(rpc, rest string, opts ChainOpts) ChainSnapshot {
 			if err := doJSON(url, &va); err == nil && va.AccountAddress != "" {
 				snap.LocalAccountAddr = va.AccountAddress
 			}
+		}
+		preferDenom := snap.Params.BondDenom
+		var localOperator string
+		for _, v := range valList {
+			if strings.EqualFold(v.ConsensusAddr, snap.LocalConsensusAddr) {
+				localOperator = v.OperatorAddr
+				break
+			}
+		}
+		if snap.LocalAccountAddr != "" {
+			snap.LocalAccountBalanceAmt, snap.LocalAccountBalanceDenom =
+				FetchAddressBalance(rest, snap.LocalAccountAddr, preferDenom)
+		}
+		if localOperator != "" {
+			snap.LocalOperatorBalanceAmt, snap.LocalOperatorBalanceDenom =
+				FetchAddressBalance(rest, localOperator, preferDenom)
 		}
 	}
 

@@ -12,6 +12,7 @@ func TestStakingSectionLocalAndNetwork(t *testing.T) {
 		BondedCount: 4, JailedCount: 1, BelowThreshold: 2,
 		BondedPct: 55.5, SlashWindow: "10000", MinSigned: 50,
 		UnbondingTime: "21d", MaxValidators: 100, BondDenom: "apmt",
+		BondedAmt: "10M PMT",
 		ModuleAccounts: []model.ModuleAccountRow{
 			{Name: "bonded_tokens_pool", Balance: "10M PMT", Address: "cosmos1bonded"},
 		},
@@ -21,7 +22,9 @@ func TestStakingSectionLocalAndNetwork(t *testing.T) {
 		}},
 		Local: model.LocalValidator{
 			IsValidator: true, Status: "BONDED", VPPercent: 25, Commission: 10,
-			SigningStatus: "ok", Missed: 2,
+			VotingPower: "100 PMT", SigningStatus: "ok", Missed: 2,
+			AccountAddr: "cosmos1delegator", EVMAddr: "0xDELEGATOR",
+			OperatorAddr: "cosmosvaloper1abc",
 		},
 	}
 	chunk := stakingChunk(t, Build(d))
@@ -32,12 +35,16 @@ func TestStakingSectionLocalAndNetwork(t *testing.T) {
 		"bonded_tokens_pool",
 		"unbonding time",
 		`<th>operator</th>`,
+		`<th>vp%</th>`,
+		`<th>commission</th>`,
 		`<code>cosmosvaloper1abc</code>`,
 		`class="data-table__row--local" title="this node"`,
-		`<th>vp%</th>`,
-		`staking-summary__vp`,
-		`id-board__row--account`,
-		`id-board__row--operator`,
+		`staking-summary__kpi`,
+		`staking-summary__kpis--network`,
+		`data-table staking-accounts`,
+		`staking-accounts__row--delegator`,
+		`staking-accounts__row--operator`,
+		`0xDELEGATOR`,
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("staking section missing %q", want)
@@ -47,9 +54,12 @@ func TestStakingSectionLocalAndNetwork(t *testing.T) {
 		`eco-domain--slashing`,
 		`<th>missed</th>`,
 		"signing health",
+		`Next proposer`,
+		`val-summary__proposer`,
+		`class="id-board"`,
 	} {
 		if strings.Contains(chunk, gone) {
-			t.Fatalf("staking section should not contain slashing content %q", gone)
+			t.Fatalf("staking section should not contain %q", gone)
 		}
 	}
 	stakeCardIdx := strings.Index(chunk, `eco-domain--staking`)

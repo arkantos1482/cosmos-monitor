@@ -25,8 +25,8 @@ func writeStakingCompactSummary(w Writer, d model.Report, lv model.LocalValidato
 	w.WriteHTML(`<div class="staking-summary staking-summary--compact">`)
 	if lv.IsValidator {
 		w.WriteHTML(fmt.Sprintf(
-			`<div class="staking-summary__row">%s · %.1f%% VP · %.1f%% commission</div>`,
-			html.EscapeString(lv.Status), lv.VPPercent, lv.Commission))
+			`<div class="staking-summary__row">%.1f%% VP · %s · %.1f%% commission</div>`,
+			lv.VPPercent, html.EscapeString(lv.Status), lv.Commission))
 	} else if lv.SigningStatus != "" {
 		w.WriteHTML(fmt.Sprintf(`<div class="staking-summary__row">%s</div>`, html.EscapeString(lv.SigningStatus)))
 	}
@@ -38,76 +38,77 @@ func writeStakingCompactSummary(w Writer, d model.Report, lv model.LocalValidato
 
 func writeStakingEmbeddedSummary(w Writer, d model.Report, lv model.LocalValidator) {
 	w.WriteHTML(`<div class="staking-summary">`)
-	if lv.IsValidator {
-		w.WriteHTML(`<div class="staking-summary__local">`)
-		writeSummaryBadges(w, "staking-summary__badges", localBadges(d)...)
-		w.WriteHTML(fmt.Sprintf(
-			`<span class="staking-summary__vp">%.1f%% VP · %s · %.1f%% commission</span>`,
-			lv.VPPercent, html.EscapeString(lv.Status), lv.Commission))
-		w.WriteHTML(`</div>`)
+	if badges := localBadges(d); len(badges) > 0 {
+		writeSummaryBadges(w, "staking-summary__badges", badges...)
 	}
-	writeStakingChainSummaryBody(w, d)
+	if lv.IsValidator {
+		w.WriteHTML(`<div class="staking-summary__kpis">`)
+		writeStakingSummaryKPI(w, "voting power", fmt.Sprintf("%.1f%%", lv.VPPercent))
+		writeStakingSummaryKPI(w, "status", lv.Status)
+		writeStakingSummaryKPI(w, "commission", fmt.Sprintf("%.1f%%", lv.Commission))
+		if lv.VotingPower != "" {
+			writeStakingSummaryKPI(w, "bonded stake", lv.VotingPower)
+		}
+		w.WriteHTML(`</div>`)
+	} else if lv.SigningStatus != "" {
+		w.WriteHTML(fmt.Sprintf(
+			`<p class="staking-summary__role">%s</p>`,
+			html.EscapeString(lv.SigningStatus)))
+	}
+	w.WriteHTML(`<div class="staking-summary__kpis staking-summary__kpis--network">`)
+	writeStakingSummaryKPI(w, "network bonded", fmt.Sprintf("%.2f%%", d.BondedPct))
+	writeStakingSummaryKPI(w, "active set", fmt.Sprintf("%d", d.BondedCount))
+	if d.JailedCount > 0 {
+		writeStakingSummaryKPI(w, "jailed", fmt.Sprintf("%d", d.JailedCount))
+	}
+	if d.BondedAmt != "" {
+		writeStakingSummaryKPI(w, "total staked", d.BondedAmt)
+	}
+	w.WriteHTML(`</div></div>`)
+}
+
+func writeStakingSummaryKPI(w Writer, label, value string) {
 	w.WriteHTML(fmt.Sprintf(
-		`<div class="staking-summary__row">%.2f%% bonded · %d active</div>`,
-		d.BondedPct, d.BondedCount))
-	w.WriteHTML(`</div>`)
+		`<div class="staking-summary__kpi"><span class="staking-summary__kpi-label">%s</span>`+
+			`<span class="staking-summary__kpi-val">%s</span></div>`,
+		html.EscapeString(label), html.EscapeString(value)))
 }
 
 func writeStaking(w Writer, d model.Report) {
 	lv := d.Local
 
 	w.Section("1. STAKING")
-	writeEmbeddedSectionIntro(w, "Local validator stake, commission, and account identities; network bonded pool, module balances, and validator set tables.")
+	writeEmbeddedSectionIntro(w, "Local validator accounts and stake; network bonded pool, module balances, and validator set.")
 	writeStakingSummary(w, d, SummaryEmbedded)
 
 	w.Subsection("This validator")
 	if lv.IsValidator {
-		writeStakingLocalStake(w, lv)
-		writeStakingIdentityBoard(w, d, lv)
+		writeStakingAccounts(w, lv)
 	} else {
 		w.Hint("`role` → CometBFT GET /status; derived when consensus address is absent from x/staking.")
 		w.Row("role", lv.SigningStatus)
 	}
 	w.Subsection("Network-wide")
 	w.WriteHTML(stakingCardHTML(d, false))
-	writeValidatorOperatorTable(w, d)
-	writeValidatorStakeTable(w, d)
+	writeValidatorStakingTable(w, d)
 
 	w.Hint(stakingSourcesHint())
 	w.BlankLine()
 }
 
-func writeStakingLocalStake(w Writer, lv model.LocalValidator) {
-	w.Hint("`status`, `voting power`, `commission` → REST GET /cosmos/staking/v1beta1/validators.")
-	w.Row("status", lv.Status)
-	w.Row("voting power", fmt.Sprintf("%s  (%.1f%% of bonded stake)", lv.VotingPower, lv.VPPercent))
-	w.Row("commission", fmt.Sprintf("%.1f%%  _(validator cut of delegator rewards)_", lv.Commission))
-}
-
-func writeValidatorOperatorTable(w Writer, d model.Report) {
-	w.Hint("`operator` → REST GET /cosmos/staking/v1beta1/validators.")
+func writeValidatorStakingTable(w Writer, d model.Report) {
+	w.Hint("`operator`, `vp%`, `commission`, `status` → REST GET /cosmos/staking/v1beta1/validators.")
 	rows := make([][]string, 0, len(d.Validators))
 	for _, v := range d.Validators {
 		rows = append(rows, []string{
 			report.Truncate(v.Moniker, 14),
 			identityCell(v.Operator),
-		})
-	}
-	writeValidatorSetTable(w, []string{"moniker", "operator"}, rows, d.Validators)
-}
-
-func writeValidatorStakeTable(w Writer, d model.Report) {
-	w.Hint("`vp%`, `commission`, `status` → REST GET /cosmos/staking/v1beta1/validators (bonded, unbonding, unbonded).")
-	stakeRows := make([][]string, 0, len(d.Validators))
-	for _, v := range d.Validators {
-		stakeRows = append(stakeRows, []string{
-			report.Truncate(v.Moniker, 14),
 			fmt.Sprintf("%.1f%%", v.VPFloat),
 			fmt.Sprintf("%.1f%%", v.CommissionFloat),
 			v.Status,
 		})
 	}
-	writeValidatorSetTable(w, []string{"moniker", "vp%", "commission", "status"}, stakeRows, d.Validators)
+	writeValidatorSetTable(w, []string{"moniker", "operator", "vp%", "commission", "status"}, rows, d.Validators)
 }
 
 func stakingSourcesHint() string {

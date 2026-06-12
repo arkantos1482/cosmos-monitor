@@ -25,16 +25,6 @@ func writeValidatorP2PSummaryBody(w Writer, d model.Report) {
 	w.WriteHTML(`</div>`)
 }
 
-func writeStakingChainSummaryBody(w Writer, d model.Report) {
-	w.WriteHTML(`<div class="val-summary val-summary--staking">`)
-	if d.NextProposer != "" {
-		w.WriteHTML(fmt.Sprintf(
-			`<p class="val-summary__proposer">Next proposer: <strong>%s</strong></p>`,
-			html.EscapeString(d.NextProposer)))
-	}
-	w.WriteHTML(`</div>`)
-}
-
 func chipClass(v model.Validator) string {
 	if v.Jailed || v.Tombstoned || v.MissedHigh {
 		return " val-summary__chip--warn"
