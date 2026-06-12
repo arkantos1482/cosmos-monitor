@@ -141,6 +141,19 @@ func bigPow10(n int) *big.Int {
 	return new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(n)), nil)
 }
 
+// FormatShares formats x/staking delegation share amounts (sdk.Dec strings) for display.
+func FormatShares(raw, bondDenom string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || raw == "0" {
+		return ""
+	}
+	if strings.Contains(raw, " ") {
+		return raw
+	}
+	displayVal, _ := coinToDisplay(raw, bondDenom)
+	return FormatAmount(displayVal)
+}
+
 // FormatFeeDec formats a Cosmos legacy decimal fee amount using FormatFeeAmount.
 // Whole-number values use the integer code path so apmt amounts match REST raw strings (e.g. "7" → "7 apmt").
 func FormatFeeDec(d sdkmath.LegacyDec, denom string) string {

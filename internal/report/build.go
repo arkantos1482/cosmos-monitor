@@ -518,7 +518,7 @@ func buildDelegationRows(delegations []fetch.DelegationInfo, localAccount string
 			EVMAddr:       fetch.AccBech32ToEVM(d.DelegatorAddr),
 			Balance:       fetch.FormatCoin(d.BalanceAmt, d.BalanceDenom),
 			LiquidBalance: fetch.FormatCoin(d.LiquidBalanceAmt, d.LiquidBalanceDenom),
-			Shares:        d.Shares,
+			Shares:        fetch.FormatShares(d.Shares, d.BalanceDenom),
 			IsLocal:       localAccount != "" && d.DelegatorAddr == localAccount,
 		})
 	}

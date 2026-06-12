@@ -23,17 +23,17 @@ func localConsensusBech32(lv model.LocalValidator) string {
 	return consBech
 }
 
-func writeStakingDelegators(w Writer, lv model.LocalValidator) {
+func writeStakingDelegators(w Writer, lv model.LocalValidator, bondDenom string) {
 	if len(lv.Delegations) == 0 {
 		w.Hint("No delegations returned for this validator.")
 	} else {
-		w.WriteHTML(delegationsTableHTML(lv.Delegations))
+		w.WriteHTML(delegationsTableHTML(lv.Delegations, bondDenom))
 	}
-	w.Hint("`address`, `delegated`, `shares` → REST GET /cosmos/staking/v1beta1/validators/{valoper}/delegations; " +
-		"`liquid` → REST GET /cosmos/bank/v1beta1/balances/{address}.")
+	w.Hint("`delegator`, `delegated`, `delegation shares` → REST GET /cosmos/staking/v1beta1/validators/{valoper}/delegations; " +
+		"`spendable` → REST GET /cosmos/bank/v1beta1/balances/{address} (bank balance excl. bonded stake).")
 }
 
-func identityDualAddrHTML(bech32, evm string) string {
+func identityDualAddrHTML(bech32, evm, sharedStem string) string {
 	bech32 = strings.TrimSpace(bech32)
 	evm = strings.TrimSpace(evm)
 	if bech32 == "" && evm == "" {
@@ -43,7 +43,7 @@ func identityDualAddrHTML(bech32, evm string) string {
 	b.WriteString(`<div class="id-dual">`)
 	if bech32 != "" {
 		b.WriteString(`<div class="id-dual__bech32">`)
-		b.WriteString(identityBech32Cell(bech32, ""))
+		b.WriteString(identityBech32Cell(bech32, sharedStem))
 		b.WriteString(`</div>`)
 	}
 	if evm != "" {
@@ -53,10 +53,65 @@ func identityDualAddrHTML(bech32, evm string) string {
 	return b.String()
 }
 
-func delegationsTableHTML(delegations []model.DelegationRow) string {
+func validatorStakingIdentityHTML(lv model.LocalValidator) string {
+	op := strings.TrimSpace(lv.OperatorAddr)
+	acct := strings.TrimSpace(lv.AccountAddr)
+	evm := strings.TrimSpace(lv.EVMAddr)
+	if op == "" && acct == "" && evm == "" {
+		return ""
+	}
+	sharedStem := ""
+	if op != "" && acct != "" {
+		sharedStem = longestCommonPrefix(bech32DataPart(op), bech32DataPart(acct))
+	}
+	var b strings.Builder
+	b.WriteString(`<div class="id-stack">`)
+	if op != "" {
+		b.WriteString(`<div class="id-stack__row id-stack__row--operator">`)
+		b.WriteString(`<div class="id-stack__label">operator</div><div class="id-stack__addr">`)
+		b.WriteString(identityBech32Cell(op, sharedStem))
+		b.WriteString(`</div></div>`)
+	}
+	if acct != "" || evm != "" {
+		b.WriteString(`<div class="id-stack__row id-stack__row--account">`)
+		b.WriteString(`<div class="id-stack__label">account</div><div class="id-stack__addr">`)
+		if acct != "" {
+			b.WriteString(identityDualAddrHTML(acct, evm, sharedStem))
+		} else {
+			fmt.Fprintf(&b, `<code class="id-hex id-hex--evm">%s</code>`, html.EscapeString(evm))
+		}
+		b.WriteString(`</div></div>`)
+	}
+	b.WriteString(`</div>`)
+	return b.String()
+}
+
+func votingPowerHTML(amount string, pct float64) string {
+	amount = strings.TrimSpace(amount)
+	if amount == "" && pct <= 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString(`<span class="metric-split">`)
+	if amount != "" {
+		b.WriteString(`<span class="metric-split__part">`)
+		b.WriteString(html.EscapeString(amount))
+		b.WriteString(`</span>`)
+	}
+	if pct > 0 {
+		if amount != "" {
+			b.WriteString(`<span class="metric-split__sep" aria-hidden="true"></span>`)
+		}
+		fmt.Fprintf(&b, `<span class="metric-split__part">%.1f%% of bonded stake</span>`, pct)
+	}
+	b.WriteString(`</span>`)
+	return b.String()
+}
+
+func delegationsTableHTML(delegations []model.DelegationRow, bondDenom string) string {
 	var b strings.Builder
 	b.WriteString(`<div class="table-scroll table-scroll--fit"><table class="data-table data-table--delegations"><thead><tr>`)
-	for _, h := range []string{"address", "delegated", "liquid", "shares"} {
+	for _, h := range []string{"delegator", "delegated", "spendable", "delegation shares"} {
 		thCls := tableColumnClass(h)
 		fmt.Fprintf(&b, "<th%s>%s</th>", thCls, html.EscapeString(h))
 	}
@@ -67,14 +122,14 @@ func delegationsTableHTML(delegations []model.DelegationRow) string {
 			trAttr = fmt.Sprintf(` class="%s" title="this node"`, validatorLocalRowClass)
 		}
 		fmt.Fprintf(&b, "<tr%s>", trAttr)
-		fmt.Fprintf(&b, `<td>%s</td>`, identityDualAddrHTML(d.Delegator, d.EVMAddr))
+		fmt.Fprintf(&b, `<td>%s</td>`, identityDualAddrHTML(d.Delegator, d.EVMAddr, ""))
 		for _, col := range []struct {
 			header string
 			val    string
 		}{
 			{"delegated", d.Balance},
-			{"liquid", orLiquidDash(d.LiquidBalance)},
-			{"shares", orSharesDash(d.Shares)},
+			{"spendable", orLiquidDash(d.LiquidBalance)},
+			{"delegation shares", formatDelegationShares(d.Shares, bondDenom)},
 		} {
 			fmt.Fprintf(&b, "<td%s>%s</td>", tableColumnClass(col.header), formatValue(col.val))
 		}
@@ -91,12 +146,15 @@ func orLiquidDash(s string) string {
 	return s
 }
 
-func orSharesDash(s string) string {
+func formatDelegationShares(s, bondDenom string) string {
 	s = strings.TrimSpace(s)
 	if s == "" || s == "0" {
 		return "—"
 	}
-	return s
+	if strings.Contains(s, " ") {
+		return s
+	}
+	return fetch.FormatShares(s, bondDenom)
 }
 
 func validatorIdentityBoardHTML(d model.Report, lv model.LocalValidator) string {

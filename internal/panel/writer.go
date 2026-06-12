@@ -15,6 +15,7 @@ type Writer interface {
 	Layer(title string)
 	Subsection(title string)
 	Row(label, value string)
+	RowHTML(label, valueHTML, extraHTML string)
 	Hint(text string)
 	Em(text string)
 	StrongLine(text string)
@@ -235,6 +236,12 @@ func (d *docWriter) Row(label, value string) {
 	barHTML := kpiBarHTML(value)
 	fmt.Fprintf(d.w, `<div class="kpi-tile%s"><div class="kpi-tile__label">%s</div><div class="kpi-tile__value">%s</div>%s</div>`+"\n",
 		tileClass, html.EscapeString(label), valHTML, barHTML)
+}
+
+func (d *docWriter) RowHTML(label, valueHTML, extraHTML string) {
+	d.openStatGrid()
+	fmt.Fprintf(d.w, `<div class="kpi-tile"><div class="kpi-tile__label">%s</div><div class="kpi-tile__value">%s</div>%s</div>`+"\n",
+		html.EscapeString(label), valueHTML, extraHTML)
 }
 
 // kpiValueHTML structures long identifiers and _(caption)_ suffixes into
@@ -602,7 +609,8 @@ func tableColumnAlign(header string) columnAlign {
 	h := strings.ToLower(strings.TrimSpace(header))
 	switch h {
 	case "in this block", "balance now", "balance", "amount", "check",
-		"vp%", "commission", "delegated", "liquid", "shares", "missed", "slash stake", "value", "current":
+		"vp%", "commission", "delegated", "liquid", "shares", "spendable", "delegation shares",
+		"missed", "slash stake", "value", "current":
 		return alignRight
 	case "jailed", "tombstoned", "health", "status", "jail", "tombstone", "local":
 		return alignCenter

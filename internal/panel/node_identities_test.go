@@ -59,9 +59,10 @@ func TestStakingDelegatorsTable(t *testing.T) {
 	}
 	chunk := stakingChunk(t, Build(d))
 	for _, want := range []string{
-		`<th>address</th>`,
+		`<th>delegator</th>`,
 		`<th class="data-table__num">delegated</th>`,
-		`<th class="data-table__num">liquid</th>`,
+		`<th class="data-table__num">spendable</th>`,
+		`<th class="data-table__num">delegation shares</th>`,
 		`class="id-dual"`,
 		`data-table--delegations`,
 		`table-scroll--fit`,
@@ -81,7 +82,7 @@ func TestStakingDelegatorsTable(t *testing.T) {
 		`validator_account`,
 		`data-table staking-accounts`,
 		`<th>evm</th>`,
-		`<th>delegator</th>`,
+		`100000000000000000000`,
 	} {
 		if strings.Contains(chunk, gone) {
 			t.Fatalf("staking section should not include %q", gone)

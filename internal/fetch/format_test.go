@@ -30,6 +30,13 @@ func TestFormatAmount(t *testing.T) {
 	}
 }
 
+func TestFormatShares(t *testing.T) {
+	got := FormatShares("100000000000000000000", "apmt")
+	if got != "100" {
+		t.Errorf("FormatShares = %q, want 100", got)
+	}
+}
+
 func TestFormatCoinLargeInteger(t *testing.T) {
 	// 400e24 apmt → 400M PMT (must not lose precision via float64 parse of raw string).
 	got := FormatCoin("400000000000000000000000000", "apmt")

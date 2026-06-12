@@ -34,12 +34,12 @@ func writeDistributionLocalValidator(w Writer, d model.Report) {
 	w.Subsection("Unclaimed")
 	w.Hint("`outstanding rewards`, `commission earned` → REST GET /cosmos/distribution/v1beta1/validators/{valoper}/outstanding_rewards, …/commission.")
 	if lv.Outstanding != "" {
-		w.Row("outstanding rewards", lv.Outstanding+"  _(total unclaimed — x/distribution)_")
+		w.Row("outstanding rewards", lv.Outstanding+"  _(x/distribution — unclaimed delegator share)_")
 	} else {
 		w.Row("outstanding rewards", "–")
 	}
 	if lv.CommissionEarned != "" {
-		w.Row("commission earned", lv.CommissionEarned+"  _(unclaimed validator commission)_")
+		w.Row("commission earned", lv.CommissionEarned+"  _(x/distribution — unclaimed validator commission)_")
 	} else {
 		w.Row("commission earned", "–")
 	}

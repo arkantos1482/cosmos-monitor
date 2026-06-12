@@ -1347,6 +1347,70 @@ body::after {
 
 /* ── Validator identity board (4 address families side by side) ── */
 
+.id-stack {
+  margin: 0.35rem 0 0.65rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(165deg, var(--surface-2) 0%, var(--surface) 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.id-stack__row {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  gap: 0.55rem 0.75rem;
+  align-items: start;
+}
+
+.id-stack__label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  padding-top: 0.15rem;
+}
+
+.id-stack__row--operator .id-stack__label {
+  color: var(--accent-validators);
+}
+
+.id-stack__row--account .id-stack__label {
+  color: var(--accent-evm);
+}
+
+.id-stack__addr {
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+.metric-split {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem 0.65rem;
+}
+
+.metric-split__part {
+  font-family: var(--mono);
+  font-weight: 600;
+}
+
+.metric-split__sep {
+  display: inline-block;
+  width: 1px;
+  height: 1.15em;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
 .id-dual {
   display: flex;
   flex-direction: column;
