@@ -589,7 +589,6 @@ body::after {
   font-weight: 600;
   word-break: normal;
   white-space: nowrap;
-  text-align: right;
   width: 14%;
 }
 
@@ -636,7 +635,6 @@ body::after {
   width: 9%;
   white-space: nowrap;
   word-break: normal;
-  text-align: right;
 }
 
 .data-table--staking-set tbody td:last-child {
@@ -1496,8 +1494,16 @@ body::after {
   white-space: nowrap;
 }
 
-.data-table__num {
+.data-table__num,
+.data-table thead th.data-table__num,
+.data-table tbody td.data-table__num {
   text-align: right;
+}
+
+.data-table__center,
+.data-table thead th.data-table__center,
+.data-table tbody td.data-table__center {
+  text-align: center;
 }
 
 .data-table tbody td {
@@ -1576,6 +1582,11 @@ body::after {
   line-height: 1.5;
   text-align: left;
   min-width: 0; /* override generic td min-width */
+}
+
+.data-table--reference .data-table__val,
+.data-table--reference thead th.data-table__val {
+  text-align: left;
 }
 
 .data-table--reference .data-table__key {
@@ -1933,7 +1944,8 @@ body::after {
   color: var(--accent-economics);
 }
 
-.eco-module-accounts .data-table__balance {
+.eco-module-accounts .data-table__balance,
+.eco-module-accounts .data-table thead th.data-table__balance {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -1947,7 +1959,8 @@ body::after {
   max-width: 16rem;
 }
 
-.eco-module-accounts .data-table__ledger {
+.eco-module-accounts .data-table__ledger,
+.eco-module-accounts .data-table thead th.data-table__ledger {
   text-align: center;
   font-family: var(--mono);
   font-size: 0.74rem;

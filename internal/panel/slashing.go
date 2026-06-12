@@ -175,8 +175,9 @@ func writeSlashingPenaltyMatrix(b *strings.Builder, d model.Report) {
 	b.WriteString(`<div class="slashing-penalties">`)
 	b.WriteString(`<div class="eco-domain__divider">Penalties</div>`)
 	b.WriteString(`<div class="table-scroll"><table class="data-table data-table--penalties"><thead><tr>`)
-	for _, h := range []string{"infraction", "slash stake", "jail", "tombstone"} {
-		fmt.Fprintf(b, `<th>%s</th>`, html.EscapeString(h))
+	penaltyHeaders := []string{"infraction", "slash stake", "jail", "tombstone"}
+	for _, h := range penaltyHeaders {
+		fmt.Fprintf(b, `<th%s>%s</th>`, tableColumnClass(h), html.EscapeString(h))
 	}
 	b.WriteString(`</tr></thead><tbody>`)
 
@@ -198,7 +199,7 @@ func writeSlashingPenaltyRow(b *strings.Builder, name, trigger, slash, jail, tom
 	if trigger != "" {
 		fmt.Fprintf(b, `<span class="slashing-penalties__trigger">%s</span>`, html.EscapeString(trigger))
 	}
-	fmt.Fprintf(b, `</td><td class="data-table__num">%s</td><td class="data-table__num">%s</td><td class="data-table__num">%s</td></tr>`,
+	fmt.Fprintf(b, `</td><td class="data-table__num">%s</td><td class="data-table__center">%s</td><td class="data-table__center">%s</td></tr>`,
 		slash, jail, tomb)
 }
 

@@ -61,7 +61,7 @@ func TestStakingDelegatorsTable(t *testing.T) {
 	for _, want := range []string{
 		`<th>delegator</th>`,
 		`<th>evm</th>`,
-		`<th>delegated</th>`,
+		`<th class="data-table__num">delegated</th>`,
 		`data-table--delegations`,
 		`table-scroll--fit`,
 		`cosmosvaloper1akkvh0ahmve830rj4mhkdnqs49kzw23cl98zp4`,

@@ -352,12 +352,8 @@ func economicsLedgerTableHTML(rows []EcoLedgerRow) string {
 	var b strings.Builder
 	b.WriteString(`<div class="table-scroll"><table class="data-table data-table--ledger">`)
 	b.WriteString(`<thead><tr>`)
-	for i, h := range headers {
-		thCls := ""
-		if i > 0 {
-			thCls = ` class="data-table__num"`
-		}
-		fmt.Fprintf(&b, `<th%s>%s</th>`, thCls, html.EscapeString(h))
+	for _, h := range headers {
+		fmt.Fprintf(&b, `<th%s>%s</th>`, tableColumnClass(h), html.EscapeString(h))
 	}
 	b.WriteString(`</tr></thead><tbody>`)
 	for _, row := range rows {
@@ -375,10 +371,7 @@ func economicsLedgerTableHTML(rows []EcoLedgerRow) string {
 				fmt.Fprintf(&b, `<td class="data-table__step" data-step="%s">%s</td>`, step, step)
 				continue
 			}
-			tdCls := ""
-			if i > 0 {
-				tdCls = ` class="data-table__num"`
-			}
+			tdCls := tableColumnClass(headers[i])
 			fmt.Fprintf(&b, `<td%s>%s</td>`, tdCls, formatValue(cell))
 		}
 		b.WriteString(`</tr>`)

@@ -26,6 +26,30 @@ func TestReferenceTableSoftWrap(t *testing.T) {
 	}
 }
 
+func TestTableColumnAlignment(t *testing.T) {
+	var b strings.Builder
+	w := newWriter(&b, Options{})
+	w.Table([]string{"moniker", "vp%", "commission", "status", "missed", "jailed", "delegated"}, [][]string{
+		{"node1", "25.0%", "5.0%", "BOND_STATUS_BONDED", "0", "yes", "100 PMT"},
+	})
+	out := b.String()
+	for _, want := range []string{
+		`<th class="data-table__num">vp%</th>`,
+		`<th class="data-table__num">commission</th>`,
+		`<th class="data-table__center">status</th>`,
+		`<th class="data-table__num">missed</th>`,
+		`<th class="data-table__center">jailed</th>`,
+		`<th class="data-table__num">delegated</th>`,
+		`<td class="data-table__num">25.0%</td>`,
+		`<td class="data-table__center">BOND_STATUS_BONDED</td>`,
+		`<td class="data-table__center">yes</td>`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("missing %q in:\n%s", want, out)
+		}
+	}
+}
+
 func TestReferenceTableAlignment(t *testing.T) {
 	var b strings.Builder
 	w := newWriter(&b, Options{})

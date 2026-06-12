@@ -26,11 +26,13 @@ func TestSlashingSectionLocalAndNetwork(t *testing.T) {
 		`class="dash-subheading">Network-wide</h3>`,
 		`eco-domain--slashing`,
 		`data-table--penalties`,
-		`<th>slash stake</th>`,
+		`<th class="data-table__num">slash stake</th>`,
+		`<th class="data-table__center">jail</th>`,
+		`<th class="data-table__center">tombstone</th>`,
 		"double-sign",
 		"downtime",
 		"signing health",
-		`<th>missed</th>`,
+		`<th class="data-table__num">missed</th>`,
 		`slashing-summary__health`,
 	} {
 		if !strings.Contains(chunk, want) {
@@ -47,7 +49,7 @@ func TestSlashingSectionLocalAndNetwork(t *testing.T) {
 		}
 	}
 	slashCardIdx := strings.Index(chunk, `eco-domain--slashing`)
-	slashTableIdx := strings.Index(chunk, `<th>missed</th>`)
+	slashTableIdx := strings.Index(chunk, `<th class="data-table__num">missed</th>`)
 	if slashCardIdx < 0 || slashTableIdx < 0 || slashCardIdx > slashTableIdx {
 		t.Fatal("slashing section should order network card before slashing table")
 	}

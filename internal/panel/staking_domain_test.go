@@ -38,14 +38,15 @@ func TestStakingSectionLocalAndNetwork(t *testing.T) {
 		"bonded_tokens_pool",
 		"unbonding time",
 		`<th>operator</th>`,
-		`<th>vp%</th>`,
-		`<th>commission</th>`,
+		`<th class="data-table__num">vp%</th>`,
+		`<th class="data-table__num">commission</th>`,
+		`<th class="data-table__center">status</th>`,
 		`<code>cosmosvaloper1abc</code>`,
 		`class="data-table__row--local" title="this node"`,
 		`staking-summary__kpi`,
 		`staking-summary__kpis--network`,
 		`data-table--delegations`,
-		`<th>delegated</th>`,
+		`<th class="data-table__num">delegated</th>`,
 		`0xDELEGATOR`,
 		`data-table--staking-set`,
 		`100 PMT`,
@@ -67,7 +68,7 @@ func TestStakingSectionLocalAndNetwork(t *testing.T) {
 		}
 	}
 	stakeCardIdx := strings.Index(chunk, `eco-domain--staking`)
-	stakeTableIdx := strings.Index(chunk, `<th>vp%</th>`)
+	stakeTableIdx := strings.Index(chunk, `<th class="data-table__num">vp%</th>`)
 	if stakeCardIdx < 0 || stakeTableIdx < 0 || stakeCardIdx > stakeTableIdx {
 		t.Fatal("staking section should order network card before stake table")
 	}

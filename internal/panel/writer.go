@@ -394,8 +394,6 @@ func (d *docWriter) Details(id, summary string, fn func(Writer)) {
 	fmt.Fprint(d.w, `</div></details>`+"\n")
 }
 
-var numericCellRE = regexp.MustCompile(`^[\d,.\s%+\-]+$`)
-
 func (d *docWriter) Table(headers []string, rows [][]string) {
 	d.TableWithRowClasses(headers, rows, nil)
 }
@@ -429,13 +427,13 @@ func (d *docWriter) TableWithRowClasses(headers []string, rows [][]string, rowCl
 		scrollCls += " table-scroll--fit"
 	}
 	fmt.Fprintf(d.w, `<div class="%s"><table class="%s"><thead><tr>`, scrollCls, tableCls)
-	for i, h := range headers {
+	for _, h := range headers {
 		thCls := ""
 		switch {
 		case reference:
 			thCls = referenceCellClass(h)
-		case i > 0 && isNumericHeader(h):
-			thCls = ` class="data-table__num"`
+		default:
+			thCls = tableColumnClass(h)
 		}
 		fmt.Fprintf(d.w, "<th%s>%s</th>", thCls, html.EscapeString(h))
 	}
@@ -464,8 +462,8 @@ func (d *docWriter) TableWithRowClasses(headers []string, rows [][]string, rowCl
 				case refColDesc:
 					cellHTML = referenceDescHTML(cell)
 				}
-			case i > 0 && isNumericHeader(headers[i]) && looksNumeric(cell):
-				tdCls = ` class="data-table__num"`
+			default:
+				tdCls = tableColumnClass(headers[i])
 			}
 			fmt.Fprintf(d.w, "<td%s>%s</td>", tdCls, cellHTML)
 		}
@@ -593,25 +591,38 @@ func referenceCellClass(header string) string {
 	}
 }
 
-func isNumericHeader(h string) bool {
-	switch strings.ToLower(strings.TrimSpace(h)) {
-	case "in this block", "balance now", "balance", "amount", "check":
-		return true
-	default:
-		return false
+type columnAlign int
+
+const (
+	alignLeft columnAlign = iota
+	alignRight
+	alignCenter
+)
+
+func tableColumnAlign(header string) columnAlign {
+	h := strings.ToLower(strings.TrimSpace(header))
+	switch h {
+	case "in this block", "balance now", "balance", "amount", "check",
+		"vp%", "commission", "delegated", "missed", "slash stake", "value", "current":
+		return alignRight
+	case "jailed", "tombstoned", "health", "status", "jail", "tombstone", "local":
+		return alignCenter
 	}
+	if strings.HasSuffix(h, "%") {
+		return alignRight
+	}
+	return alignLeft
 }
 
-func looksNumeric(s string) bool {
-	plain := strings.TrimSpace(s)
-	if plain == "" || plain == "—" {
-		return false
+func tableColumnClass(header string) string {
+	switch tableColumnAlign(header) {
+	case alignRight:
+		return ` class="data-table__num"`
+	case alignCenter:
+		return ` class="data-table__center"`
+	default:
+		return ""
 	}
-	// strip HTML badge content check on raw string
-	if strings.HasPrefix(plain, "0.") || strings.HasPrefix(plain, "~") {
-		return true
-	}
-	return numericCellRE.MatchString(plain)
 }
 
 func formatValue(s string) string {
