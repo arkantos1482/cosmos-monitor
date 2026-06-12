@@ -23,9 +23,8 @@ func TestValidatorsP2PNetworkTable(t *testing.T) {
 	for _, want := range []string{
 		`class="dash-subheading">Network (P2P)</h3>`,
 		`data-table--identity`,
-		`<th>operator</th>`,
 		`<th>p2p dial</th>`,
-		`<code>cosmosvaloper1abc</code>`,
+		`<th>consensus</th>`,
 		`<code>7c90c689@host:26656</code>`,
 		`class="data-table__row--local" title="this node"`,
 	} {
@@ -34,6 +33,7 @@ func TestValidatorsP2PNetworkTable(t *testing.T) {
 		}
 	}
 	for _, bad := range []string{
+		`<th>operator</th>`,
 		`<th>local</th>`,
 		`class="kpi-tile kpi-tile--hash"`,
 		`class="validator-label"`,

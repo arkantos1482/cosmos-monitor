@@ -67,6 +67,7 @@ func writeStaking(w Writer, d model.Report) {
 	}
 	w.Subsection("Network-wide")
 	w.WriteHTML(stakingCardHTML(d, false))
+	writeValidatorOperatorTable(w, d)
 	writeValidatorStakeTable(w, d)
 
 	w.Hint(stakingSourcesHint())
@@ -78,6 +79,18 @@ func writeStakingLocalStake(w Writer, lv model.LocalValidator) {
 	w.Row("status", lv.Status)
 	w.Row("voting power", fmt.Sprintf("%s  (%.1f%% of bonded stake)", lv.VotingPower, lv.VPPercent))
 	w.Row("commission", fmt.Sprintf("%.1f%%  _(validator cut of delegator rewards)_", lv.Commission))
+}
+
+func writeValidatorOperatorTable(w Writer, d model.Report) {
+	w.Hint("`operator` → REST GET /cosmos/staking/v1beta1/validators.")
+	rows := make([][]string, 0, len(d.Validators))
+	for _, v := range d.Validators {
+		rows = append(rows, []string{
+			report.Truncate(v.Moniker, 14),
+			identityCell(v.Operator),
+		})
+	}
+	writeValidatorSetTable(w, []string{"moniker", "operator"}, rows, d.Validators)
 }
 
 func writeValidatorStakeTable(w Writer, d model.Report) {

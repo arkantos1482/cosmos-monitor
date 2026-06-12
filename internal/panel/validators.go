@@ -45,7 +45,7 @@ func chipClass(v model.Validator) string {
 func writeValidatorP2PNetwork(w Writer, d model.Report) {
 	w.Layer("Validator set")
 	w.Subsection("Network (P2P)")
-	w.Hint("`p2p dial`, `node ID` → CometBFT GET /status (local) or GET /net_info (peers); `operator`, `consensus` → REST GET /cosmos/staking/v1beta1/validators.")
+	w.Hint("`p2p dial`, `node ID` → CometBFT GET /status (local) or GET /net_info (peers); `consensus` → REST GET /cosmos/staking/v1beta1/validators.")
 	p2pRows := make([][]string, 0, len(d.Validators))
 	for _, v := range d.Validators {
 		cons := v.ConsensusBech32
@@ -54,13 +54,12 @@ func writeValidatorP2PNetwork(w Writer, d model.Report) {
 		}
 		p2pRows = append(p2pRows, []string{
 			report.Truncate(v.Moniker, 14),
-			identityCell(v.Operator),
 			identityCell(v.P2PDial),
 			identityCell(v.NodeID),
 			identityCell(cons),
 		})
 	}
-	writeValidatorSetTable(w, []string{"moniker", "operator", "p2p dial", "node ID", "consensus"}, p2pRows, d.Validators)
+	writeValidatorSetTable(w, []string{"moniker", "p2p dial", "node ID", "consensus"}, p2pRows, d.Validators)
 }
 
 func identityCell(s string) string {

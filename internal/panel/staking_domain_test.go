@@ -16,7 +16,8 @@ func TestStakingSectionLocalAndNetwork(t *testing.T) {
 			{Name: "bonded_tokens_pool", Balance: "10M PMT", Address: "cosmos1bonded"},
 		},
 		Validators: []model.Validator{{
-			Moniker: "node1", VPFloat: 25, CommissionFloat: 10, Status: "BONDED",
+			Moniker: "node1", Operator: "cosmosvaloper1abc",
+			VPFloat: 25, CommissionFloat: 10, Status: "BONDED", IsLocal: true,
 		}},
 		Local: model.LocalValidator{
 			IsValidator: true, Status: "BONDED", VPPercent: 25, Commission: 10,
@@ -30,6 +31,9 @@ func TestStakingSectionLocalAndNetwork(t *testing.T) {
 		`eco-domain--staking`,
 		"bonded_tokens_pool",
 		"unbonding time",
+		`<th>operator</th>`,
+		`<code>cosmosvaloper1abc</code>`,
+		`class="data-table__row--local" title="this node"`,
 		`<th>vp%</th>`,
 		`staking-summary__vp`,
 		`id-board__row--account`,
@@ -65,7 +69,8 @@ func TestStakingSectionNoDuplicateFields(t *testing.T) {
 			{Name: "bonded_tokens_pool", Balance: "10M PMT"},
 		},
 		Validators: []model.Validator{{
-			Moniker: "node1", VPFloat: 25, CommissionFloat: 10, Status: "BONDED",
+			Moniker: "node1", Operator: "cosmosvaloper1abc",
+			VPFloat: 25, CommissionFloat: 10, Status: "BONDED", IsLocal: true,
 		}},
 		Local: model.LocalValidator{
 			IsValidator: true, Status: "BONDED", VPPercent: 25, Commission: 10,

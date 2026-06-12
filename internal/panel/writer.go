@@ -415,7 +415,7 @@ func (d *docWriter) TableWithRowClasses(headers []string, rows [][]string, rowCl
 	if reference {
 		tableCls += " data-table--reference"
 	}
-	if isIdentityNetworkTable(headers) {
+	if isIdentityTable(headers) {
 		tableCls += " data-table--identity"
 	}
 	fmt.Fprintf(d.w, `<div class="table-scroll"><table class="%s"><thead><tr>`, tableCls)
@@ -473,13 +473,22 @@ const (
 	refColDesc
 )
 
+func isIdentityTable(headers []string) bool {
+	return isIdentityNetworkTable(headers) || isStakingOperatorTable(headers)
+}
+
 func isIdentityNetworkTable(headers []string) bool {
-	if len(headers) < 5 {
+	if len(headers) < 4 {
 		return false
 	}
 	return strings.EqualFold(headers[0], "moniker") &&
-		strings.EqualFold(headers[1], "operator") &&
-		strings.EqualFold(headers[2], "p2p dial")
+		strings.EqualFold(headers[1], "p2p dial")
+}
+
+func isStakingOperatorTable(headers []string) bool {
+	return len(headers) == 2 &&
+		strings.EqualFold(headers[0], "moniker") &&
+		strings.EqualFold(headers[1], "operator")
 }
 
 // isReferenceTable marks 3-column glossary tables: reference | value | meaning.
