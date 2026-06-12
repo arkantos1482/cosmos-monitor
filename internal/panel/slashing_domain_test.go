@@ -17,7 +17,7 @@ func TestSlashingSectionLocalAndNetwork(t *testing.T) {
 		}},
 		Local: model.LocalValidator{
 			IsValidator: true, Status: "BONDED", VPPercent: 25, Commission: 10,
-			SigningStatus: "ok", Missed: 2,
+			SigningStatus: "ok", Missed: 2, MaxMissed: 5000,
 		},
 	}
 	chunk := slashingChunk(t, Build(d))
@@ -33,7 +33,8 @@ func TestSlashingSectionLocalAndNetwork(t *testing.T) {
 		"downtime",
 		"signing health",
 		`<th class="data-table__num">missed</th>`,
-		`slashing-summary__health`,
+		`slashing-summary__kpi`,
+		`headroom`,
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("slashing section missing %q", want)
@@ -63,20 +64,21 @@ func TestSlashingSectionNoDuplicateFields(t *testing.T) {
 			Moniker: "node1", VPFloat: 25, Status: "BONDED",
 		}},
 		Local: model.LocalValidator{
-			IsValidator: true, Status: "BONDED", SigningStatus: "ok", Missed: 2,
+			IsValidator: true, Status: "BONDED", SigningStatus: "ok", Missed: 2, MaxMissed: 5000,
 		},
 	}
 	chunk := slashingChunk(t, Build(d))
-	if strings.Count(chunk, "signing health") != 1 {
-		t.Fatalf("signing health should appear once in body, got %d", strings.Count(chunk, "signing health"))
-	}
 	summaryEnd := strings.Index(chunk, `class="dash-subheading">This validator</h3>`)
 	if summaryEnd < 0 {
 		t.Fatal("expected slashing body")
 	}
 	summaryCard := chunk[strings.Index(chunk, `class="dash-section__summary-card__body"`):summaryEnd]
-	if strings.Contains(summaryCard, "signing health") {
-		t.Fatal("signing health belongs in body only, not embedded summary card")
+	if !strings.Contains(summaryCard, "signing health") {
+		t.Fatal("summary should show signing health KPI")
+	}
+	body := chunk[summaryEnd:]
+	if strings.Count(body, "signing health") != 1 {
+		t.Fatalf("signing health should appear once in body, got %d", strings.Count(body, "signing health"))
 	}
 }
 

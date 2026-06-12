@@ -224,4 +224,10 @@ func TestSlashingCardSeparate(t *testing.T) {
 	if !strings.Contains(card, "permanent") {
 		t.Fatal("double-sign row should show permanent jail")
 	}
+	if !strings.Contains(card, "penalty-tag--param") {
+		t.Fatal("penalty cells should use neutral param styling")
+	}
+	if strings.Contains(card, "penalty-tag--slash") {
+		t.Fatal("penalty cells should not use alarming slash styling")
+	}
 }
