@@ -99,6 +99,47 @@ func TestBuildOverviewStack(t *testing.T) {
 	}
 }
 
+func TestOverviewReusesSectionSummaries(t *testing.T) {
+	d := model.Report{
+		Moniker: "node1", Synced: true, BlockHeight: "100",
+		BondedPct: 100, BondedCount: 4, BondedAmt: "4M PMT",
+		SlashWindow: "10000", MinSigned: 95, JailedCount: 1,
+		Local: model.LocalValidator{
+			IsValidator: true, VPPercent: 25, Status: "BOND_STATUS_BONDED",
+			Commission: 10, Missed: 2, MaxMissed: 50,
+		},
+		CommunityTax: "2%", CommunityPool: "0.5 PMT",
+	}
+	overview := BuildView(ViewHome, d)
+	for _, tc := range []struct {
+		section View
+		markers []string
+	}{
+		{ViewStaking, []string{
+			`staking-summary__kpi-label">voting power`,
+			`staking-summary__kpi-label">network bonded`,
+		}},
+		{ViewSlashing, []string{
+			`slashing-summary__kpi-label">signing health`,
+			`slashing-summary__kpi-label">jailed`,
+		}},
+		{ViewDistribution, []string{
+			`Community pool: 0.5 PMT`,
+			`Community tax: 2%`,
+		}},
+	} {
+		section := BuildView(tc.section, d)
+		for _, marker := range tc.markers {
+			if !strings.Contains(section, marker) {
+				t.Fatalf("section %s missing summary marker %q", tc.section, marker)
+			}
+			if !strings.Contains(overview, marker) {
+				t.Fatalf("overview should reuse section %s summary marker %q", tc.section, marker)
+			}
+		}
+	}
+}
+
 func TestBuildViewSingleSection(t *testing.T) {
 	d := model.Report{
 		Moniker: "node1", Synced: true, BlockHeight: "1",

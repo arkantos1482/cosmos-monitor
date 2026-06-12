@@ -1,9 +1,6 @@
 package panel
 
 import (
-	"fmt"
-	"html"
-
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
@@ -26,25 +23,10 @@ func writeDistribution(w Writer, d model.Report) {
 
 func writeDistributionSummary(w Writer, d model.Report, mode SummaryMode) {
 	summaryWrapStart(w, mode, "distribution")
-	if mode == SummaryOverviewClickable {
-		writeDistributionCompactSummary(w, d)
-	} else {
-		w.WriteHTML(`<div class="dist-summary">`)
-		writeDistributionSummaryRows(w, d)
-		w.WriteHTML(`</div>`)
-	}
-	summaryWrapEnd(w, mode)
-}
-
-func writeDistributionCompactSummary(w Writer, d model.Report) {
-	w.WriteHTML(`<div class="dist-summary dist-summary--compact">`)
+	w.WriteHTML(`<div class="dist-summary">`)
 	writeDistributionSummaryRows(w, d)
 	w.WriteHTML(`</div>`)
-	if d.Local.IsValidator && d.Local.Outstanding != "" {
-		w.WriteHTML(fmt.Sprintf(
-			`<div class="dist-summary__row">Outstanding: %s</div>`,
-			html.EscapeString(d.Local.Outstanding)))
-	}
+	summaryWrapEnd(w, mode)
 }
 
 func writeDistributionLocalValidator(w Writer, d model.Report) {

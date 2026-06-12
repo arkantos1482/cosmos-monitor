@@ -459,7 +459,9 @@ body::after {
 .gov-summary,
 .infra-summary,
 .node-summary,
-.evm-summary {
+.evm-summary,
+.staking-summary,
+.slashing-summary {
   padding: 0.85rem 1rem;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -494,7 +496,9 @@ body::after {
 .dash-overview__card .gov-summary,
 .dash-overview__card .infra-summary,
 .dash-overview__card .node-summary,
-.dash-overview__card .evm-summary {
+.dash-overview__card .evm-summary,
+.dash-overview__card .staking-summary,
+.dash-overview__card .slashing-summary {
   border-radius: var(--radius);
 }
 
@@ -616,19 +620,6 @@ body::after {
   margin: 0 0 0.55rem;
   font-size: 0.84rem;
   color: var(--muted);
-}
-
-.slashing-summary--compact .slashing-summary__row {
-  font-size: 0.84rem;
-  line-height: 1.45;
-}
-
-.slashing-summary--compact .slashing-summary__row + .slashing-summary__row {
-  margin-top: 0.25rem;
-}
-
-.slashing-summary__row--warn {
-  color: var(--warn);
 }
 
 .data-table--delegations {

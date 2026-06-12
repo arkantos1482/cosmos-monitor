@@ -12,43 +12,11 @@ import (
 func writeSlashingSummary(w Writer, d model.Report, mode SummaryMode) {
 	lv := d.Local
 	summaryWrapStart(w, mode, "slashing")
-
-	if mode == SummaryOverviewClickable {
-		writeSlashingCompactSummary(w, d, lv)
-	} else {
-		writeSlashingEmbeddedSummary(w, d, lv)
-	}
-
+	writeSlashingSummaryBody(w, d, lv)
 	summaryWrapEnd(w, mode)
 }
 
-func writeSlashingCompactSummary(w Writer, d model.Report, lv model.LocalValidator) {
-	w.WriteHTML(`<div class="slashing-summary slashing-summary--compact">`)
-	if lv.IsValidator {
-		w.WriteHTML(fmt.Sprintf(
-			`<div class="slashing-summary__row">%s</div>`,
-			html.EscapeString(slashingHealthShort(lv))))
-		if d.SlashWindow != "" && d.SlashWindow != "0" {
-			w.WriteHTML(fmt.Sprintf(
-				`<div class="slashing-summary__row">%d / %s missed · headroom %d</div>`,
-				lv.Missed, html.EscapeString(d.SlashWindow), slashingHeadroom(lv)))
-		}
-	} else if lv.SigningStatus != "" {
-		w.WriteHTML(fmt.Sprintf(
-			`<div class="slashing-summary__row">%s</div>`,
-			html.EscapeString(lv.SigningStatus)))
-	}
-	if line := slashingNetworkCompactLine(d); line != "" {
-		cls := "slashing-summary__row"
-		if d.JailedCount > 0 || d.BelowThreshold > 0 || d.TombstonedCount > 0 {
-			cls += " slashing-summary__row--warn"
-		}
-		w.WriteHTML(fmt.Sprintf(`<div class="%s">%s</div>`, cls, html.EscapeString(line)))
-	}
-	w.WriteHTML(`</div>`)
-}
-
-func writeSlashingEmbeddedSummary(w Writer, d model.Report, lv model.LocalValidator) {
+func writeSlashingSummaryBody(w Writer, d model.Report, lv model.LocalValidator) {
 	w.WriteHTML(`<div class="slashing-summary">`)
 	if badges := localBadges(d); len(badges) > 0 {
 		writeSummaryBadges(w, "slashing-summary__badges", badges...)
@@ -168,26 +136,6 @@ func slashingHeadroomTone(lv model.LocalValidator) string {
 	default:
 		return "ok"
 	}
-}
-
-func slashingNetworkCompactLine(d model.Report) string {
-	var parts []string
-	if d.JailedCount > 0 {
-		parts = append(parts, fmt.Sprintf("%d jailed", d.JailedCount))
-	}
-	if d.BelowThreshold > 0 {
-		parts = append(parts, fmt.Sprintf("%d below min signed", d.BelowThreshold))
-	}
-	if d.TombstonedCount > 0 {
-		parts = append(parts, fmt.Sprintf("%d tombstoned", d.TombstonedCount))
-	}
-	if len(parts) > 0 {
-		return strings.Join(parts, " · ")
-	}
-	if d.SlashWindow != "" && d.SlashWindow != "0" {
-		return fmt.Sprintf("window %s · min signed %.0f%%", d.SlashWindow, d.MinSigned)
-	}
-	return ""
 }
 
 func writeSlashing(w Writer, d model.Report) {

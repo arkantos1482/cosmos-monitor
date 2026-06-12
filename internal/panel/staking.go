@@ -12,32 +12,11 @@ import (
 func writeStakingSummary(w Writer, d model.Report, mode SummaryMode) {
 	lv := d.Local
 	summaryWrapStart(w, mode, "staking")
-
-	if mode == SummaryOverviewClickable {
-		writeStakingCompactSummary(w, d, lv)
-	} else {
-		writeStakingEmbeddedSummary(w, d, lv)
-	}
-
+	writeStakingSummaryBody(w, d, lv)
 	summaryWrapEnd(w, mode)
 }
 
-func writeStakingCompactSummary(w Writer, d model.Report, lv model.LocalValidator) {
-	w.WriteHTML(`<div class="staking-summary staking-summary--compact">`)
-	if lv.IsValidator {
-		w.WriteHTML(fmt.Sprintf(
-			`<div class="staking-summary__row">%.1f%% VP · %s · %.1f%% commission</div>`,
-			lv.VPPercent, html.EscapeString(lv.Status), lv.Commission))
-	} else if lv.SigningStatus != "" {
-		w.WriteHTML(fmt.Sprintf(`<div class="staking-summary__row">%s</div>`, html.EscapeString(lv.SigningStatus)))
-	}
-	w.WriteHTML(fmt.Sprintf(
-		`<div class="staking-summary__row">%.2f%% bonded · %d active</div>`,
-		d.BondedPct, d.BondedCount))
-	w.WriteHTML(`</div>`)
-}
-
-func writeStakingEmbeddedSummary(w Writer, d model.Report, lv model.LocalValidator) {
+func writeStakingSummaryBody(w Writer, d model.Report, lv model.LocalValidator) {
 	w.WriteHTML(`<div class="staking-summary">`)
 	if badges := localBadges(d); len(badges) > 0 {
 		writeSummaryBadges(w, "staking-summary__badges", badges...)
