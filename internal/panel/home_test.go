@@ -211,8 +211,11 @@ func TestSectionSummariesEmbedded(t *testing.T) {
 		if !strings.Contains(out, tc.want) {
 			t.Fatalf("view %s missing summary marker %q", tc.view, tc.want)
 		}
-		if !strings.Contains(out, `dash-section__summary-title">Summary</h3>`) {
-			t.Fatalf("view %s missing summary title", tc.view)
+		if !strings.Contains(out, `dash-section__summary-card__title">Summary</h3>`) {
+			t.Fatalf("view %s missing summary card title", tc.view)
+		}
+		if !strings.Contains(out, `class="dash-section__summary-card"`) {
+			t.Fatalf("view %s missing summary card wrapper", tc.view)
 		}
 		if tc.gone != "" && strings.Contains(out, tc.gone) {
 			t.Fatalf("view %s should not contain stale %q", tc.view, tc.gone)
@@ -228,7 +231,7 @@ func TestSectionSummariesEmbedded(t *testing.T) {
 
 func sectionIntroBeforeSummary(out string) bool {
 	lead := strings.Index(out, `class="dash-callout dash-callout--note note"`)
-	title := strings.Index(out, `dash-section__summary-title">Summary</h3>`)
+	title := strings.Index(out, `dash-section__summary-card__title">Summary</h3>`)
 	summary := strings.Index(out, `-summary`)
 	if lead < 0 || title < 0 || summary < 0 {
 		return false

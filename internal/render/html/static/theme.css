@@ -422,25 +422,34 @@ body::after {
 
 /* ── Section summaries ────────────────────────────────────────── */
 
-.dash-section__summary-title {
-  margin: 0.55rem 0 0.35rem;
+.dash-callout--note + .dash-section__summary-card,
+.note + .dash-section__summary-card {
+  margin-top: 0.75rem;
+}
+
+.dash-section__summary-card {
+  margin: 0.65rem 0 1.35rem;
+  padding: 0.85rem 1rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  border-left: 3px solid var(--section-accent, var(--accent));
+  box-shadow: var(--shadow);
+}
+
+.dash-section__summary-card__title {
+  margin: 0 0 0.7rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--border);
   font-size: var(--text-sm);
+  font-weight: 600;
   letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
-  color: var(--muted);
+  color: color-mix(in srgb, var(--section-accent, var(--accent)) 55%, var(--muted));
 }
 
-.dash-callout--note + .dash-section__summary-title,
-.note + .dash-section__summary-title {
-  margin-top: 0.65rem;
-}
-
-.dash-section__summary {
-  margin: 0 0 0.85rem;
-}
-
-.dash-section__summary-title + .dash-section__summary {
-  margin-top: 0;
+.dash-section__summary-card__body {
+  min-width: 0;
 }
 
 .val-summary,
@@ -459,22 +468,23 @@ body::after {
   box-shadow: var(--shadow);
 }
 
-.dash-section .val-summary,
-.dash-section .eco-summary,
-.dash-section .dist-summary,
-.dash-section .fee-summary,
-.dash-section .gov-summary,
-.dash-section .infra-summary,
-.dash-section .node-summary,
-.dash-section .evm-summary {
+.dash-section__summary-card .val-summary,
+.dash-section__summary-card .eco-summary,
+.dash-section__summary-card .dist-summary,
+.dash-section__summary-card .fee-summary,
+.dash-section__summary-card .gov-summary,
+.dash-section__summary-card .infra-summary,
+.dash-section__summary-card .node-summary,
+.dash-section__summary-card .evm-summary,
+.dash-section__summary-card .staking-summary,
+.dash-section__summary-card .slashing-summary {
   --card-accent: var(--section-accent, var(--accent));
-  padding: 0.75rem 0 0.85rem;
+  padding: 0;
   background: transparent;
   border: none;
-  border-top: 1px solid var(--border);
   border-radius: 0;
   box-shadow: none;
-  margin-top: -0.35rem;
+  margin: 0;
 }
 
 .dash-overview__card .val-summary,

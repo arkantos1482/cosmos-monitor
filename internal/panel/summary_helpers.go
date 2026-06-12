@@ -25,15 +25,9 @@ func writeSectionLead(w Writer, text string) {
 	w.Em(text)
 }
 
-// writeSectionSummaryTitle labels the summary card within a section page.
-func writeSectionSummaryTitle(w Writer) {
-	w.WriteHTML(`<h3 class="dash-subheading dash-section__summary-title">Summary</h3>`)
-}
-
-// writeEmbeddedSectionIntro renders lead text and the Summary heading before the card.
+// writeEmbeddedSectionIntro renders the section lead above the summary card.
 func writeEmbeddedSectionIntro(w Writer, lead string) {
 	writeSectionLead(w, lead)
-	writeSectionSummaryTitle(w)
 }
 
 func summaryWrapStart(w Writer, mode SummaryMode, slug string) {
@@ -45,7 +39,9 @@ func summaryWrapStart(w Writer, mode SummaryMode, slug string) {
 			w.WriteHTML(fmt.Sprintf(`<p class="dash-overview__card-title">%s</p>`, html.EscapeString(title)))
 		}
 	case SummaryEmbedded:
-		w.WriteHTML(`<div class="dash-section__summary">`)
+		w.WriteHTML(`<div class="dash-section__summary-card">`)
+		w.WriteHTML(`<h3 class="dash-section__summary-card__title">Summary</h3>`)
+		w.WriteHTML(`<div class="dash-section__summary-card__body">`)
 	}
 }
 
@@ -54,7 +50,7 @@ func summaryWrapEnd(w Writer, mode SummaryMode) {
 	case SummaryOverviewClickable:
 		w.WriteHTML(`</a>`)
 	case SummaryEmbedded:
-		w.WriteHTML(`</div>`)
+		w.WriteHTML(`</div></div>`)
 	}
 }
 
