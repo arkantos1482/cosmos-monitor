@@ -9,6 +9,7 @@ const (
 	ViewHome       View = "home"
 	ViewInfra      View = "infra"
 	ViewNode       View = "node"
+	ViewStaking    View = "staking"
 	ViewValidators View = "validators"
 	ViewEconomics  View = "economics"
 	ViewFeemarket  View = "feemarket"
@@ -50,6 +51,7 @@ var Nav = []NavItem{
 	{ViewInfra, "Infrastructure", "/s/infra", NavScopeNode},
 	{ViewNode, "Validator", "/s/node", NavScopeNode},
 	{ViewEVM, "EVM JSON-RPC", "/s/evm", NavScopeNode},
+	{ViewStaking, "Staking", "/s/staking", NavScopeChain},
 	{ViewValidators, "Validator set", "/s/validators", NavScopeChain},
 	{ViewEconomics, "Economics", "/s/economics", NavScopeChain},
 	{ViewFeemarket, "Fee market", "/s/feemarket", NavScopeChain},
@@ -72,7 +74,7 @@ func ParseView(s string) View {
 	switch View(s) {
 	case "local": // legacy path — merged into Validator
 		return ViewNode
-	case ViewHome, ViewInfra, ViewNode, ViewValidators, ViewEconomics, ViewFeemarket, ViewGovernance, ViewEVM:
+	case ViewHome, ViewInfra, ViewNode, ViewStaking, ViewValidators, ViewEconomics, ViewFeemarket, ViewGovernance, ViewEVM:
 		return View(s)
 	default:
 		return ViewHome
@@ -85,6 +87,8 @@ func writeView(w Writer, v View, d model.Report) {
 		writeInfra(w, d)
 	case ViewNode:
 		writeNode(w, d)
+	case ViewStaking:
+		writeStaking(w, d)
 	case ViewValidators:
 		writeValidators(w, d)
 	case ViewEconomics:

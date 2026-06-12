@@ -19,18 +19,18 @@ func TestNodePageLocalStateOnly(t *testing.T) {
 	}
 	out := BuildView(ViewNode, d)
 	for _, want := range []string{
-		`class="dash-subheading">Staking</h3>`,
 		`class="dash-subheading">Rewards</h3>`,
-		`class="dash-subheading">Slashing</h3>`,
 		"outstanding rewards",
 		"commission earned",
-		"signing health",
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("node view missing local state %q", want)
 		}
 	}
 	for _, gone := range []string{
+		`class="dash-subheading">Staking</h3>`,
+		`class="dash-subheading">Signing</h3>`,
+		`class="dash-subheading">Slashing</h3>`,
 		`eco-domain--staking`,
 		`eco-domain--slashing`,
 		`eco-domain--distribution`,
@@ -41,7 +41,7 @@ func TestNodePageLocalStateOnly(t *testing.T) {
 		`eco-domain__divider">Governance params`,
 	} {
 		if strings.Contains(out, gone) {
-			t.Fatalf("node view should not show chain-level %q", gone)
+			t.Fatalf("node view should not show staking section content %q", gone)
 		}
 	}
 }

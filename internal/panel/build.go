@@ -35,6 +35,7 @@ func BuildViewWithOptions(v View, d model.Report, opts Options) string {
 }
 
 func writeAll(w Writer, d model.Report) {
+	writeStaking(w, d)
 	writeValidators(w, d)
 	writeEconomics(w, d)
 	writeFeemarket(w, d)

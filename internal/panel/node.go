@@ -67,7 +67,7 @@ func writeNode(w Writer, d model.Report) {
 
 	w.Section("2. VALIDATOR")
 	writeNodeSummary(w, d, SummaryEmbedded)
-	w.Em("This validator on this node — identities, application staking, and CometBFT live state.")
+	w.Em("This validator on this node — identities, rewards, and CometBFT live state. Stake and signing health → § Staking.")
 
 	writeIdentityBoard(w, d, lv)
 
@@ -113,18 +113,6 @@ func nodeFeeAcceptanceRows(c feemarket.Context) [][]string {
 func writeNodeApplication(w Writer, d model.Report, lv model.LocalValidator) {
 	w.Layer("Application (Cosmos SDK / ABCI state)")
 
-	w.Subsection("Staking")
-	w.Hint("`status`, `jailed`, `voting power`, `commission` → REST GET /cosmos/staking/v1beta1/validators.")
-	w.Row("status", lv.Status)
-	if lv.Jailed {
-		w.Row("jailed", "yes")
-	}
-	if lv.Tombstoned {
-		w.Row("tombstoned", "YES")
-	}
-	w.Row("voting power", fmt.Sprintf("%s  (%.1f%% of bonded stake)", lv.VotingPower, lv.VPPercent))
-	w.Row("commission", fmt.Sprintf("%.1f%%  _(validator cut of delegator rewards)_", lv.Commission))
-
 	w.Subsection("Rewards")
 	w.Hint("`outstanding rewards`, `commission earned` → REST GET /cosmos/distribution/v1beta1/validators/{valoper}/outstanding_rewards, …/commission; `per-block` → derived (network reward flow × VP% × commission).")
 	if lv.Outstanding != "" {
@@ -140,13 +128,6 @@ func writeNodeApplication(w Writer, d model.Report, lv model.LocalValidator) {
 	if op, del, _, ok := localValidatorPerBlockRewards(d); ok {
 		w.Row("per-block commission", op+fmt.Sprintf("  (%.2f%% VP · %.2f%% commission)", lv.VPPercent, lv.Commission))
 		w.Row("per-block delegators", del)
-	}
-
-	w.Subsection("Slashing")
-	w.Hint("`signing health`, `missed / window` → REST GET /cosmos/slashing/v1beta1/signing_infos + params.")
-	w.Row("signing health", lv.SigningStatus)
-	if d.SlashWindow != "" && d.SlashWindow != "0" {
-		w.Row("missed / window", fmt.Sprintf("%d / %s blocks  (max allowed: %d)", lv.Missed, d.SlashWindow, lv.MaxMissed))
 	}
 }
 

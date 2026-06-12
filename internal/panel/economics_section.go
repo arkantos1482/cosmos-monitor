@@ -46,8 +46,6 @@ func writeEconomicsCompactSummary(w Writer, d model.Report) {
 	}
 	w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">Inflation: %s</div>`, html.EscapeString(inflStatus)))
 
-	w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">Staking: %.2f%% bonded</div>`, d.BondedPct))
-
 	w.WriteHTML(`</div>`)
 }
 

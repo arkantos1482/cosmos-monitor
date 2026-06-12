@@ -30,6 +30,8 @@ func TestBuildOverviewStack(t *testing.T) {
 		`dash-overview__group--chain`,
 		`dash-overview__stack`,
 		`class="dash-overview__card-title">Infrastructure</p>`,
+		`class="dash-overview__card-title">Staking</p>`,
+		`dash-overview__card--staking`,
 		`class="dash-overview__card-title">Validator set</p>`,
 		`dash-overview__card--validators`,
 		`dash-overview__card--economics`,
@@ -40,7 +42,8 @@ func TestBuildOverviewStack(t *testing.T) {
 		`dash-overview__card--evm`,
 		`href="/s/infra"`,
 		`href="/s/evm"`,
-		`class="val-summary"`,
+		`staking-summary`,
+		`val-summary--p2p`,
 		`eco-summary`,
 		`class="fee-summary"`,
 		`class="gov-summary"`,
@@ -165,7 +168,8 @@ func TestSectionSummariesEmbedded(t *testing.T) {
 		want string
 		gone string
 	}{
-		{ViewValidators, `class="val-summary"`, `class="dash-subheading">Summary</h3>`},
+		{ViewStaking, `staking-summary`, `class="dash-subheading">Summary</h3>`},
+		{ViewValidators, `val-summary--p2p`, `class="dash-subheading">Summary</h3>`},
 		{ViewEconomics, `eco-domains`, "At a glance"},
 		{ViewFeemarket, `class="fee-summary"`, ""},
 		{ViewGovernance, `class="gov-summary"`, ""},

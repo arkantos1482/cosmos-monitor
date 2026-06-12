@@ -40,8 +40,8 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		},
 	}
 	out := Build(d)
-	idx := strings.Index(out, "2. ECONOMICS")
-	end := strings.Index(out, `class="dash-heading">3. FEE MARKET</h2>`)
+	idx := strings.Index(out, "3. ECONOMICS")
+	end := strings.Index(out, `class="dash-heading">4. FEE MARKET</h2>`)
 	if idx < 0 || end < 0 {
 		t.Fatal("expected economics and governance sections")
 	}
@@ -62,10 +62,6 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		"eco-domains",
 		"eco-domain--pmtrewards",
 		"eco-domain--inflation",
-		"eco-domain--staking",
-		"eco-domain--slashing",
-		"bonded_tokens_pool",
-		"not_bonded_tokens_pool",
 		"fee_collector",
 		"distribution escrow",
 		`class="eco-dist"`,
@@ -81,6 +77,10 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 	}
 
 	for _, gone := range []string{
+		"eco-domain--staking",
+		"eco-domain--slashing",
+		"bonded_tokens_pool",
+		"not_bonded_tokens_pool",
 		"Module accounts",
 		"eco-module-accounts",
 	} {
@@ -210,8 +210,8 @@ func TestEconomicsSourcesProvenance(t *testing.T) {
 		},
 	}
 	out := BuildWithOptions(d, Options{ShowSources: true})
-	idx := strings.Index(out, "2. ECONOMICS")
-	end := strings.Index(out, `class="dash-heading">3. FEE MARKET</h2>`)
+	idx := strings.Index(out, "3. ECONOMICS")
+	end := strings.Index(out, `class="dash-heading">4. FEE MARKET</h2>`)
 	if idx < 0 || end < 0 {
 		t.Fatal("expected economics section")
 	}

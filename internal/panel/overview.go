@@ -23,6 +23,7 @@ func writeOverview(w Writer, d model.Report) {
 		slug string
 		fn   func(Writer, model.Report, SummaryMode)
 	}{
+		{"staking", writeStakingSummary},
 		{"validators", writeValidatorsSummary},
 		{"economics", writeEconomicsSummary},
 		{"feemarket", writeFeemarketSummary},

@@ -10,6 +10,28 @@ import (
 
 func writeValidatorsSummary(w Writer, d model.Report, mode SummaryMode) {
 	summaryWrapStart(w, mode, "validators")
+	writeValidatorP2PSummaryBody(w, d)
+	summaryWrapEnd(w, mode)
+}
+
+func writeValidatorP2PSummaryBody(w Writer, d model.Report) {
+	w.WriteHTML(`<div class="val-summary val-summary--p2p">`)
+	if n := len(d.Validators); n > 0 {
+		w.WriteHTML(fmt.Sprintf(`<p class="val-summary__count">%d validators</p>`, n))
+	}
+	if len(d.Validators) > 0 {
+		w.WriteHTML(`<div class="val-summary__chips">`)
+		for _, v := range d.Validators {
+			w.WriteHTML(fmt.Sprintf(
+				`<span class="val-summary__chip%s">%s</span>`,
+				chipClass(v), html.EscapeString(report.Truncate(v.Moniker, 14))))
+		}
+		w.WriteHTML(`</div>`)
+	}
+	w.WriteHTML(`</div>`)
+}
+
+func writeStakingChainSummaryBody(w Writer, d model.Report) {
 	w.WriteHTML(`<div class="val-summary">`)
 	w.WriteHTML(`<div class="val-summary__kpis">`)
 	for _, kpi := range []struct{ label, val string }{
@@ -52,7 +74,6 @@ func writeValidatorsSummary(w Writer, d model.Report, mode SummaryMode) {
 		w.WriteHTML(`</div>`)
 	}
 	w.WriteHTML(`</div>`)
-	summaryWrapEnd(w, mode)
 }
 
 func chipClass(v model.Validator) string {
@@ -63,58 +84,9 @@ func chipClass(v model.Validator) string {
 }
 
 func writeValidators(w Writer, d model.Report) {
-	w.Section("1. VALIDATOR SET")
+	w.Section("2. VALIDATOR SET")
 	writeValidatorsSummary(w, d, SummaryEmbedded)
-	w.Em("Chain-wide validator set — summary counts, stake and slashing tables, then P2P identity per validator. Staking/slashing params → § Economics.")
-
-	w.Subsection("Stake")
-	w.Hint("`vp%%`, `commission`, `status` → REST GET /cosmos/staking/v1beta1/validators (bonded, unbonding, unbonded).")
-	stakeRows := make([][]string, 0, len(d.Validators))
-	for _, v := range d.Validators {
-		stakeRows = append(stakeRows, []string{
-			report.Truncate(v.Moniker, 14),
-			fmt.Sprintf("%.1f%%", v.VPFloat),
-			fmt.Sprintf("%.1f%%", v.CommissionFloat),
-			v.Status,
-			valLocalMark(v),
-		})
-	}
-	w.Table([]string{"moniker", "vp%", "commission", "status", "local"}, stakeRows)
-
-	w.Subsection("Slashing")
-	w.Hint("`missed`, `tombstoned` → REST GET /cosmos/slashing/v1beta1/signing_infos; `jailed` → module x/staking validators; `health` → derived (missed vs min_signed_per_window from slashing params).")
-	secRows := make([][]string, 0, len(d.Validators))
-	for _, v := range d.Validators {
-		missed := fmt.Sprintf("%d", v.Missed)
-		health := "ok"
-		if v.Tombstoned {
-			health = "tombstoned"
-		} else if v.Jailed {
-			health = "jailed"
-		} else if v.MissedHigh {
-			health = "⚠ below min signed"
-			missed += " ⚠"
-		} else if v.Missed > 0 {
-			health = "ok (some misses)"
-		}
-		jailed := ""
-		if v.Jailed {
-			jailed = "yes"
-		}
-		tomb := ""
-		if v.Tombstoned {
-			tomb = "yes"
-		}
-		secRows = append(secRows, []string{
-			report.Truncate(v.Moniker, 14),
-			missed,
-			jailed,
-			tomb,
-			health,
-			valLocalMark(v),
-		})
-	}
-	w.Table([]string{"moniker", "missed", "jailed", "tombstoned", "health", "local"}, secRows)
+	w.Em("P2P dial strings and operator identities per validator. Stake, slashing, and pool params → § Staking.")
 
 	w.Subsection("Network (P2P)")
 	w.Hint("`p2p dial`, `node ID` → CometBFT GET /status (local) or GET /net_info (peers); `operator`, `consensus` → REST GET /cosmos/staking/v1beta1/validators.")

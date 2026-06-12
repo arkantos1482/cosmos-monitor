@@ -33,7 +33,8 @@ var navIcons = map[panel.View]string{
 	panel.ViewHome: `<svg class="dash-nav__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 6.5L8 2l6 4.5V13a1 1 0 01-1 1H3a1 1 0 01-1-1V6.5z"/><path d="M6 14V9h4v5"/></svg>`,
 	panel.ViewInfra: `<svg class="dash-nav__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M5 7h6M5 10h4"/></svg>`,
 	panel.ViewNode: `<svg class="dash-nav__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="8" cy="8" r="5"/><path d="M8 5v3l2 1"/></svg>`,
-	panel.ViewValidators: `<svg class="dash-nav__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M8 2l2 3.5h4l-3.2 2.5 1.2 4L8 10.5 3.8 12l1.2-4L2 5.5h4L8 2z"/></svg>`,
+	panel.ViewStaking: `<svg class="dash-nav__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M8 2l2 3.5h4l-3.2 2.5 1.2 4L8 10.5 3.8 12l1.2-4L2 5.5h4L8 2z"/></svg>`,
+	panel.ViewValidators: `<svg class="dash-nav__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="5" cy="5" r="2"/><circle cx="11" cy="5" r="2"/><circle cx="8" cy="11" r="2"/><path d="M6.2 6.2L7.4 9.2M9.8 6.2L8.6 9.2M7 5h2"/></svg>`,
 	panel.ViewEconomics: `<svg class="dash-nav__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="8" cy="8" r="5"/><path d="M8 5v6M6 7h3.5a1.5 1.5 0 010 3H6"/></svg>`,
 	panel.ViewFeemarket: `<svg class="dash-nav__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 12h10"/><path d="M8 3l4 6H4l4-6z"/><circle cx="8" cy="11" r="1"/></svg>`,
 	panel.ViewGovernance: `<svg class="dash-nav__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 4h10M3 8h10M3 12h6"/></svg>`,
@@ -46,6 +47,8 @@ func navSlug(v panel.View) string {
 		return "infra"
 	case panel.ViewNode:
 		return "node"
+	case panel.ViewStaking:
+		return "staking"
 	case panel.ViewValidators:
 		return "validators"
 	case panel.ViewEconomics:

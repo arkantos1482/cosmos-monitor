@@ -170,8 +170,6 @@ func economicsDomainCardsHTML(d model.Report, compact bool) string {
 	b.WriteString(`<div class="eco-domains">`)
 	b.WriteString(pmtRewardsCardHTML(d, compact))
 	b.WriteString(inflationCardHTML(d, compact))
-	b.WriteString(stakingCardHTML(d, compact))
-	b.WriteString(slashingCardHTML(d, compact))
 	b.WriteString(`</div>`)
 	return b.String()
 }

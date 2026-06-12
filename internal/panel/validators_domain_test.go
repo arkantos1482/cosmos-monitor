@@ -18,24 +18,23 @@ func TestValidatorsNoDomainCards(t *testing.T) {
 	}
 	chunk := validatorsChunk(t, Build(d))
 	for _, want := range []string{
-		`class="val-summary"`,
-		`class="dash-subheading">Stake</h3>`,
-		`class="dash-subheading">Slashing</h3>`,
-		"below min signed",
+		`val-summary--p2p`,
+		`class="dash-subheading">Network (P2P)</h3>`,
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("validators missing %q", want)
 		}
 	}
 	for _, gone := range []string{
+		`class="dash-subheading">Stake</h3>`,
+		`class="dash-subheading">Slashing</h3>`,
 		`eco-domain--staking`,
 		`eco-domain--slashing`,
 		"bonded_tokens_pool",
-		"unbonding time",
-		`eco-domain__divider">Governance params`,
+		"below min signed",
 	} {
 		if strings.Contains(chunk, gone) {
-			t.Fatalf("validators should not duplicate economics chain modules: %q", gone)
+			t.Fatalf("validators should not contain staking content: %q", gone)
 		}
 	}
 }

@@ -13,7 +13,8 @@
   --ok: #5ee4a8;
   --accent-infra: #5eb3ff;
   --accent-node: #5ee4a8;
-  --accent-validators: #a78bfa;
+  --accent-staking: #a78bfa;
+  --accent-validators: #c4b5fd;
   --accent-local: #f0abfc;
   --accent-economics: #fbbf24;
   --accent-feemarket: #2dd4bf;
@@ -216,6 +217,7 @@ body::after {
 
 .dash-nav__link--infra { --nav-accent: var(--accent-infra); }
 .dash-nav__link--node { --nav-accent: var(--accent-node); }
+.dash-nav__link--staking { --nav-accent: var(--accent-staking); }
 .dash-nav__link--validators { --nav-accent: var(--accent-validators); }
 .dash-nav__link--local { --nav-accent: var(--accent-local); }
 .dash-nav__link--economics { --nav-accent: var(--accent-economics); }
@@ -385,6 +387,7 @@ body::after {
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.32);
 }
 
+.dash-overview__card--staking { --card-accent: var(--accent-staking); }
 .dash-overview__card--validators { --card-accent: var(--accent-validators); }
 .dash-overview__card--economics { --card-accent: var(--accent-economics); }
 .dash-overview__card--feemarket { --card-accent: var(--accent-feemarket); }
@@ -788,6 +791,7 @@ body::after {
 
 .dash-section--infra { --section-accent: var(--accent-infra); }
 .dash-section--node { --section-accent: var(--accent-node); }
+.dash-section--staking { --section-accent: var(--accent-staking); }
 .dash-section--validators { --section-accent: var(--accent-validators); }
 .dash-section--local { --section-accent: var(--accent-local); }
 .dash-section--economics { --section-accent: var(--accent-economics); }
