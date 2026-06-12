@@ -255,7 +255,7 @@ func buildFeeL5(c feemarket.Context, d model.Report) feeLevel {
 	return feeLevel{
 		ID:      "fee-L5",
 		Title:   "L5 · Formula & parameters",
-		Concept: "Full computation and governance knobs (node fee acceptance → § Validator).",
+		Concept: "Full computation and governance knobs (local node fee acceptance → subsection below).",
 		Extra:   extra.String(),
 	}
 }

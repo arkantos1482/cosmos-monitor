@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"html"
 
-	"github.com/arkantos1482/cosmos-monitor/internal/feemarket"
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 	"github.com/arkantos1482/cosmos-monitor/internal/report"
 )
@@ -67,13 +66,11 @@ func writeNode(w Writer, d model.Report) {
 
 	w.Section("2. VALIDATOR")
 	writeNodeSummary(w, d, SummaryEmbedded)
-	w.Em("This validator on this node — identities, rewards, and CometBFT live state. Stake and signing health → § Staking.")
+	w.Em("This validator on this node — identities and CometBFT live state. Stake → § Staking. Rewards → § Rewards.")
 
 	writeIdentityBoard(w, d, lv)
 
-	if lv.IsValidator {
-		writeNodeApplication(w, d, lv)
-	} else {
+	if !lv.IsValidator {
 		w.Layer("Application (Cosmos SDK / ABCI state)")
 		w.Subsection("Role")
 		w.Hint("`role` → CometBFT GET /status; derived when consensus address is absent from x/staking.")
@@ -81,54 +78,6 @@ func writeNode(w Writer, d model.Report) {
 	}
 
 	writeNodeCometBFT(w, d, lv, syncStr)
-	writeNodeFeeAcceptance(w, d)
-}
-
-func writeNodeFeeAcceptance(w Writer, d model.Report) {
-	c := feemarket.LoadContext(d)
-	if c.NodeMinGasPrices == "" && c.NodeEVMMinTip == "" && c.NodeMempoolPriceLimit == "" &&
-		c.NodeMaxTxGasWanted == "" && c.NodeAppTomlPath == "" {
-		return
-	}
-	w.Subsection("Fee acceptance (app.toml)")
-	w.Hint("`minimum-gas-prices`, `evm.min-tip`, `evm.mempool.price-limit`, `evm.max-tx-gas-wanted` → local app.toml (APPTOML_PATH or ~/.evmd/config/app.toml). Chain fee params live in § Fee market.")
-	for _, row := range nodeFeeAcceptanceRows(c) {
-		w.Row(row[0], row[1])
-	}
-}
-
-func nodeFeeAcceptanceRows(c feemarket.Context) [][]string {
-	rows := [][]string{
-		{"minimum-gas-prices", orDash(c.NodeMinGasPrices)},
-		{"evm.min-tip", orDash(c.NodeEVMMinTip)},
-		{"evm.mempool.price-limit", orDash(c.NodeMempoolPriceLimit)},
-		{"evm.max-tx-gas-wanted", orDash(c.NodeMaxTxGasWanted)},
-	}
-	if c.NodeAppTomlPath != "" {
-		rows = append(rows, []string{"config path", c.NodeAppTomlPath})
-	}
-	return rows
-}
-
-func writeNodeApplication(w Writer, d model.Report, lv model.LocalValidator) {
-	w.Layer("Application (Cosmos SDK / ABCI state)")
-
-	w.Subsection("Rewards")
-	w.Hint("`outstanding rewards`, `commission earned` → REST GET /cosmos/distribution/v1beta1/validators/{valoper}/outstanding_rewards, …/commission; `per-block` → derived (network reward flow × VP% × commission).")
-	if lv.Outstanding != "" {
-		w.Row("outstanding rewards", lv.Outstanding+"  _(total unclaimed — x/distribution)_")
-	} else {
-		w.Row("outstanding rewards", "–")
-	}
-	if lv.CommissionEarned != "" {
-		w.Row("commission earned", lv.CommissionEarned+"  _(unclaimed validator commission)_")
-	} else {
-		w.Row("commission earned", "–")
-	}
-	if op, del, _, ok := localValidatorPerBlockRewards(d); ok {
-		w.Row("per-block commission", op+fmt.Sprintf("  (%.2f%% VP · %.2f%% commission)", lv.VPPercent, lv.Commission))
-		w.Row("per-block delegators", del)
-	}
 }
 
 func writeNodeCometBFT(w Writer, d model.Report, lv model.LocalValidator, syncStr string) {

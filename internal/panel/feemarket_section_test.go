@@ -9,8 +9,8 @@ import (
 
 func feemarketChunk(t *testing.T, out string) string {
 	t.Helper()
-	idx := strings.Index(out, `class="dash-heading">4. FEE MARKET</h2>`)
-	end := strings.Index(out, "5. GOVERNANCE")
+	idx := strings.Index(out, `class="dash-heading">5. FEE MARKET</h2>`)
+	end := strings.Index(out, "6. GOVERNANCE")
 	if idx < 0 || end < 0 {
 		t.Fatal("expected fee market and governance sections")
 	}
@@ -170,14 +170,13 @@ func TestWriteFeemarketL5ChainParams(t *testing.T) {
 		`CometBFT GET /block_results`,
 		"consensus_params",
 		"vm/v1/config",
-		"§ Validator",
+		"subsection below",
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("L5 missing %q", want)
 		}
 	}
 	for _, gone := range []string{
-		"minimum-gas-prices",
 		"Node acceptance",
 	} {
 		if strings.Contains(chunk, gone) {
@@ -196,6 +195,9 @@ func TestWriteFeemarketL5ChainParams(t *testing.T) {
 		t.Fatal("missing L5 closing details")
 	}
 	l5Block := chunk[l5Start : l5Start+l5CloseRel]
+	if strings.Contains(l5Block, "minimum-gas-prices") {
+		t.Fatal("fee market L5 should not contain node app.toml settings")
+	}
 	if strings.Contains(l5Block, "CometBFT GET /block_results") {
 		t.Fatal("L5 should not embed data source provenance")
 	}
@@ -218,14 +220,15 @@ func TestWriteFeemarketSourcesHiddenByDefault(t *testing.T) {
 	}
 }
 
-func TestWriteNodeFeeAcceptance(t *testing.T) {
+func TestWriteFeemarketFeeAcceptance(t *testing.T) {
 	d := model.Report{
+		BlockHeight: "1", BaseFeeRaw: "7",
 		NodeMinGasPrices: "0apmt", NodeEVMMinTip: "0",
 		NodeMempoolPriceLimit: "1", NodeMaxTxGasWanted: "0",
 		NodeAppTomlPath: "/home/ubuntu/.evmd/config/app.toml",
 		Local: model.LocalValidator{IsValidator: true, Moniker: "node1", Status: "BOND_STATUS_BONDED"},
 	}
-	out := BuildView(ViewNode, d)
+	chunk := feemarketChunk(t, Build(d))
 	for _, want := range []string{
 		"Fee acceptance (app.toml)",
 		"minimum-gas-prices",
@@ -234,9 +237,13 @@ func TestWriteNodeFeeAcceptance(t *testing.T) {
 		"evm.max-tx-gas-wanted",
 		"/home/ubuntu/.evmd/config/app.toml",
 	} {
-		if !strings.Contains(out, want) {
-			t.Fatalf("validator section missing %q", want)
+		if !strings.Contains(chunk, want) {
+			t.Fatalf("fee market section missing %q", want)
 		}
+	}
+	node := BuildView(ViewNode, d)
+	if strings.Contains(node, "Fee acceptance (app.toml)") {
+		t.Fatal("validator section should not contain app.toml fee acceptance")
 	}
 	infra := BuildView(ViewInfra, d)
 	if strings.Contains(infra, "Fee acceptance (app.toml)") {
