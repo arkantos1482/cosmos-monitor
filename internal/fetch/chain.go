@@ -32,8 +32,10 @@ type ChainSnapshot struct {
 	// This node's validator identity from /status (empty if full node).
 	LocalConsensusAddr   string
 	LocalConsensusBech32 string
-	LocalAccountAddr   string
-	LocalDelegations   []DelegationInfo
+	LocalAccountAddr        string
+	LocalAccountLiquidAmt   string
+	LocalAccountLiquidDenom string
+	LocalDelegations        []DelegationInfo
 	LocalP2PDial       string
 	LocalVotingPower          int64
 

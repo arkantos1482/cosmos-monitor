@@ -153,7 +153,23 @@ func fetchForView(view panel.View, rpc, rest, evm, container string) Snapshots {
 	}
 	wg.Wait()
 	chain.Params = p
+	enrichLocalStakingBalances(rest, &chain)
 	return Snapshots{Chain: chain, EVM: evSnap, System: sys, Docker: docker}
+}
+
+func enrichLocalStakingBalances(rest string, chain *fetch.ChainSnapshot) {
+	if rest == "" {
+		return
+	}
+	denom := chain.Params.BondDenom
+	if len(chain.LocalDelegations) > 0 {
+		fetch.EnrichDelegationLiquidBalances(rest, chain.LocalDelegations, denom)
+	}
+	if chain.LocalAccountAddr != "" && chain.LocalAccountLiquidAmt == "" {
+		amt, d := fetch.FetchAddressBalance(rest, chain.LocalAccountAddr, denom)
+		chain.LocalAccountLiquidAmt = amt
+		chain.LocalAccountLiquidDenom = d
+	}
 }
 
 func chainOptsFor(view panel.View) fetch.ChainOpts {

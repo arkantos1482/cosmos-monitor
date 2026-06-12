@@ -48,26 +48,28 @@ func TestStakingDelegatorsTable(t *testing.T) {
 			Delegations: []model.DelegationRow{{
 				Delegator: "cosmos1akkvh0ahmve830rj4mhkdnqs49kzw23c63nhdx",
 				EVMAddr:   "0xEDaCcbBfB7dB3278bc72AeeF66Cc10A96C272a38",
-				Balance:   "100M PMT",
+				Balance:   "100M PMT", LiquidBalance: "10M PMT", Shares: "100000000000000000000",
 				IsLocal:   true,
 			}, {
 				Delegator: "cosmos1otherdelegator",
 				EVMAddr:   "0xOTHER",
-				Balance:   "5M PMT",
+				Balance:   "5M PMT", LiquidBalance: "1M PMT",
 			}},
 		},
 	}
 	chunk := stakingChunk(t, Build(d))
 	for _, want := range []string{
-		`<th>delegator</th>`,
-		`<th>evm</th>`,
+		`<th>address</th>`,
 		`<th class="data-table__num">delegated</th>`,
+		`<th class="data-table__num">liquid</th>`,
+		`class="id-dual"`,
 		`data-table--delegations`,
 		`table-scroll--fit`,
-		`cosmosvaloper1akkvh0ahmve830rj4mhkdnqs49kzw23cl98zp4`,
-		`cosmos1akkvh0ahmve830rj4mhkdnqs49kzw23c63nhdx`,
-		`cosmos1otherdelegator`,
+		`akkvh0ahmve830rj4mhkdnqs49kzw23c63nhdx`,
+		`0xEDaCcbBfB7dB3278bc72AeeF66Cc10A96C272a38`,
+		`otherdelegator`,
 		`100M PMT`,
+		`10M PMT`,
 		`5M PMT`,
 		`class="data-table__row--local" title="this node"`,
 	} {
@@ -78,6 +80,8 @@ func TestStakingDelegatorsTable(t *testing.T) {
 	for _, gone := range []string{
 		`validator_account`,
 		`data-table staking-accounts`,
+		`<th>evm</th>`,
+		`<th>delegator</th>`,
 	} {
 		if strings.Contains(chunk, gone) {
 			t.Fatalf("staking section should not include %q", gone)

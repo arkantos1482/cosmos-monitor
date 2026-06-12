@@ -21,12 +21,15 @@ func TestStakingSectionLocalAndNetwork(t *testing.T) {
 			VPFloat: 25, CommissionFloat: 10, Status: "BONDED", IsLocal: true,
 		}},
 		Local: model.LocalValidator{
-			IsValidator: true, Status: "BONDED", VPPercent: 25, Commission: 10,
+			IsValidator: true, Moniker: "node1", Status: "bonded", VPPercent: 25, Commission: 10,
 			VotingPower: "100 PMT", SigningStatus: "ok", Missed: 2,
+			AccountAddr: "cosmos1account", EVMAddr: "0xACCOUNT",
 			OperatorAddr: "cosmosvaloper1abc", CommissionEarned: "0.1 PMT",
+			Outstanding: "0.5 PMT", LiquidBalance: "1M PMT", DelegatorCount: 1,
 			Delegations: []model.DelegationRow{{
 				Delegator: "cosmos1delegator", EVMAddr: "0xDELEGATOR",
-				Balance: "100 PMT", IsLocal: true,
+				Balance: "100 PMT", LiquidBalance: "50 PMT", Shares: "100000000000000000000",
+				IsLocal: true,
 			}},
 		},
 	}
@@ -46,8 +49,14 @@ func TestStakingSectionLocalAndNetwork(t *testing.T) {
 		`staking-summary__kpi`,
 		`staking-summary__kpis--network`,
 		`data-table--delegations`,
+		`<th>address</th>`,
 		`<th class="data-table__num">delegated</th>`,
+		`<th class="data-table__num">liquid</th>`,
+		`class="id-dual"`,
 		`0xDELEGATOR`,
+		`liquid balance`,
+		`outstanding rewards`,
+		`delegators`,
 		`data-table--staking-set`,
 		`100 PMT`,
 	} {

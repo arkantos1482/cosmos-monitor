@@ -507,10 +507,9 @@ func isStakingSetTable(headers []string) bool {
 }
 
 func isDelegationsTable(headers []string) bool {
-	return len(headers) == 3 &&
-		strings.EqualFold(headers[0], "delegator") &&
-		strings.EqualFold(headers[1], "evm") &&
-		strings.EqualFold(headers[2], "delegated")
+	return len(headers) >= 3 &&
+		strings.EqualFold(headers[0], "address") &&
+		strings.EqualFold(headers[1], "delegated")
 }
 
 // isReferenceTable marks 3-column glossary tables: reference | value | meaning.
@@ -603,7 +602,7 @@ func tableColumnAlign(header string) columnAlign {
 	h := strings.ToLower(strings.TrimSpace(header))
 	switch h {
 	case "in this block", "balance now", "balance", "amount", "check",
-		"vp%", "commission", "delegated", "missed", "slash stake", "value", "current":
+		"vp%", "commission", "delegated", "liquid", "shares", "missed", "slash stake", "value", "current":
 		return alignRight
 	case "jailed", "tombstoned", "health", "status", "jail", "tombstone", "local":
 		return alignCenter

@@ -7,10 +7,12 @@ import (
 
 // DelegationInfo is a single delegator entry for a validator.
 type DelegationInfo struct {
-	DelegatorAddr string
-	BalanceAmt    string
-	BalanceDenom  string
-	Shares        string
+	DelegatorAddr    string
+	BalanceAmt       string
+	BalanceDenom     string
+	Shares           string
+	LiquidBalanceAmt string
+	LiquidBalanceDenom string
 }
 
 type delegationsResp struct {
@@ -65,4 +67,13 @@ func FetchValidatorDelegations(rest, valoper string) []DelegationInfo {
 		}
 	}
 	return out
+}
+
+// EnrichDelegationLiquidBalances fills LiquidBalance* from bank balances (preferDenom when set).
+func EnrichDelegationLiquidBalances(rest string, delegations []DelegationInfo, preferDenom string) {
+	for i := range delegations {
+		amt, denom := FetchAddressBalance(rest, delegations[i].DelegatorAddr, preferDenom)
+		delegations[i].LiquidBalanceAmt = amt
+		delegations[i].LiquidBalanceDenom = denom
+	}
 }

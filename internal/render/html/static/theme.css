@@ -564,6 +564,73 @@ body::after {
   color: var(--muted);
 }
 
+.slashing-summary__badges {
+  margin-bottom: 0.55rem;
+}
+
+.slashing-summary__kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: 0.55rem;
+  margin-bottom: 0.55rem;
+}
+
+.slashing-summary__kpis--network {
+  margin-bottom: 0;
+}
+
+.slashing-summary__kpi {
+  padding: 0.45rem 0.55rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.slashing-summary__kpi-label {
+  display: block;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.slashing-summary__kpi-val {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.slashing-summary__kpi-val--ok {
+  color: var(--ok);
+}
+
+.slashing-summary__kpi-val--warn {
+  color: var(--warn);
+}
+
+.slashing-summary__kpi-val--bad {
+  color: var(--bad);
+}
+
+.slashing-summary__role {
+  margin: 0 0 0.55rem;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.slashing-summary--compact .slashing-summary__row {
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.slashing-summary--compact .slashing-summary__row + .slashing-summary__row {
+  margin-top: 0.25rem;
+}
+
+.slashing-summary__row--warn {
+  color: var(--warn);
+}
+
 .data-table--delegations {
   table-layout: fixed;
   width: 100%;
@@ -584,12 +651,19 @@ body::after {
   line-height: 1.45;
 }
 
-.data-table--delegations tbody td:last-child {
+.data-table--delegations tbody td:not(:first-child) {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   word-break: normal;
   white-space: nowrap;
-  width: 14%;
+}
+
+.data-table--delegations tbody td:first-child {
+  width: 46%;
+}
+
+.data-table--delegations tbody td:nth-child(n+2) {
+  width: 18%;
 }
 
 .data-table--delegations tbody td code {
@@ -1282,6 +1356,29 @@ body::after {
 
 /* ── Validator identity board (4 address families side by side) ── */
 
+.id-dual {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.id-dual__bech32 code {
+  font-size: inherit;
+  background: none;
+  padding: 0;
+}
+
+.id-dual__evm {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--muted);
+  word-break: break-all;
+  line-height: 1.4;
+}
+
 .id-board {
   margin: 0.5rem 0 0.85rem;
   padding: 0.85rem 0.95rem 0.75rem;
@@ -1769,7 +1866,7 @@ body::after {
 }
 
 .eco-domain--slashing {
-  border-left-color: var(--bad);
+  border-left-color: var(--accent-validators);
 }
 
 .eco-domain__title {
@@ -2622,6 +2719,13 @@ body::after {
   margin-top: 0.35rem;
 }
 
+.slashing-penalties__note {
+  margin: 0 0 0.45rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
 .slashing-penalties__infraction {
   min-width: 9rem;
 }
@@ -2651,28 +2755,16 @@ body::after {
   white-space: nowrap;
 }
 
-.penalty-tag--slash {
-  background: rgba(240, 113, 120, 0.12);
-  color: var(--bad);
-  border-color: rgba(240, 113, 120, 0.22);
+.penalty-tag--param {
+  background: var(--surface-2);
+  color: var(--fg);
+  border-color: var(--border);
+  font-family: var(--mono);
+  font-weight: 500;
 }
 
-.penalty-tag--jail {
-  background: rgba(232, 196, 104, 0.12);
-  color: var(--warn);
-  border-color: rgba(232, 196, 104, 0.22);
-}
-
-.penalty-tag--severe {
-  background: rgba(240, 113, 120, 0.12);
-  color: var(--bad);
-  border-color: rgba(240, 113, 120, 0.22);
-}
-
-.penalty-tag--yes {
-  background: rgba(240, 113, 120, 0.12);
-  color: var(--bad);
-  border-color: rgba(240, 113, 120, 0.22);
+.penalty-tag--emph {
+  font-weight: 600;
 }
 
 .penalty-tag--off {

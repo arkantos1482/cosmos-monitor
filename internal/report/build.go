@@ -444,6 +444,7 @@ func buildLocalValidator(chain fetch.ChainSnapshot, v *fetch.ValidatorInfo, maxM
 			lv.SigningStatus = "this node is not a validator (full node / observer)"
 		}
 		lv.Delegations = buildDelegationRows(chain.LocalDelegations, lv.AccountAddr)
+		lv.DelegatorCount = len(lv.Delegations)
 		return lv
 	}
 
@@ -478,6 +479,18 @@ func buildLocalValidator(chain fetch.ChainSnapshot, v *fetch.ValidatorInfo, maxM
 	lv.IsNextProposer = v.Moniker == chain.NextProposerMoniker
 	lv.Outstanding = v.OutstandingRewards
 	lv.CommissionEarned = v.CommissionEarned
+	lv.DelegatorCount = len(lv.Delegations)
+	if lv.AccountAddr != "" {
+		for _, row := range lv.Delegations {
+			if row.IsLocal {
+				lv.LiquidBalance = row.LiquidBalance
+				break
+			}
+		}
+		if lv.LiquidBalance == "" {
+			lv.LiquidBalance = fetch.FormatCoin(chain.LocalAccountLiquidAmt, chain.LocalAccountLiquidDenom)
+		}
+	}
 
 	switch {
 	case lv.Tombstoned:
@@ -501,10 +514,12 @@ func buildDelegationRows(delegations []fetch.DelegationInfo, localAccount string
 	rows := make([]model.DelegationRow, 0, len(delegations))
 	for _, d := range delegations {
 		rows = append(rows, model.DelegationRow{
-			Delegator: d.DelegatorAddr,
-			EVMAddr:   fetch.AccBech32ToEVM(d.DelegatorAddr),
-			Balance:   fetch.FormatCoin(d.BalanceAmt, d.BalanceDenom),
-			IsLocal:   localAccount != "" && d.DelegatorAddr == localAccount,
+			Delegator:     d.DelegatorAddr,
+			EVMAddr:       fetch.AccBech32ToEVM(d.DelegatorAddr),
+			Balance:       fetch.FormatCoin(d.BalanceAmt, d.BalanceDenom),
+			LiquidBalance: fetch.FormatCoin(d.LiquidBalanceAmt, d.LiquidBalanceDenom),
+			Shares:        d.Shares,
+			IsLocal:       localAccount != "" && d.DelegatorAddr == localAccount,
 		})
 	}
 	return rows

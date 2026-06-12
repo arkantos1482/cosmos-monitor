@@ -3,6 +3,7 @@ package panel
 import (
 	"fmt"
 	"html"
+	"strings"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 	"github.com/arkantos1482/cosmos-monitor/internal/report"
@@ -83,6 +84,7 @@ func writeStaking(w Writer, d model.Report) {
 
 	w.Subsection("This validator")
 	if lv.IsValidator {
+		writeStakingLocal(w, lv)
 		writeStakingDelegators(w, lv)
 	} else {
 		w.Hint("`role` → CometBFT GET /status; derived when consensus address is absent from x/staking.")
@@ -94,6 +96,55 @@ func writeStaking(w Writer, d model.Report) {
 
 	w.Hint(stakingSourcesHint())
 	w.BlankLine()
+}
+
+func writeStakingLocal(w Writer, lv model.LocalValidator) {
+	w.Hint("`operator`, `account`, `status`, `voting power`, `commission` → REST GET /cosmos/staking/v1beta1/validators; " +
+		"`liquid balance` → REST GET /cosmos/bank/v1beta1/balances/{address}; " +
+		"`outstanding rewards`, `commission earned` → REST GET /cosmos/distribution/v1beta1/validators/{valoper}/….")
+	if moniker := strings.TrimSpace(lv.Moniker); moniker != "" {
+		w.Row("moniker", moniker)
+	}
+	if lv.OperatorAddr != "" {
+		w.Row("operator", identityCell(lv.OperatorAddr))
+	}
+	if lv.AccountAddr != "" {
+		w.Row("account", identityCell(lv.AccountAddr))
+	}
+	if lv.EVMAddr != "" {
+		w.Row("evm", identityCell(lv.EVMAddr))
+	}
+	if lv.Status != "" {
+		w.Row("status", lv.Status)
+	}
+	if lv.Jailed {
+		w.Row("jailed", "yes")
+	}
+	if lv.Tombstoned {
+		w.Row("tombstoned", "yes")
+	}
+	if lv.VotingPower != "" {
+		vp := lv.VotingPower
+		if lv.VPPercent > 0 {
+			vp += fmt.Sprintf("  (%.1f%% of bonded stake)", lv.VPPercent)
+		}
+		w.Row("voting power", vp)
+	}
+	if lv.Commission > 0 {
+		w.Row("commission", fmt.Sprintf("%.1f%%", lv.Commission))
+	}
+	if lv.LiquidBalance != "" {
+		w.Row("liquid balance", lv.LiquidBalance+"  _(bank — spendable, excl. bonded)_")
+	}
+	if lv.Outstanding != "" {
+		w.Row("outstanding rewards", lv.Outstanding+"  _(x/distribution — unclaimed delegator share)_")
+	}
+	if comm := strings.TrimSpace(lv.CommissionEarned); comm != "" {
+		w.Row("commission earned", comm+"  _(x/distribution — unclaimed validator commission)_")
+	}
+	if lv.DelegatorCount > 0 {
+		w.Row("delegators", fmt.Sprintf("%d", lv.DelegatorCount))
+	}
 }
 
 func writeValidatorStakingTable(w Writer, d model.Report) {

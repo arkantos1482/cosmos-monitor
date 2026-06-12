@@ -179,10 +179,12 @@ type Validator struct {
 
 // DelegationRow is a delegator to the local validator (from x/staking delegations).
 type DelegationRow struct {
-	Delegator string
-	EVMAddr   string
-	Balance   string
-	IsLocal   bool
+	Delegator     string
+	EVMAddr       string
+	Balance       string
+	LiquidBalance string
+	Shares        string
+	IsLocal       bool
 }
 
 type LocalValidator struct {
@@ -208,8 +210,10 @@ type LocalValidator struct {
 	SigningStatus    string
 	IsNextProposer   bool
 	ProposerPriority int64
-	Outstanding      string
-	CommissionEarned string
+	Outstanding       string
+	CommissionEarned  string
+	LiquidBalance     string
+	DelegatorCount    int
 }
 
 type RPCProbe struct {
