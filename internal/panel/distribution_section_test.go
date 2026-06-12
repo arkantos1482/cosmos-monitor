@@ -58,7 +58,8 @@ func TestWriteDistributionSection(t *testing.T) {
 		`class="dash-subheading">This validator</h3>`,
 		`class="dash-subheading">Network-wide</h3>`,
 		"outstanding rewards",
-		`class="data-table"`,
+		`data-table--staking-set`,
+		`table-scroll--fit`,
 		"outstanding",
 	} {
 		if !strings.Contains(chunk, want) {

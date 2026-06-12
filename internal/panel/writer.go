@@ -507,10 +507,10 @@ func isStakingOperatorTable(headers []string) bool {
 }
 
 func isStakingSetTable(headers []string) bool {
+	// moniker + operator validator-set tables (staking, distribution, …)
 	return len(headers) >= 5 &&
 		strings.EqualFold(headers[0], "moniker") &&
-		strings.EqualFold(headers[1], "operator") &&
-		strings.EqualFold(headers[2], "vp%")
+		strings.EqualFold(headers[1], "operator")
 }
 
 func isDelegationsTable(headers []string) bool {
@@ -609,7 +609,7 @@ func tableColumnAlign(header string) columnAlign {
 	h := strings.ToLower(strings.TrimSpace(header))
 	switch h {
 	case "in this block", "balance now", "balance", "amount", "check",
-		"vp%", "commission", "delegated", "liquid", "shares", "spendable", "delegation shares",
+		"vp%", "commission", "outstanding", "rate", "delegated", "liquid", "shares", "spendable", "delegation shares",
 		"missed", "slash stake", "value", "current":
 		return alignRight
 	case "jailed", "tombstoned", "health", "status", "jail", "tombstone", "local":
