@@ -54,35 +54,30 @@ func identityDualAddrHTML(bech32, evm, sharedStem string) string {
 }
 
 func validatorStakingIdentityHTML(lv model.LocalValidator) string {
-	op := strings.TrimSpace(lv.OperatorAddr)
-	acct := strings.TrimSpace(lv.AccountAddr)
-	evm := strings.TrimSpace(lv.EVMAddr)
-	if op == "" && acct == "" && evm == "" {
+	type row struct {
+		role string
+		addr string
+	}
+	var rows []row
+	if op := strings.TrimSpace(lv.OperatorAddr); op != "" {
+		rows = append(rows, row{"operator", op})
+	}
+	if acct := strings.TrimSpace(lv.AccountAddr); acct != "" {
+		rows = append(rows, row{"account", acct})
+	}
+	if evm := strings.TrimSpace(lv.EVMAddr); evm != "" {
+		rows = append(rows, row{"evm", evm})
+	}
+	if len(rows) == 0 {
 		return ""
 	}
-	sharedStem := ""
-	if op != "" && acct != "" {
-		sharedStem = longestCommonPrefix(bech32DataPart(op), bech32DataPart(acct))
-	}
 	var b strings.Builder
-	b.WriteString(`<div class="id-stack">`)
-	if op != "" {
-		b.WriteString(`<div class="id-stack__row id-stack__row--operator">`)
-		b.WriteString(`<div class="id-stack__label">operator</div><div class="id-stack__addr">`)
-		b.WriteString(identityBech32Cell(op, sharedStem))
-		b.WriteString(`</div></div>`)
+	b.WriteString(`<div class="table-scroll table-scroll--fit"><table class="data-table id-addr-table"><tbody>`)
+	for _, row := range rows {
+		fmt.Fprintf(&b, `<tr><td class="id-addr-table__role">%s</td><td class="id-addr-table__addr"><code>%s</code></td></tr>`,
+			html.EscapeString(row.role), html.EscapeString(row.addr))
 	}
-	if acct != "" || evm != "" {
-		b.WriteString(`<div class="id-stack__row id-stack__row--account">`)
-		b.WriteString(`<div class="id-stack__label">account</div><div class="id-stack__addr">`)
-		if acct != "" {
-			b.WriteString(identityDualAddrHTML(acct, evm, sharedStem))
-		} else {
-			fmt.Fprintf(&b, `<code class="id-hex id-hex--evm">%s</code>`, html.EscapeString(evm))
-		}
-		b.WriteString(`</div></div>`)
-	}
-	b.WriteString(`</div>`)
+	b.WriteString(`</tbody></table></div>`)
 	return b.String()
 }
 

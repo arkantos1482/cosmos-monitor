@@ -1382,48 +1382,40 @@ body::after {
 
 /* ── Validator identity board (4 address families side by side) ── */
 
-.id-stack {
+.id-addr-table {
   margin: 0.35rem 0 0.65rem;
-  padding: 0.75rem 0.85rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: linear-gradient(165deg, var(--surface-2) 0%, var(--surface) 100%);
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
+  table-layout: fixed;
+  font-family: var(--mono);
+  font-size: 0.76rem;
 }
 
-.id-stack__row {
-  display: grid;
-  grid-template-columns: 5.5rem minmax(0, 1fr);
-  gap: 0.55rem 0.75rem;
-  align-items: start;
-}
-
-.id-stack__label {
+.id-addr-table__role {
+  width: 5.5rem;
+  font-family: var(--font);
   font-size: 0.72rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--muted);
-  padding-top: 0.15rem;
+  vertical-align: top;
+  padding-top: 0.42rem;
 }
 
-.id-stack__row--operator .id-stack__label {
-  color: var(--accent-validators);
-}
-
-.id-stack__row--account .id-stack__label {
-  color: var(--accent-evm);
-}
-
-.id-stack__addr {
-  min-width: 0;
-  font-family: var(--mono);
-  font-size: 0.76rem;
-  line-height: 1.45;
+.id-addr-table__addr {
+  color: var(--text);
+  vertical-align: top;
   overflow-wrap: anywhere;
   word-break: break-all;
+  line-height: 1.45;
+}
+
+.id-addr-table__addr code {
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 400;
+  color: inherit;
+  background: none;
+  padding: 0;
 }
 
 .metric-split {
