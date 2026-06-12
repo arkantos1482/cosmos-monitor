@@ -27,13 +27,14 @@ func TestValidatorsP2PNetworkTable(t *testing.T) {
 		`<th>p2p dial</th>`,
 		`<code>cosmosvaloper1abc</code>`,
 		`<code>7c90c689@host:26656</code>`,
-		`<strong>this node</strong>`,
+		`class="data-table__row--local" title="this node"`,
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("validators P2P section missing %q\n%s", want, chunk)
 		}
 	}
 	for _, bad := range []string{
+		`<th>local</th>`,
 		`class="kpi-tile kpi-tile--hash"`,
 		`class="validator-label"`,
 		`class="kpi-tile__primary"`,

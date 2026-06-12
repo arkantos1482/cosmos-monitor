@@ -134,10 +134,9 @@ func writeValidatorSlashingTable(w Writer, d model.Report) {
 			jailed,
 			tomb,
 			health,
-			valLocalMark(v),
 		})
 	}
-	w.Table([]string{"moniker", "missed", "jailed", "tombstoned", "health", "local"}, secRows)
+	writeValidatorSetTable(w, []string{"moniker", "missed", "jailed", "tombstoned", "health"}, secRows, d.Validators)
 }
 
 func validatorSlashingHealth(v model.Validator, missed *string) string {

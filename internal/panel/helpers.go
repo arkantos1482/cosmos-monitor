@@ -4,11 +4,23 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-func valLocalMark(v model.Validator) string {
-	if v.IsLocal {
-		return "**this node**"
+const validatorLocalRowClass = "data-table__row--local"
+
+func validatorRowClasses(validators []model.Validator) []string {
+	if len(validators) == 0 {
+		return nil
 	}
-	return ""
+	classes := make([]string, len(validators))
+	for i, v := range validators {
+		if v.IsLocal {
+			classes[i] = validatorLocalRowClass
+		}
+	}
+	return classes
+}
+
+func writeValidatorSetTable(w Writer, headers []string, rows [][]string, validators []model.Validator) {
+	w.TableWithRowClasses(headers, rows, validatorRowClasses(validators))
 }
 
 func pmtStatus(d model.Report) string {

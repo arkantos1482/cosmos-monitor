@@ -20,6 +20,7 @@ type Writer interface {
 	StrongLine(text string)
 	BlankLine()
 	Table(headers []string, rows [][]string)
+	TableWithRowClasses(headers []string, rows [][]string, rowClasses []string)
 	ValidatorHeader(title string)
 	ListItem(text string)
 	Pre(content string)
@@ -394,6 +395,10 @@ func (d *docWriter) Details(id, summary string, fn func(Writer)) {
 var numericCellRE = regexp.MustCompile(`^[\d,.\s%+\-]+$`)
 
 func (d *docWriter) Table(headers []string, rows [][]string) {
+	d.TableWithRowClasses(headers, rows, nil)
+}
+
+func (d *docWriter) TableWithRowClasses(headers []string, rows [][]string, rowClasses []string) {
 	d.closeList()
 	d.closeStatGrid()
 	ledger := len(headers) > 0 && headers[0] == "Step"
@@ -423,8 +428,13 @@ func (d *docWriter) Table(headers []string, rows [][]string) {
 		fmt.Fprintf(d.w, "<th%s>%s</th>", thCls, html.EscapeString(h))
 	}
 	fmt.Fprint(d.w, "</tr></thead><tbody>")
-	for _, row := range rows {
-		fmt.Fprint(d.w, "<tr>")
+	for ri, row := range rows {
+		trAttr := ""
+		if ri < len(rowClasses) && rowClasses[ri] != "" {
+			cls := html.EscapeString(rowClasses[ri])
+			trAttr = fmt.Sprintf(` class="%s" title="this node"`, cls)
+		}
+		fmt.Fprintf(d.w, "<tr%s>", trAttr)
 		for i, cell := range row {
 			if ledger && i == 0 {
 				step := html.EscapeString(strings.TrimSpace(cell))

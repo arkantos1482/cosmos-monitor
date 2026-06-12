@@ -1370,6 +1370,15 @@ body::after {
   background: rgba(94, 179, 255, 0.07);
 }
 
+.data-table tbody tr.data-table__row--local td {
+  background: rgba(240, 171, 252, 0.1);
+  box-shadow: inset 3px 0 0 var(--accent-local);
+}
+
+.data-table tbody tr.data-table__row--local:hover td {
+  background: rgba(240, 171, 252, 0.16);
+}
+
 /* Validator P2P identity table — monospace ids, no nested KPI boxes */
 .data-table--identity {
   table-layout: fixed;
@@ -1388,8 +1397,7 @@ body::after {
   vertical-align: top;
 }
 
-.data-table--identity tbody td:first-child,
-.data-table--identity tbody td:last-child {
+.data-table--identity tbody td:first-child {
   font-family: var(--font);
   font-size: var(--text-sm);
   word-break: normal;

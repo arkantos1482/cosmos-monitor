@@ -58,10 +58,9 @@ func writeValidatorP2PNetwork(w Writer, d model.Report) {
 			identityCell(v.P2PDial),
 			identityCell(v.NodeID),
 			identityCell(cons),
-			valLocalMark(v),
 		})
 	}
-	w.Table([]string{"moniker", "operator", "p2p dial", "node ID", "consensus", "local"}, p2pRows)
+	writeValidatorSetTable(w, []string{"moniker", "operator", "p2p dial", "node ID", "consensus"}, p2pRows, d.Validators)
 }
 
 func identityCell(s string) string {

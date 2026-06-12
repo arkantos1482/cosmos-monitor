@@ -88,10 +88,9 @@ func writeValidatorStakeTable(w Writer, d model.Report) {
 			fmt.Sprintf("%.1f%%", v.VPFloat),
 			fmt.Sprintf("%.1f%%", v.CommissionFloat),
 			v.Status,
-			valLocalMark(v),
 		})
 	}
-	w.Table([]string{"moniker", "vp%", "commission", "status", "local"}, stakeRows)
+	writeValidatorSetTable(w, []string{"moniker", "vp%", "commission", "status"}, stakeRows, d.Validators)
 }
 
 func stakingSourcesHint() string {
