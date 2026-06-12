@@ -119,21 +119,23 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 			p2p = "—"
 		}
 		d.Validators = append(d.Validators, model.Validator{
-			Moniker:         v.Moniker,
-			Operator:        v.OperatorAddr,
-			NodeID:          v.NodeID,
-			ConsensusAddr:   strings.ToUpper(v.ConsensusAddr),
-			ConsensusBech32: v.ConsensusBech32,
-			P2PDial:         p2p,
-			P2PConnected:    v.P2PConnected,
-			VPFloat:         v.VotingPowerPercent,
-			CommissionFloat: v.Commission * 100,
-			Missed:          v.MissedBlocks,
-			MissedHigh:      maxMissed > 0 && v.MissedBlocks > maxMissed,
-			Status:          strings.ToLower(v.Status),
-			Jailed:          v.Jailed,
-			Tombstoned:      v.Tombstoned,
-			IsLocal:         isLocal,
+			Moniker:          v.Moniker,
+			Operator:         v.OperatorAddr,
+			NodeID:           v.NodeID,
+			ConsensusAddr:    strings.ToUpper(v.ConsensusAddr),
+			ConsensusBech32:  v.ConsensusBech32,
+			P2PDial:          p2p,
+			P2PConnected:     v.P2PConnected,
+			VPFloat:          v.VotingPowerPercent,
+			CommissionFloat:  v.Commission * 100,
+			Missed:           v.MissedBlocks,
+			MissedHigh:       maxMissed > 0 && v.MissedBlocks > maxMissed,
+			Status:           strings.ToLower(v.Status),
+			Jailed:           v.Jailed,
+			Tombstoned:       v.Tombstoned,
+			IsLocal:          isLocal,
+			Outstanding:      v.OutstandingRewards,
+			CommissionEarned: v.CommissionEarned,
 		})
 	}
 
@@ -168,6 +170,7 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 
 	d.CommunityTaxPct = p.CommunityTax * 100
 	d.CommunityTaxZero = p.CommunityTax == 0
+	d.WithdrawAddrEnabled = p.WithdrawAddrEnabled
 	if p.CommunityTax == 0 {
 		d.CommunityTax = "0%"
 	} else {

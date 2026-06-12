@@ -66,9 +66,10 @@ type Report struct {
 	Inflation        float64
 	AnnualProvisions string
 	CommunityPool    string
-	CommunityTax     string
-	CommunityTaxZero bool
-	CommunityTaxPct  float64
+	CommunityTax         string
+	CommunityTaxZero     bool
+	CommunityTaxPct      float64
+	WithdrawAddrEnabled  bool
 	BlocksPerYear    string
 	TotalOutstanding    string
 	UnclaimedDelegator  string // sum of validator outstanding_rewards (delegator share)
@@ -172,9 +173,11 @@ type Validator struct {
 	Missed          int64
 	MissedHigh      bool
 	Status          string
-	Jailed          bool
-	Tombstoned      bool
-	IsLocal         bool
+	Jailed           bool
+	Tombstoned       bool
+	IsLocal          bool
+	Outstanding      string // unclaimed delegator rewards (outstanding_rewards)
+	CommissionEarned string // unclaimed validator commission
 }
 
 // DelegationRow is a delegator to the local validator (from x/staking delegations).

@@ -16,8 +16,8 @@ func TestEconomicsInactivePMTDisabled(t *testing.T) {
 	}
 	rewardsOut := BuildView(ViewRewards, d)
 	distOut := BuildView(ViewDistribution, d)
-	if !strings.Contains(distOut, `eco-row--inactive`) {
-		t.Fatal("expected inactive ledger rows when PMT disabled and inflation off")
+	if !strings.Contains(distOut, `eco-domain__row--inactive`) {
+		t.Fatal("expected inactive distribution rows when no outstanding rewards")
 	}
 	if !strings.Contains(rewardsOut, `eco-domain--pmtrewards`) {
 		t.Fatal("expected PMT Rewards source card")
@@ -53,17 +53,14 @@ func TestEconomicsPMTPoolEmptyWarn(t *testing.T) {
 	}
 	rewardsOut := BuildView(ViewRewards, d)
 	distOut := BuildView(ViewDistribution, d)
-	if !strings.Contains(distOut, `eco-row--warn`) {
-		t.Fatal("expected warn styling for empty PMT pool")
+	if !strings.Contains(distOut, `eco-domain--distribution`) {
+		t.Fatal("expected distribution domain card")
 	}
 	if !strings.Contains(rewardsOut, `eco-domain--pmtrewards eco-domain--ineffective`) {
 		t.Fatal("expected ineffective PMT rewards card when pool empty")
 	}
 	if !strings.Contains(rewardsOut, `eco-domain__status badge badge--warn">ineffective`) {
 		t.Fatal("expected ineffective status badge on PMT rewards card")
-	}
-	if !strings.Contains(distOut, `pool empty`) {
-		t.Fatal("expected pool empty check in ledger")
 	}
 }
 

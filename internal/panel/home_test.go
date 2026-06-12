@@ -94,7 +94,7 @@ func TestBuildOverviewStack(t *testing.T) {
 	if !strings.Contains(out[rewardsCard:distCard], `eco-summary--compact`) {
 		t.Fatal("rewards overview card should show compact PMT/inflation summary")
 	}
-	if !strings.Contains(out[distCard:], "Community pool:") {
+	if !strings.Contains(out[distCard:], `dist-summary__kpi-label">community pool`) {
 		t.Fatal("distribution overview card should include community pool summary")
 	}
 }
@@ -124,8 +124,10 @@ func TestOverviewReusesSectionSummaries(t *testing.T) {
 			`slashing-summary__kpi-label">jailed`,
 		}},
 		{ViewDistribution, []string{
-			`Community pool: 0.5 PMT`,
-			`Community tax: 2%`,
+			`dist-summary__kpi-label">community pool`,
+			`0.5 PMT`,
+			`dist-summary__kpi-label">community tax`,
+			`2%`,
 		}},
 	} {
 		section := BuildView(tc.section, d)

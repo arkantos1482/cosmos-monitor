@@ -76,11 +76,11 @@ func TestBuildRewardsUsesTablesNotMermaid(t *testing.T) {
 		t.Fatal("expected distribution and governance sections")
 	}
 	dist := out[distIdx:govIdx]
-	if !strings.Contains(dist, `data-table--ledger`) {
-		t.Fatal("ledger table should live in distribution section")
+	if !strings.Contains(dist, `eco-domain--distribution`) {
+		t.Fatal("distribution should include x/distribution domain card")
 	}
-	if !strings.Contains(dist, `class="dash-subheading">Routing</h3>`) {
-		t.Fatal("distribution should include routing subsection")
+	if strings.Contains(dist, `data-table--ledger`) || strings.Contains(dist, "Block reward ledger") {
+		t.Fatal("distribution should not include block reward ledger")
 	}
 }
 
@@ -158,8 +158,7 @@ func TestContentInventory(t *testing.T) {
 		`class="data-table"`,
 		`val-summary--p2p`,
 		`class="dash-layer__title">Validator set</h3>`,
-		"Block reward ledger",
-		`class="dash-subheading">Routing</h3>`,
+		`eco-domain--distribution`,
 		"eco-domain--pmtrewards",
 		`dash-section--rewards`,
 		`dash-section--distribution`,

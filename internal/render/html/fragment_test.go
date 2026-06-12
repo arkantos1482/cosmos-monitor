@@ -27,14 +27,11 @@ func TestRenderFragmentEconomicsTables(t *testing.T) {
 		ModuleAccounts: []model.ModuleAccountRow{{Name: "fee_collector", Balance: "1 PMT"}},
 	}
 	out := RenderFragment(d)
-	if !strings.Contains(out, "Block reward ledger") {
-		t.Fatal("rendered fragment should include distribution ledger")
-	}
 	for _, want := range []string{
 		`class="dash-heading">3. FEE MARKET</h2>`,
 		`class="dash-heading">4. REWARDS</h2>`,
 		`class="dash-heading">5. DISTRIBUTION</h2>`,
-		`class="dash-subheading">Routing</h3>`,
+		"eco-domain--distribution",
 		"eco-domain--pmtrewards",
 		"eco-domain--inflation",
 	} {

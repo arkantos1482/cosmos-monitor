@@ -145,6 +145,7 @@ type ChainParams struct {
 	BlocksPerYear            int64
 	GoalBonded               float64
 	CommunityTax             float64
+	WithdrawAddrEnabled      bool
 	VotingPeriod             time.Duration
 	Quorum                   float64
 	Threshold                float64
@@ -448,7 +449,8 @@ type erc20ParamsResp struct {
 
 type distributionParamsResp struct {
 	Params struct {
-		CommunityTax string `json:"community_tax"`
+		CommunityTax        string `json:"community_tax"`
+		WithdrawAddrEnabled bool   `json:"withdraw_addr_enabled"`
 	} `json:"params"`
 }
 
@@ -1162,6 +1164,7 @@ func FetchParams(rest string) ChainParams {
 	var dp distributionParamsResp
 	if err := doJSON(rest+"/cosmos/distribution/v1beta1/params", &dp); err == nil {
 		p.CommunityTax = parseFloat(dp.Params.CommunityTax)
+		p.WithdrawAddrEnabled = dp.Params.WithdrawAddrEnabled
 	}
 
 	var pmtr pmtRewardsParamsResp

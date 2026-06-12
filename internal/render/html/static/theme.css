@@ -502,6 +502,41 @@ body::after {
   border-radius: var(--radius);
 }
 
+.dist-summary__kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: 0.55rem;
+}
+
+.dist-summary__kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.dist-summary__kpi-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.dist-summary__kpi-val {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dist-summary__kpi-val--ok {
+  color: var(--ok);
+}
+
+.dist-summary__kpi-val--warn {
+  color: var(--warn);
+}
+
 .val-summary__kpis {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
