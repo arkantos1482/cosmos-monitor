@@ -39,7 +39,7 @@ func TestStatusStripLiveValues(t *testing.T) {
 	for _, want := range []string{
 		">100<",
 		">synced<",
-		"3 cosmos · 1 evm",
+		">Peers</span><span class=\"dash-status__value\">3</span>",
 		">running<",
 		"7 apmt",
 		">enabled<",
@@ -58,7 +58,7 @@ func TestStatusStripPartialPeers(t *testing.T) {
 		Synced:         true,
 		TimeUTC:        "12:00:00 UTC",
 	})
-	if !strings.Contains(out, "5 cosmos · — evm") {
-		t.Fatalf("expected partial peers, got: %s", out)
+	if !strings.Contains(out, ">Peers</span><span class=\"dash-status__value\">5</span>") {
+		t.Fatalf("expected cosmos peer count only, got: %s", out)
 	}
 }

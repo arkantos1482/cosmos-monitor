@@ -58,16 +58,11 @@ func writeStatusPills(w Writer, d model.Report) {
 	}
 
 	peers := "—"
-	if d.HasChainStatus || d.HasEVMPeers {
-		cosmos := "—"
-		evm := "—"
-		if d.HasChainStatus {
-			cosmos = fmt.Sprintf("%d", d.PeerCount)
-		}
-		if d.HasEVMPeers {
-			evm = fmt.Sprintf("%d", d.EVMPeerCount)
-		}
-		peers = fmt.Sprintf("%s cosmos · %s evm", cosmos, evm)
+	switch {
+	case d.HasChainStatus:
+		peers = fmt.Sprintf("%d", d.PeerCount)
+	case d.HasEVMPeers:
+		peers = fmt.Sprintf("%d", d.EVMPeerCount)
 	}
 	writeStatusPill(w, "Peers", peers, "")
 
