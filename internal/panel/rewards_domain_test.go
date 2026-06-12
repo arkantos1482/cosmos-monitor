@@ -29,7 +29,7 @@ func TestRewardsSectionConsolidatesChainAndLocal(t *testing.T) {
 	}
 	out := BuildView(ViewRewards, d)
 	for _, want := range []string{
-		`class="dash-heading">5. REWARDS</h2>`,
+		`class="dash-heading">4. REWARDS</h2>`,
 		`class="dash-subheading">This validator</h3>`,
 		`class="eco-domain__title">PMT Rewards`,
 		`class="eco-domain__title">Inflation`,

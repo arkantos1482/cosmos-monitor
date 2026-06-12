@@ -8,7 +8,7 @@ import (
 )
 
 func writeDistribution(w Writer, d model.Report) {
-	w.Section("3. DISTRIBUTION")
+	w.Section("5. DISTRIBUTION")
 	writeDistributionSummary(w, d, SummaryEmbedded)
 	w.Em("Reward routing through `fee_collector` and `x/distribution`, community tax and pool, and unclaimed balances chain-wide and for this validator.")
 

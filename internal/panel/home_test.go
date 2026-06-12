@@ -76,23 +76,23 @@ func TestBuildOverviewStack(t *testing.T) {
 		t.Fatal("overview should show Runtime → Validator → Economics → Governance groups")
 	}
 	
-	distCard := strings.Index(out, `dash-overview__card--distribution`)
 	feeCard := strings.Index(out, `dash-overview__card--feemarket`)
 	rewardsCard := strings.Index(out, `dash-overview__card--rewards`)
-	if distCard < 0 || feeCard < 0 || rewardsCard < 0 {
-		t.Fatal("overview should include distribution, fee market, and rewards cards")
+	distCard := strings.Index(out, `dash-overview__card--distribution`)
+	if feeCard < 0 || rewardsCard < 0 || distCard < 0 {
+		t.Fatal("overview should include fee market, rewards, and distribution cards")
 	}
-	if distCard > feeCard || feeCard > rewardsCard {
-		t.Fatal("economics overview cards should be ordered distribution → fee market → rewards")
-	}
-	if !strings.Contains(out[distCard:feeCard], "Community pool:") {
-		t.Fatal("distribution overview card should include community pool summary")
+	if feeCard > rewardsCard || rewardsCard > distCard {
+		t.Fatal("economics overview cards should be ordered fee market → rewards → distribution")
 	}
 	if !strings.Contains(out[feeCard:rewardsCard], `fee-summary`) {
 		t.Fatal("fee market overview card should include fee summary")
 	}
-	if !strings.Contains(out[rewardsCard:], `eco-summary--compact`) {
+	if !strings.Contains(out[rewardsCard:distCard], `eco-summary--compact`) {
 		t.Fatal("rewards overview card should show compact PMT/inflation summary")
+	}
+	if !strings.Contains(out[distCard:], "Community pool:") {
+		t.Fatal("distribution overview card should include community pool summary")
 	}
 }
 

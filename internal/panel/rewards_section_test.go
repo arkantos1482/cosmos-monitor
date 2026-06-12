@@ -9,10 +9,10 @@ import (
 
 func rewardsChunk(t *testing.T, out string) string {
 	t.Helper()
-	idx := strings.Index(out, "5. REWARDS")
-	end := strings.Index(out, `class="dash-heading">6. GOVERNANCE</h2>`)
+	idx := strings.Index(out, "4. REWARDS")
+	end := strings.Index(out, "5. DISTRIBUTION")
 	if idx < 0 || end < 0 {
-		t.Fatal("expected rewards and governance sections")
+		t.Fatal("expected rewards and distribution sections")
 	}
 	return out[idx:end]
 }
