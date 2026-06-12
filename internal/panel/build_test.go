@@ -36,15 +36,15 @@ func TestBuildRewardsUsesTablesNotMermaid(t *testing.T) {
 		t.Fatal("rewards should not duplicate at-a-glance subsection")
 	}
 	if !strings.Contains(rewards, `eco-domains`) {
-		t.Fatal("rewards summary should use domain cards")
+		t.Fatal("rewards should use domain cards")
 	}
-	if !strings.Contains(rewards, `class="eco-summary"`) {
-		t.Fatal("rewards should include embedded summary")
+	if !strings.Contains(rewards, `eco-summary--compact`) {
+		t.Fatal("rewards should include compact embedded summary")
 	}
 
 	for _, want := range []string{
-		`class="dash-subheading">PMT Rewards</h3>`,
-		`class="dash-subheading">Inflation</h3>`,
+		`class="eco-domain__title">PMT Rewards`,
+		`class="eco-domain__title">Inflation`,
 		"eco-domain--pmtrewards",
 		"eco-domain--inflation",
 	} {

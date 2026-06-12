@@ -31,8 +31,8 @@ func TestRewardsSectionConsolidatesChainAndLocal(t *testing.T) {
 	for _, want := range []string{
 		`class="dash-heading">5. REWARDS</h2>`,
 		`class="dash-subheading">This validator</h3>`,
-		`class="dash-subheading">PMT Rewards</h3>`,
-		`class="dash-subheading">Inflation</h3>`,
+		`class="eco-domain__title">PMT Rewards`,
+		`class="eco-domain__title">Inflation`,
 		"eco-domain--pmtrewards",
 		"eco-domain--inflation",
 		"per-block commission",
@@ -43,10 +43,16 @@ func TestRewardsSectionConsolidatesChainAndLocal(t *testing.T) {
 		}
 	}
 	localIdx := strings.Index(out, `class="dash-subheading">This validator</h3>`)
-	pmtIdx := strings.Index(out, `class="dash-subheading">PMT Rewards</h3>`)
-	inflIdx := strings.Index(out, `class="dash-subheading">Inflation</h3>`)
+	pmtIdx := strings.Index(out, `class="eco-domain__title">PMT Rewards`)
+	inflIdx := strings.Index(out, `class="eco-domain__title">Inflation`)
 	if localIdx < 0 || pmtIdx < 0 || inflIdx < 0 || localIdx > pmtIdx || pmtIdx > inflIdx {
-		t.Fatal("rewards subsections must be ordered This validator → PMT Rewards → Inflation")
+		t.Fatal("rewards section must be ordered This validator → PMT Rewards → Inflation")
+	}
+	if strings.Count(out, `class="eco-domain__title">PMT Rewards`) != 1 {
+		t.Fatal("rewards section must contain exactly one PMT Rewards block")
+	}
+	if strings.Count(out, `class="eco-domain__title">Inflation`) != 1 {
+		t.Fatal("rewards section must contain exactly one Inflation block")
 	}
 	for _, gone := range []string{
 		`class="dash-layer__title">Network-wide</h3>`,

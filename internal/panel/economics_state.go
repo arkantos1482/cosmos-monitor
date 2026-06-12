@@ -165,13 +165,6 @@ func economicsDistributionModuleAddr(d model.Report) string {
 	return moduleAccountDisplayAddress(d, "distribution")
 }
 
-func economicsDomainCardsHTML(d model.Report, compact bool) string {
-	return ecoDomainsWrap(
-		pmtRewardsCardHTML(d, compact),
-		inflationCardHTML(d, compact),
-	)
-}
-
 func pmtRewardsCardHTML(d model.Report, compact bool) string {
 	return pmtRewardsCardHTMLTitled(d, compact, true)
 }

@@ -36,7 +36,7 @@ func TestWriteRewardsSectionSourcesOnly(t *testing.T) {
 	for _, want := range []string{
 		"eco-domain--pmtrewards",
 		"eco-domain--inflation",
-		`class="eco-summary"`,
+		`eco-summary--compact`,
 		"per-block commission",
 		"per-block delegators",
 	} {

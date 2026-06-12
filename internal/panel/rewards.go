@@ -17,13 +17,10 @@ func writeRewards(w Writer, d model.Report) {
 		writeRewardsLocalValidator(w, d)
 	}
 
-	w.Subsection("PMT Rewards")
-	w.Hint("x/pmtrewards")
-	w.WriteHTML(pmtRewardsCardHTMLTitled(d, false, false))
-
-	w.Subsection("Inflation")
-	w.Hint("x/mint")
-	w.WriteHTML(inflationCardHTMLTitled(d, false, false))
+	w.WriteHTML(ecoDomainsWrap(
+		pmtRewardsCardHTML(d, false),
+		inflationCardHTML(d, false),
+	))
 
 	w.Hint(rewardsSourcesHint())
 	w.BlankLine()
@@ -31,13 +28,7 @@ func writeRewards(w Writer, d model.Report) {
 
 func writeRewardsSummary(w Writer, d model.Report, mode SummaryMode) {
 	summaryWrapStart(w, mode, "rewards")
-	if mode == SummaryOverviewClickable {
-		writeRewardsCompactSummary(w, d)
-	} else {
-		w.WriteHTML(`<div class="eco-summary">`)
-		w.WriteHTML(economicsDomainCardsHTML(d, true))
-		w.WriteHTML(`</div>`)
-	}
+	writeRewardsCompactSummary(w, d)
 	summaryWrapEnd(w, mode)
 }
 

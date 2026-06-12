@@ -197,7 +197,7 @@ func TestSectionSummariesEmbedded(t *testing.T) {
 	}{
 		{ViewStaking, `staking-summary`, `class="dash-subheading">Summary</h3>`},
 		{ViewSlashing, `slashing-summary`, `class="dash-subheading">Summary</h3>`},
-		{ViewRewards, `eco-domains`, "At a glance"},
+		{ViewRewards, `eco-summary--compact`, "At a glance"},
 		{ViewDistribution, `dist-summary`, "At a glance"},
 		{ViewFeemarket, `class="fee-summary"`, ""},
 		{ViewGovernance, `class="gov-summary"`, ""},
