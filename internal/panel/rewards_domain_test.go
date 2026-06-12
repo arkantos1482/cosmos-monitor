@@ -30,9 +30,9 @@ func TestRewardsSectionConsolidatesChainAndLocal(t *testing.T) {
 	out := BuildView(ViewRewards, d)
 	for _, want := range []string{
 		`class="dash-heading">5. REWARDS</h2>`,
-		`class="dash-layer__title">This validator</h3>`,
-		`class="dash-layer__title">Network-wide</h3>`,
-		"eco-domain--blockrewards",
+		`class="dash-subheading">This validator</h3>`,
+		`class="dash-subheading">PMT Rewards</h3>`,
+		`class="dash-subheading">Inflation</h3>`,
 		"eco-domain--pmtrewards",
 		"eco-domain--inflation",
 		"per-block commission",
@@ -42,10 +42,19 @@ func TestRewardsSectionConsolidatesChainAndLocal(t *testing.T) {
 			t.Fatalf("rewards view missing %q", want)
 		}
 	}
-	localIdx := strings.Index(out, `class="dash-layer__title">This validator</h3>`)
-	networkIdx := strings.Index(out, `class="dash-layer__title">Network-wide</h3>`)
-	if localIdx < 0 || networkIdx < 0 || localIdx > networkIdx {
-		t.Fatal("This validator layer must precede Network-wide")
+	localIdx := strings.Index(out, `class="dash-subheading">This validator</h3>`)
+	pmtIdx := strings.Index(out, `class="dash-subheading">PMT Rewards</h3>`)
+	inflIdx := strings.Index(out, `class="dash-subheading">Inflation</h3>`)
+	if localIdx < 0 || pmtIdx < 0 || inflIdx < 0 || localIdx > pmtIdx || pmtIdx > inflIdx {
+		t.Fatal("rewards subsections must be ordered This validator → PMT Rewards → Inflation")
+	}
+	for _, gone := range []string{
+		`class="dash-layer__title">Network-wide</h3>`,
+		"eco-domain--blockrewards",
+	} {
+		if strings.Contains(out, gone) {
+			t.Fatalf("rewards view should not contain %q", gone)
+		}
 	}
 }
 

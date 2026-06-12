@@ -13,12 +13,18 @@ func writeRewards(w Writer, d model.Report) {
 	w.Em("Block reward sources: PMT emissions and mint inflation, with per-block estimates for this validator.")
 
 	if d.Local.IsValidator {
-		w.Layer("This validator")
+		w.Subsection("This validator")
 		writeRewardsLocalValidator(w, d)
 	}
 
-	w.Layer("Network-wide")
-	w.WriteHTML(economicsDomainCardsHTML(d, false))
+	w.Subsection("PMT Rewards")
+	w.Hint("x/pmtrewards")
+	w.WriteHTML(pmtRewardsCardHTMLTitled(d, false, false))
+
+	w.Subsection("Inflation")
+	w.Hint("x/mint")
+	w.WriteHTML(inflationCardHTMLTitled(d, false, false))
+
 	w.Hint(rewardsSourcesHint())
 	w.BlankLine()
 }
@@ -64,7 +70,6 @@ func writeRewardsChainStatusRows(w Writer, d model.Report) {
 
 func writeRewardsLocalValidator(w Writer, d model.Report) {
 	lv := d.Local
-	w.Subsection("Per-block estimates")
 	w.Hint("`per-block` → derived (network reward flow × VP% × commission).")
 	if op, del, _, ok := localValidatorPerBlockRewards(d); ok {
 		w.Row("per-block commission", op+fmt.Sprintf("  (%.2f%% VP · %.2f%% commission)", lv.VPPercent, lv.Commission))

@@ -43,7 +43,8 @@ func TestBuildRewardsUsesTablesNotMermaid(t *testing.T) {
 	}
 
 	for _, want := range []string{
-		"eco-domain--blockrewards",
+		`class="dash-subheading">PMT Rewards</h3>`,
+		`class="dash-subheading">Inflation</h3>`,
 		"eco-domain--pmtrewards",
 		"eco-domain--inflation",
 	} {

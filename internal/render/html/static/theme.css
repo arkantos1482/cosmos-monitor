@@ -1590,18 +1590,6 @@ body::after {
   box-shadow: var(--shadow);
 }
 
-.eco-domain--blockrewards {
-  border-left-color: var(--accent-economics);
-}
-
-.eco-domain__section {
-  margin: 0;
-}
-
-.eco-domain__section + .eco-domain__divider {
-  margin-top: 0.85rem;
-}
-
 .eco-domain--pmtrewards {
   border-left-color: var(--accent-economics);
 }
