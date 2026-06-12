@@ -29,6 +29,7 @@ func writeOverview(w Writer, d model.Report) {
 		fn   func(Writer, model.Report, SummaryMode)
 	}{
 		{"staking", writeStakingSummary},
+		{"slashing", writeSlashingSummary},
 		{"rewards", writeRewardsSummary},
 		{"feemarket", writeFeemarketSummary},
 	})

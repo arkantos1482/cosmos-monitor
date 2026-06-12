@@ -40,8 +40,8 @@ func TestWriteRewardsOverviewLedger(t *testing.T) {
 		},
 	}
 	out := Build(d)
-	idx := strings.Index(out, "2. REWARDS")
-	end := strings.Index(out, `class="dash-heading">3. FEE MARKET</h2>`)
+	idx := strings.Index(out, "3. REWARDS")
+	end := strings.Index(out, `class="dash-heading">4. FEE MARKET</h2>`)
 	if idx < 0 || end < 0 {
 		t.Fatal("expected rewards and fee market sections")
 	}
@@ -152,8 +152,8 @@ func TestRewardsSourcesProvenance(t *testing.T) {
 		},
 	}
 	out := BuildWithOptions(d, Options{ShowSources: true})
-	idx := strings.Index(out, "2. REWARDS")
-	end := strings.Index(out, `class="dash-heading">3. FEE MARKET</h2>`)
+	idx := strings.Index(out, "3. REWARDS")
+	end := strings.Index(out, `class="dash-heading">4. FEE MARKET</h2>`)
 	if idx < 0 || end < 0 {
 		t.Fatal("expected rewards section")
 	}

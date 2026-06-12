@@ -32,19 +32,6 @@ func writeStakingChainSummaryBody(w Writer, d model.Report) {
 			`<p class="val-summary__proposer">Next proposer: <strong>%s</strong></p>`,
 			html.EscapeString(d.NextProposer)))
 	}
-	if d.JailedCount > 0 || d.BelowThreshold > 0 {
-		var alerts []string
-		if d.JailedCount > 0 {
-			alerts = append(alerts, fmt.Sprintf("%d jailed", d.JailedCount))
-		}
-		if d.BelowThreshold > 0 {
-			alerts = append(alerts, fmt.Sprintf("%d below min signed", d.BelowThreshold))
-		}
-		w.WriteHTML(fmt.Sprintf(`<p class="val-summary__alert">⚠ %s</p>`, html.EscapeString(alerts[0])))
-		if len(alerts) > 1 {
-			w.WriteHTML(fmt.Sprintf(`<p class="val-summary__alert">⚠ %s</p>`, html.EscapeString(alerts[1])))
-		}
-	}
 	w.WriteHTML(`</div>`)
 }
 

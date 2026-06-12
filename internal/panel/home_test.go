@@ -33,6 +33,7 @@ func TestBuildOverviewStack(t *testing.T) {
 		`class="dash-overview__card-title">Infrastructure</p>`,
 		`class="dash-overview__card-title">Staking</p>`,
 		`dash-overview__card--staking`,
+		`dash-overview__card--slashing`,
 		`dash-overview__card--rewards`,
 		`dash-overview__card--feemarket`,
 		`dash-overview__card--governance`,
@@ -174,6 +175,7 @@ func TestSectionSummariesEmbedded(t *testing.T) {
 		gone string
 	}{
 		{ViewStaking, `staking-summary`, `class="dash-subheading">Summary</h3>`},
+		{ViewSlashing, `slashing-summary`, `class="dash-subheading">Summary</h3>`},
 		{ViewRewards, `eco-domains`, "At a glance"},
 		{ViewFeemarket, `class="fee-summary"`, ""},
 		{ViewGovernance, `class="gov-summary"`, ""},

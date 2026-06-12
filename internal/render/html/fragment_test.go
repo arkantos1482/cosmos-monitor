@@ -31,7 +31,7 @@ func TestRenderFragmentEconomicsTables(t *testing.T) {
 		t.Fatal("rendered fragment should include rewards ledger")
 	}
 	for _, want := range []string{
-		`class="dash-heading">2. REWARDS</h2>`,
+		`class="dash-heading">3. REWARDS</h2>`,
 		`class="dash-subheading">Distribution</h3>`,
 		"eco-domain--pmtrewards",
 		"eco-domain--inflation",

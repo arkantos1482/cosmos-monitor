@@ -70,7 +70,7 @@ func writeNode(w Writer, d model.Report) {
 
 	w.Section("2. VALIDATOR")
 	writeNodeSummary(w, d, SummaryEmbedded)
-	w.Em("This validator on this node — identities, CometBFT live state, and the full validator set (P2P). Stake → § Staking. Rewards → § Rewards.")
+	w.Em("This validator on this node — identities, CometBFT live state, and the full validator set (P2P). Stake → § Staking. Slashing → § Slashing. Rewards → § Rewards.")
 
 	writeIdentityBoard(w, d, lv)
 

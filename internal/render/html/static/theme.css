@@ -14,6 +14,7 @@
   --accent-infra: #5eb3ff;
   --accent-node: #5ee4a8;
   --accent-staking: #a78bfa;
+  --accent-slashing: #f87171;
   --accent-validators: #c4b5fd;
   --accent-local: #f0abfc;
   --accent-rewards: #f472b6;
@@ -219,6 +220,7 @@ body::after {
 .dash-nav__link--infra { --nav-accent: var(--accent-infra); }
 .dash-nav__link--node { --nav-accent: var(--accent-node); }
 .dash-nav__link--staking { --nav-accent: var(--accent-staking); }
+.dash-nav__link--slashing { --nav-accent: var(--accent-slashing); }
 .dash-nav__link--validators { --nav-accent: var(--accent-validators); }
 .dash-nav__link--local { --nav-accent: var(--accent-local); }
 .dash-nav__link--rewards { --nav-accent: var(--accent-rewards); }
@@ -397,6 +399,7 @@ body::after {
 }
 
 .dash-overview__card--staking { --card-accent: var(--accent-staking); }
+.dash-overview__card--slashing { --card-accent: var(--accent-slashing); }
 .dash-overview__card--validators { --card-accent: var(--accent-validators); }
 .dash-overview__card--rewards { --card-accent: var(--accent-rewards); }
 .dash-overview__card--feemarket { --card-accent: var(--accent-feemarket); }
@@ -801,6 +804,7 @@ body::after {
 .dash-section--infra { --section-accent: var(--accent-infra); }
 .dash-section--node { --section-accent: var(--accent-node); }
 .dash-section--staking { --section-accent: var(--accent-staking); }
+.dash-section--slashing { --section-accent: var(--accent-slashing); }
 .dash-section--validators { --section-accent: var(--accent-validators); }
 .dash-section--local { --section-accent: var(--accent-local); }
 .dash-section--rewards { --section-accent: var(--accent-rewards); }
