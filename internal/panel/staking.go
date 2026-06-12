@@ -52,7 +52,6 @@ func writeStakingEmbeddedSummary(w Writer, d model.Report, lv model.LocalValidat
 		w.WriteHTML(`</div>`)
 	}
 	writeStakingChainSummaryBody(w, d)
-	w.WriteHTML(stakingChainDomainsHTML(d, true))
 	w.WriteHTML(`</div>`)
 }
 
@@ -61,40 +60,48 @@ func writeStaking(w Writer, d model.Report) {
 
 	w.Section("1. STAKING")
 	writeStakingSummary(w, d, SummaryEmbedded)
-	w.Em("This validator's stake and signing health first, then chain-wide pool, parameters, and validator tables.")
+	w.Em("Staking block — this validator then chain pool and stake table. Slashing block — this validator signing then chain params and slashing table.")
 
-	w.Layer("This validator")
+	w.Layer("Staking")
+	w.Subsection("This validator")
 	if lv.IsValidator {
-		writeStakingLocalState(w, d, lv)
+		writeStakingLocalStake(w, lv)
 	} else {
-		w.Subsection("Role")
 		w.Hint("`role` → CometBFT GET /status; derived when consensus address is absent from x/staking.")
 		w.Row("role", lv.SigningStatus)
 	}
-
-	w.Layer("Chain")
-	w.WriteHTML(stakingChainDomainsHTML(d, false))
+	w.Subsection("Chain")
+	w.WriteHTML(stakingCardHTML(d, false))
 	writeValidatorStakeTable(w, d)
+
+	w.Layer("Slashing")
+	w.Subsection("This validator")
+	if lv.IsValidator {
+		writeStakingLocalSlashing(w, d, lv)
+	}
+	w.Subsection("Chain")
+	w.WriteHTML(slashingCardHTML(d, false))
 	writeValidatorSlashingTable(w, d)
+
 	w.Hint(stakingSourcesHint())
 	w.BlankLine()
 }
 
-func writeStakingLocalState(w Writer, d model.Report, lv model.LocalValidator) {
-	w.Subsection("Stake")
-	w.Hint("`status`, `jailed`, `voting power`, `commission` → REST GET /cosmos/staking/v1beta1/validators.")
+func writeStakingLocalStake(w Writer, lv model.LocalValidator) {
+	w.Hint("`status`, `voting power`, `commission` → REST GET /cosmos/staking/v1beta1/validators.")
 	w.Row("status", lv.Status)
+	w.Row("voting power", fmt.Sprintf("%s  (%.1f%% of bonded stake)", lv.VotingPower, lv.VPPercent))
+	w.Row("commission", fmt.Sprintf("%.1f%%  _(validator cut of delegator rewards)_", lv.Commission))
+}
+
+func writeStakingLocalSlashing(w Writer, d model.Report, lv model.LocalValidator) {
+	w.Hint("`jailed`, `tombstoned`, `signing health`, `missed / window` → x/staking validators + REST GET /cosmos/slashing/v1beta1/signing_infos and params.")
 	if lv.Jailed {
 		w.Row("jailed", "yes")
 	}
 	if lv.Tombstoned {
 		w.Row("tombstoned", "YES")
 	}
-	w.Row("voting power", fmt.Sprintf("%s  (%.1f%% of bonded stake)", lv.VotingPower, lv.VPPercent))
-	w.Row("commission", fmt.Sprintf("%.1f%%  _(validator cut of delegator rewards)_", lv.Commission))
-
-	w.Subsection("Signing")
-	w.Hint("`signing health`, `missed / window` → REST GET /cosmos/slashing/v1beta1/signing_infos + params.")
 	w.Row("signing health", lv.SigningStatus)
 	if d.SlashWindow != "" && d.SlashWindow != "0" {
 		w.Row("missed / window", fmt.Sprintf("%d / %s blocks  (max allowed: %d)", lv.Missed, d.SlashWindow, lv.MaxMissed))
@@ -102,7 +109,6 @@ func writeStakingLocalState(w Writer, d model.Report, lv model.LocalValidator) {
 }
 
 func writeValidatorStakeTable(w Writer, d model.Report) {
-	w.Subsection("Validator stake")
 	w.Hint("`vp%`, `commission`, `status` → REST GET /cosmos/staking/v1beta1/validators (bonded, unbonding, unbonded).")
 	stakeRows := make([][]string, 0, len(d.Validators))
 	for _, v := range d.Validators {
@@ -118,27 +124,15 @@ func writeValidatorStakeTable(w Writer, d model.Report) {
 }
 
 func writeValidatorSlashingTable(w Writer, d model.Report) {
-	w.Subsection("Validator slashing")
 	w.Hint("`missed`, `tombstoned` → REST GET /cosmos/slashing/v1beta1/signing_infos; `jailed` → module x/staking validators; `health` → derived (missed vs min_signed_per_window from slashing params).")
 	secRows := make([][]string, 0, len(d.Validators))
 	for _, v := range d.Validators {
 		missed := fmt.Sprintf("%d", v.Missed)
-		health := "ok"
-		if v.Tombstoned {
-			health = "tombstoned"
-		} else if v.Jailed {
-			health = "jailed"
-		} else if v.MissedHigh {
-			health = "⚠ below min signed"
-			missed += " ⚠"
-		} else if v.Missed > 0 {
-			health = "ok (some misses)"
-		}
-		jailed := ""
+		health := validatorSlashingHealth(v, &missed)
+		jailed, tomb := "", ""
 		if v.Jailed {
 			jailed = "yes"
 		}
-		tomb := ""
 		if v.Tombstoned {
 			tomb = "yes"
 		}
@@ -154,8 +148,20 @@ func writeValidatorSlashingTable(w Writer, d model.Report) {
 	w.Table([]string{"moniker", "missed", "jailed", "tombstoned", "health", "local"}, secRows)
 }
 
-func stakingChainDomainsHTML(d model.Report, compact bool) string {
-	return ecoDomainsWrap(stakingCardHTML(d, compact), slashingCardHTML(d, compact))
+func validatorSlashingHealth(v model.Validator, missed *string) string {
+	switch {
+	case v.Tombstoned:
+		return "tombstoned"
+	case v.Jailed:
+		return "jailed"
+	case v.MissedHigh:
+		*missed += " ⚠"
+		return "⚠ below min signed"
+	case v.Missed > 0:
+		return "ok (some misses)"
+	default:
+		return "ok"
+	}
 }
 
 func stakingSourcesHint() string {

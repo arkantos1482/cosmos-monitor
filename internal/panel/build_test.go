@@ -146,7 +146,7 @@ func TestContentInventory(t *testing.T) {
 		`class="kpi-grid"`,
 		`class="kpi-tile"`,
 		`class="data-table"`,
-		`class="val-summary"`,
+		`val-summary--p2p`,
 		"Block reward ledger",
 		`class="dash-subheading">Distribution</h3>`,
 		"eco-domain--pmtrewards",

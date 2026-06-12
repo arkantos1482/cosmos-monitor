@@ -32,20 +32,7 @@ func writeValidatorP2PSummaryBody(w Writer, d model.Report) {
 }
 
 func writeStakingChainSummaryBody(w Writer, d model.Report) {
-	w.WriteHTML(`<div class="val-summary">`)
-	w.WriteHTML(`<div class="val-summary__kpis">`)
-	for _, kpi := range []struct{ label, val string }{
-		{"bonded", fmt.Sprintf("%d", d.BondedCount)},
-		{"jailed", fmt.Sprintf("%d", d.JailedCount)},
-		{"tombstoned", fmt.Sprintf("%d", d.TombstonedCount)},
-		{"below min signed", fmt.Sprintf("%d", d.BelowThreshold)},
-	} {
-		w.WriteHTML(fmt.Sprintf(
-			`<div class="val-summary__kpi"><span class="val-summary__kpi-label">%s</span>`+
-				`<span class="val-summary__kpi-val">%s</span></div>`,
-			html.EscapeString(kpi.label), html.EscapeString(kpi.val)))
-	}
-	w.WriteHTML(`</div>`)
+	w.WriteHTML(`<div class="val-summary val-summary--staking">`)
 	if d.NextProposer != "" {
 		w.WriteHTML(fmt.Sprintf(
 			`<p class="val-summary__proposer">Next proposer: <strong>%s</strong></p>`,
@@ -63,15 +50,6 @@ func writeStakingChainSummaryBody(w Writer, d model.Report) {
 		if len(alerts) > 1 {
 			w.WriteHTML(fmt.Sprintf(`<p class="val-summary__alert">⚠ %s</p>`, html.EscapeString(alerts[1])))
 		}
-	}
-	if len(d.Validators) > 0 {
-		w.WriteHTML(`<div class="val-summary__chips">`)
-		for _, v := range d.Validators {
-			w.WriteHTML(fmt.Sprintf(
-				`<span class="val-summary__chip%s">%s <span class="val-summary__chip-vp">%.1f%%</span></span>`,
-				chipClass(v), html.EscapeString(report.Truncate(v.Moniker, 12)), v.VPFloat))
-		}
-		w.WriteHTML(`</div>`)
 	}
 	w.WriteHTML(`</div>`)
 }
