@@ -8,29 +8,29 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-func writeRewardsDistributionSummaryRows(w Writer, d model.Report) {
+func writeDistributionSummaryRows(w Writer, d model.Report) {
 	if d.CommunityPool != "" {
-		w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">Community pool: %s</div>`, html.EscapeString(d.CommunityPool)))
+		w.WriteHTML(fmt.Sprintf(`<div class="dist-summary__row">Community pool: %s</div>`, html.EscapeString(d.CommunityPool)))
 	}
 	if d.CommunityTax != "" {
-		w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">Community tax: %s</div>`, html.EscapeString(d.CommunityTax)))
+		w.WriteHTML(fmt.Sprintf(`<div class="dist-summary__row">Community tax: %s</div>`, html.EscapeString(d.CommunityTax)))
 	}
 	if total := economicsUnclaimedTotal(d); total != "" {
-		w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">Unclaimed: %s</div>`, html.EscapeString(total)))
+		w.WriteHTML(fmt.Sprintf(`<div class="dist-summary__row">Unclaimed: %s</div>`, html.EscapeString(total)))
 	}
 	if bal := FeeCollectorBalance(d); bal != "" {
-		w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">fee_collector: %s</div>`, html.EscapeString(bal)))
+		w.WriteHTML(fmt.Sprintf(`<div class="dist-summary__row">fee_collector: %s</div>`, html.EscapeString(bal)))
 	}
 }
 
-func writeRewardsDistribution(w Writer, d model.Report) {
-	w.Subsection("Distribution")
-	writeRewardsDistributionModule(w, d)
-	writeRewardsUnclaimedBalances(w, d)
-	writeRewardsCommunityTax(w, d)
+func writeDistributionDetails(w Writer, d model.Report) {
+	w.Subsection("Routing")
+	writeDistributionModule(w, d)
+	writeDistributionUnclaimedBalances(w, d)
+	writeDistributionCommunityTax(w, d)
 }
 
-func writeRewardsDistributionModule(w Writer, d model.Report) {
+func writeDistributionModule(w Writer, d model.Report) {
 	bal := distributionModuleBalance(d)
 	addr := economicsDistributionModuleAddr(d)
 	if bal == "" && addr == "" {
@@ -45,7 +45,7 @@ func writeRewardsDistributionModule(w Writer, d model.Report) {
 	w.WriteHTML(html)
 }
 
-func writeRewardsCommunityTax(w Writer, d model.Report) {
+func writeDistributionCommunityTax(w Writer, d model.Report) {
 	if d.CommunityTax == "" && d.CommunityPool == "" {
 		return
 	}
@@ -66,7 +66,7 @@ func writeRewardsCommunityTax(w Writer, d model.Report) {
 	}}))
 }
 
-func writeRewardsUnclaimedBalances(w Writer, d model.Report) {
+func writeDistributionUnclaimedBalances(w Writer, d model.Report) {
 	del := economicsUnclaimedDelegator(d)
 	comm := economicsUnclaimedCommission(d)
 	total := economicsUnclaimedTotal(d)
@@ -110,19 +110,19 @@ func writeRewardsUnclaimedBalances(w Writer, d model.Report) {
 	w.WriteHTML(economicsDistItemsHTML(items))
 }
 
-func writeRewardsLedger(w Writer, d model.Report) {
+func writeDistributionLedger(w Writer, d model.Report) {
 	rows := economicsLedgerRows(d)
 	if len(rows) == 0 {
 		return
 	}
 	w.Subsection("Block reward ledger")
-	if intro := rewardsLedgerIntro(d); intro != "" {
+	if intro := distributionLedgerIntro(d); intro != "" {
 		w.Em(intro)
 	}
 	w.WriteHTML(economicsLedgerTableHTML(rows))
 }
 
-func rewardsLedgerIntro(d model.Report) string {
+func distributionLedgerIntro(d model.Report) string {
 	addr := moduleAccountDisplayAddress(d, "fee_collector")
 	bal := FeeCollectorBalance(d)
 	if addr == "" && bal == "" {

@@ -1,0 +1,73 @@
+package panel
+
+import (
+	"fmt"
+	"html"
+
+	"github.com/arkantos1482/cosmos-monitor/internal/model"
+)
+
+func writeDistribution(w Writer, d model.Report) {
+	w.Section("4. DISTRIBUTION")
+	writeDistributionSummary(w, d, SummaryEmbedded)
+	w.Em("Reward routing through `fee_collector` and `x/distribution`, community tax and pool, and unclaimed balances chain-wide and for this validator.")
+
+	w.Layer("Network-wide")
+	writeDistributionLedger(w, d)
+	writeDistributionDetails(w, d)
+	w.Hint(distributionSourcesHint())
+
+	if d.Local.IsValidator {
+		w.Layer("This validator")
+		writeDistributionLocalValidator(w, d)
+	}
+	w.BlankLine()
+}
+
+func writeDistributionSummary(w Writer, d model.Report, mode SummaryMode) {
+	summaryWrapStart(w, mode, "distribution")
+	if mode == SummaryOverviewClickable {
+		writeDistributionCompactSummary(w, d)
+	} else {
+		w.WriteHTML(`<div class="dist-summary">`)
+		writeDistributionSummaryRows(w, d)
+		w.WriteHTML(`</div>`)
+	}
+	summaryWrapEnd(w, mode)
+}
+
+func writeDistributionCompactSummary(w Writer, d model.Report) {
+	w.WriteHTML(`<div class="dist-summary dist-summary--compact">`)
+	writeDistributionSummaryRows(w, d)
+	w.WriteHTML(`</div>`)
+	if d.Local.IsValidator && d.Local.Outstanding != "" {
+		w.WriteHTML(fmt.Sprintf(
+			`<div class="dist-summary__row">Outstanding: %s</div>`,
+			html.EscapeString(d.Local.Outstanding)))
+	}
+}
+
+func writeDistributionLocalValidator(w Writer, d model.Report) {
+	lv := d.Local
+	w.Subsection("Unclaimed")
+	w.Hint("`outstanding rewards`, `commission earned` → REST GET /cosmos/distribution/v1beta1/validators/{valoper}/outstanding_rewards, …/commission.")
+	if lv.Outstanding != "" {
+		w.Row("outstanding rewards", lv.Outstanding+"  _(total unclaimed — x/distribution)_")
+	} else {
+		w.Row("outstanding rewards", "–")
+	}
+	if lv.CommissionEarned != "" {
+		w.Row("commission earned", lv.CommissionEarned+"  _(unclaimed validator commission)_")
+	} else {
+		w.Row("commission earned", "–")
+	}
+}
+
+func distributionSourcesHint() string {
+	return "`community tax`, `community pool` → REST GET /cosmos/distribution/v1beta1/params, /cosmos/distribution/v1beta1/community_pool; " +
+		"`unclaimed delegator`, `unclaimed commission` → REST GET /cosmos/distribution/v1beta1/validators/{valoper}/outstanding_rewards, …/commission (summed across validators); " +
+		"`module account balances` → REST GET /cosmos/bank/v1beta1/balances/{address}; " +
+		"`module account addresses` → REST GET /cosmos/auth/v1beta1/module_accounts; " +
+		"`fee_collector cleared`, `unclaimed check` → derived (x/bank balances, outstanding sums); " +
+		"`ledger per-block amounts` → derived (PMT rate, mint inflation/block, parent-block fees)."
+}

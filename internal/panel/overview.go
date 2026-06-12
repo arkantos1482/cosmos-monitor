@@ -31,6 +31,7 @@ func writeOverview(w Writer, d model.Report) {
 		{"staking", writeStakingSummary},
 		{"slashing", writeSlashingSummary},
 		{"rewards", writeRewardsSummary},
+		{"distribution", writeDistributionSummary},
 		{"feemarket", writeFeemarketSummary},
 	})
 	writeOverviewGroup(w, d, NavScopeGovernance, []struct {

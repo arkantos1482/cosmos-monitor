@@ -34,11 +34,6 @@ func TestRewardsSectionConsolidatesChainAndLocal(t *testing.T) {
 		`class="dash-layer__title">This validator</h3>`,
 		"eco-domain--pmtrewards",
 		"eco-domain--inflation",
-		"Block reward ledger",
-		`class="dash-subheading">Distribution</h3>`,
-		`class="dash-subheading">Unclaimed</h3>`,
-		"outstanding rewards",
-		"commission earned",
 		"per-block commission",
 		"per-block delegators",
 	} {

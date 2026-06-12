@@ -38,6 +38,7 @@ func writeAll(w Writer, d model.Report) {
 	writeStaking(w, d)
 	writeSlashing(w, d)
 	writeRewards(w, d)
+	writeDistribution(w, d)
 	writeFeemarket(w, d)
 	writeGovernance(w, d)
 	writeInfra(w, d)

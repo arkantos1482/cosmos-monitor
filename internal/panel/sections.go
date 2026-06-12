@@ -2,7 +2,7 @@ package panel
 
 import "github.com/arkantos1482/cosmos-monitor/internal/model"
 
-// View identifies a dashboard page (home or one of six chain/node sections).
+// View identifies a dashboard page (home or one of the chain/node sections).
 type View string
 
 const (
@@ -11,8 +11,9 @@ const (
 	ViewNode       View = "node"
 	ViewStaking    View = "staking"
 	ViewSlashing   View = "slashing"
-	ViewRewards    View = "rewards"
-	ViewFeemarket  View = "feemarket"
+	ViewRewards       View = "rewards"
+	ViewDistribution  View = "distribution"
+	ViewFeemarket     View = "feemarket"
 	ViewGovernance View = "governance"
 	ViewEVM        View = "evm"
 )
@@ -60,6 +61,7 @@ var Nav = []NavItem{
 	{ViewStaking, "Staking", "/s/staking", NavScopeEconomics},
 	{ViewSlashing, "Slashing", "/s/slashing", NavScopeEconomics},
 	{ViewRewards, "Rewards", "/s/rewards", NavScopeEconomics},
+	{ViewDistribution, "Distribution", "/s/distribution", NavScopeEconomics},
 	{ViewFeemarket, "Fee market", "/s/feemarket", NavScopeEconomics},
 	{ViewGovernance, "Governance", "/s/governance", NavScopeGovernance},
 }
@@ -82,7 +84,7 @@ func ParseView(s string) View {
 		return ViewNode
 	case "economics": // legacy path — merged into rewards
 		return ViewRewards
-	case ViewHome, ViewInfra, ViewNode, ViewStaking, ViewSlashing, ViewRewards, ViewFeemarket, ViewGovernance, ViewEVM:
+	case ViewHome, ViewInfra, ViewNode, ViewStaking, ViewSlashing, ViewRewards, ViewDistribution, ViewFeemarket, ViewGovernance, ViewEVM:
 		return View(s)
 	default:
 		return ViewHome
@@ -101,6 +103,8 @@ func writeView(w Writer, v View, d model.Report) {
 		writeSlashing(w, d)
 	case ViewRewards:
 		writeRewards(w, d)
+	case ViewDistribution:
+		writeDistribution(w, d)
 	case ViewFeemarket:
 		writeFeemarket(w, d)
 	case ViewGovernance:

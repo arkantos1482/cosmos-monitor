@@ -46,7 +46,7 @@ func writeFeemarketSummary(w Writer, d model.Report, mode SummaryMode) {
 
 func writeFeemarket(w Writer, d model.Report) {
 	c := feemarket.LoadContext(d)
-	w.Section("4. FEE MARKET")
+	w.Section("5. FEE MARKET")
 	writeFeemarketSummary(w, d, SummaryEmbedded)
 	w.Em("Chain-wide EIP-1559 fee market — live base fee, demand, and governance parameters.")
 	writeFeemarketFeeAcceptance(w, d)

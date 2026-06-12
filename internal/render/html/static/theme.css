@@ -18,6 +18,7 @@
   --accent-validators: #c4b5fd;
   --accent-local: #f0abfc;
   --accent-rewards: #f472b6;
+  --accent-distribution: #e879f9;
   --accent-economics: #fbbf24;
   --accent-feemarket: #2dd4bf;
   --accent-governance: #fb923c;
@@ -224,6 +225,7 @@ body::after {
 .dash-nav__link--validators { --nav-accent: var(--accent-validators); }
 .dash-nav__link--local { --nav-accent: var(--accent-local); }
 .dash-nav__link--rewards { --nav-accent: var(--accent-rewards); }
+.dash-nav__link--distribution { --nav-accent: var(--accent-distribution); }
 .dash-nav__link--feemarket { --nav-accent: var(--accent-feemarket); }
 .dash-nav__link--governance { --nav-accent: var(--accent-governance); }
 .dash-nav__link--evm { --nav-accent: var(--accent-evm); }
@@ -402,6 +404,7 @@ body::after {
 .dash-overview__card--slashing { --card-accent: var(--accent-slashing); }
 .dash-overview__card--validators { --card-accent: var(--accent-validators); }
 .dash-overview__card--rewards { --card-accent: var(--accent-rewards); }
+.dash-overview__card--distribution { --card-accent: var(--accent-distribution); }
 .dash-overview__card--feemarket { --card-accent: var(--accent-feemarket); }
 .dash-overview__card--governance { --card-accent: var(--accent-governance); }
 .dash-overview__card--infra { --card-accent: var(--accent-infra); }
@@ -430,6 +433,7 @@ body::after {
 
 .val-summary,
 .eco-summary,
+.dist-summary,
 .fee-summary,
 .gov-summary,
 .infra-summary,
@@ -445,6 +449,7 @@ body::after {
 
 .dash-section .val-summary,
 .dash-section .eco-summary,
+.dash-section .dist-summary,
 .dash-section .fee-summary,
 .dash-section .gov-summary,
 .dash-section .infra-summary,
@@ -462,6 +467,7 @@ body::after {
 
 .dash-overview__card .val-summary,
 .dash-overview__card .eco-summary,
+.dash-overview__card .dist-summary,
 .dash-overview__card .fee-summary,
 .dash-overview__card .gov-summary,
 .dash-overview__card .infra-summary,
@@ -808,6 +814,7 @@ body::after {
 .dash-section--validators { --section-accent: var(--accent-validators); }
 .dash-section--local { --section-accent: var(--accent-local); }
 .dash-section--rewards { --section-accent: var(--accent-rewards); }
+.dash-section--distribution { --section-accent: var(--accent-distribution); }
 .dash-section--feemarket { --section-accent: var(--accent-feemarket); }
 .dash-section--governance { --section-accent: var(--accent-governance); }
 .dash-section--evm { --section-accent: var(--accent-evm); }

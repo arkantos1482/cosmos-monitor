@@ -35,6 +35,7 @@ func TestBuildOverviewStack(t *testing.T) {
 		`dash-overview__card--staking`,
 		`dash-overview__card--slashing`,
 		`dash-overview__card--rewards`,
+		`dash-overview__card--distribution`,
 		`dash-overview__card--feemarket`,
 		`dash-overview__card--governance`,
 		`dash-overview__card--infra`,
@@ -76,15 +77,16 @@ func TestBuildOverviewStack(t *testing.T) {
 	}
 	
 	rewardsCard := strings.Index(out, `dash-overview__card--rewards`)
+	distCard := strings.Index(out, `dash-overview__card--distribution`)
 	feeCard := strings.Index(out, `dash-overview__card--feemarket`)
-	if rewardsCard < 0 || feeCard < 0 {
-		t.Fatal("overview should include rewards and fee market cards")
+	if rewardsCard < 0 || distCard < 0 || feeCard < 0 {
+		t.Fatal("overview should include rewards, distribution, and fee market cards")
 	}
-	if !strings.Contains(out[rewardsCard:feeCard], `eco-summary--compact`) {
-		t.Fatal("rewards overview card should show compact summary with PMT/inflation and distribution")
+	if !strings.Contains(out[rewardsCard:distCard], `eco-summary--compact`) {
+		t.Fatal("rewards overview card should show compact PMT/inflation summary")
 	}
-	if !strings.Contains(out[rewardsCard:feeCard], "Community pool:") {
-		t.Fatal("rewards overview card should include distribution summary rows")
+	if !strings.Contains(out[distCard:feeCard], "Community pool:") {
+		t.Fatal("distribution overview card should include community pool summary")
 	}
 }
 
@@ -177,6 +179,7 @@ func TestSectionSummariesEmbedded(t *testing.T) {
 		{ViewStaking, `staking-summary`, `class="dash-subheading">Summary</h3>`},
 		{ViewSlashing, `slashing-summary`, `class="dash-subheading">Summary</h3>`},
 		{ViewRewards, `eco-domains`, "At a glance"},
+		{ViewDistribution, `dist-summary`, "At a glance"},
 		{ViewFeemarket, `class="fee-summary"`, ""},
 		{ViewGovernance, `class="gov-summary"`, ""},
 		{ViewInfra, `class="infra-summary"`, ""},

@@ -14,26 +14,27 @@ func TestEconomicsInactivePMTDisabled(t *testing.T) {
 		CommunityTax:    "2.00%",
 		CommunityTaxPct: 2,
 	}
-	out := BuildView(ViewRewards, d)
-	if !strings.Contains(out, `eco-row--inactive`) {
+	rewardsOut := BuildView(ViewRewards, d)
+	distOut := BuildView(ViewDistribution, d)
+	if !strings.Contains(distOut, `eco-row--inactive`) {
 		t.Fatal("expected inactive ledger rows when PMT disabled and inflation off")
 	}
-	if !strings.Contains(out, `eco-domain--pmtrewards`) {
+	if !strings.Contains(rewardsOut, `eco-domain--pmtrewards`) {
 		t.Fatal("expected PMT Rewards source card")
 	}
-	if !strings.Contains(out, `eco-domain--pmtrewards eco-domain--inactive`) {
+	if !strings.Contains(rewardsOut, `eco-domain--pmtrewards eco-domain--inactive`) {
 		t.Fatal("expected inactive PMT rewards card when disabled")
 	}
-	if !strings.Contains(out, `eco-domain__status badge badge--bad">inactive`) {
+	if !strings.Contains(rewardsOut, `eco-domain__status badge badge--bad">inactive`) {
 		t.Fatal("expected inactive status badge on PMT rewards card")
 	}
-	if !strings.Contains(out, `badge--bad">false`) {
+	if !strings.Contains(rewardsOut, `badge--bad">false`) {
 		t.Fatal("expected false badge for disabled PMT")
 	}
-	if !strings.Contains(out, `eco-domain__row--inactive`) {
+	if !strings.Contains(rewardsOut, `eco-domain__row--inactive`) {
 		t.Fatal("expected inactive inflation in domain card")
 	}
-	if strings.Contains(out, `id="eco-flags"`) {
+	if strings.Contains(rewardsOut, `id="eco-flags"`) {
 		t.Fatal("flags panel should be removed")
 	}
 }
@@ -50,17 +51,18 @@ func TestEconomicsPMTPoolEmptyWarn(t *testing.T) {
 		BondedCount:       4,
 		Validators:        []model.Validator{{CommissionFloat: 10}},
 	}
-	out := BuildView(ViewRewards, d)
-	if !strings.Contains(out, `eco-row--warn`) {
+	rewardsOut := BuildView(ViewRewards, d)
+	distOut := BuildView(ViewDistribution, d)
+	if !strings.Contains(distOut, `eco-row--warn`) {
 		t.Fatal("expected warn styling for empty PMT pool")
 	}
-	if !strings.Contains(out, `eco-domain--pmtrewards eco-domain--ineffective`) {
+	if !strings.Contains(rewardsOut, `eco-domain--pmtrewards eco-domain--ineffective`) {
 		t.Fatal("expected ineffective PMT rewards card when pool empty")
 	}
-	if !strings.Contains(out, `eco-domain__status badge badge--warn">ineffective`) {
+	if !strings.Contains(rewardsOut, `eco-domain__status badge badge--warn">ineffective`) {
 		t.Fatal("expected ineffective status badge on PMT rewards card")
 	}
-	if !strings.Contains(out, `pool empty`) {
+	if !strings.Contains(distOut, `pool empty`) {
 		t.Fatal("expected pool empty check in ledger")
 	}
 }
