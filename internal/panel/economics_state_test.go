@@ -198,10 +198,12 @@ func TestPMTRewardsPoolMerged(t *testing.T) {
 
 func TestSlashingCardSeparate(t *testing.T) {
 	d := model.Report{
-		SlashWindow:   "10000",
-		MinSigned:     50,
-		SlashDowntime: "0.01%",
-		SlashDS:       "5%",
+		SlashWindow:    "10,000",
+		SlashMaxMissed: 5000,
+		MinSigned:      50,
+		DowntimeJail:   "1m",
+		SlashDowntime:  "0.01%",
+		SlashDS:        "5%",
 	}
 	card := slashingCardHTML(d, false)
 	if !strings.Contains(card, `eco-domain--slashing`) {
@@ -212,5 +214,14 @@ func TestSlashingCardSeparate(t *testing.T) {
 	}
 	if !strings.Contains(card, "slash / downtime") {
 		t.Fatal("slashing card should show downtime slash")
+	}
+	if !strings.Contains(card, `data-table--penalties`) {
+		t.Fatal("slashing card should show penalty matrix")
+	}
+	if !strings.Contains(card, "miss &gt; 5,000 / 10,000 window") {
+		t.Fatal("downtime trigger should use live window thresholds")
+	}
+	if !strings.Contains(card, "permanent") {
+		t.Fatal("double-sign row should show permanent jail")
 	}
 }

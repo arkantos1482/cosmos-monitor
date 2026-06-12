@@ -268,6 +268,10 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 
 	d.SlashWindow = FormatInt(p.SignedBlocksWindow)
 	d.MinSigned = p.MinSignedPerWindow * 100
+	if p.SignedBlocksWindow > 0 {
+		d.SlashMaxMissed = int64(float64(p.SignedBlocksWindow) * (1 - p.MinSignedPerWindow))
+	}
+	d.DowntimeJail = FormatDurFull(p.DowntimeJailDuration)
 	d.SlashDowntime, d.SlashDTInactive = slashFraction(p.SlashFractionDowntime)
 	d.SlashDS, d.SlashDSInactive = slashFraction(p.SlashFractionDoubleSign)
 

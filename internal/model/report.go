@@ -110,12 +110,14 @@ type Report struct {
 	ParentBlockGasWanted     uint64
 	ParentBlockResultsOK     bool
 
-	SlashWindow     string
-	MinSigned       float64
-	SlashDowntime   string
-	SlashDTInactive bool
-	SlashDS         string
-	SlashDSInactive bool
+	SlashWindow          string
+	MinSigned            float64
+	SlashMaxMissed       int64
+	DowntimeJail         string
+	SlashDowntime        string
+	SlashDTInactive      bool
+	SlashDS              string
+	SlashDSInactive      bool
 
 	EVMHTTPEndpoint   string
 	EVMWSEndpoint     string

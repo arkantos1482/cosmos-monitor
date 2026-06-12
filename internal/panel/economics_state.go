@@ -296,6 +296,7 @@ func slashingCardHTML(d model.Report, _ bool) string {
 	b.WriteString(`<div class="eco-domain__rows">`)
 
 	writeSlashingParamRows(&b, d)
+	writeSlashingPenaltyMatrix(&b, d)
 
 	b.WriteString(`</div></div>`)
 	return b.String()

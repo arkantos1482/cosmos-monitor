@@ -3,6 +3,7 @@ package panel
 import (
 	"fmt"
 	"html"
+	"strings"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 	"github.com/arkantos1482/cosmos-monitor/internal/report"
@@ -164,4 +165,72 @@ func slashingSourcesHint() string {
 	return "`jailed` → REST GET /cosmos/staking/v1beta1/validators; " +
 		"`missed`, `tombstoned` → REST GET /cosmos/slashing/v1beta1/signing_infos; " +
 		"`signed blocks window`, `min signed`, `slash fractions` → REST GET /cosmos/slashing/v1beta1/params."
+}
+
+// writeSlashingPenaltyMatrix renders a compact infraction → penalty map per Cosmos SDK x/slashing + x/evidence.
+func writeSlashingPenaltyMatrix(b *strings.Builder, d model.Report) {
+	dtTrigger := downtimeTriggerLabel(d)
+	dsTrigger := "conflicting votes (equivocation)"
+
+	b.WriteString(`<div class="slashing-penalties">`)
+	b.WriteString(`<div class="eco-domain__divider">Penalties</div>`)
+	b.WriteString(`<div class="table-scroll"><table class="data-table data-table--penalties"><thead><tr>`)
+	for _, h := range []string{"infraction", "slash stake", "jail", "tombstone"} {
+		fmt.Fprintf(b, `<th>%s</th>`, html.EscapeString(h))
+	}
+	b.WriteString(`</tr></thead><tbody>`)
+
+	writeSlashingPenaltyRow(b, "downtime", dtTrigger,
+		slashPenaltyCell(d.SlashDowntime, d.SlashDTInactive),
+		jailPenaltyCell(d.DowntimeJail, false),
+		penaltyNoCell())
+	writeSlashingPenaltyRow(b, "double-sign", dsTrigger,
+		slashPenaltyCell(d.SlashDS, d.SlashDSInactive),
+		jailPenaltyCell("permanent", true),
+		penaltyYesCell())
+
+	b.WriteString(`</tbody></table></div></div>`)
+}
+
+func writeSlashingPenaltyRow(b *strings.Builder, name, trigger, slash, jail, tomb string) {
+	fmt.Fprintf(b, `<tr><td class="slashing-penalties__infraction"><span class="slashing-penalties__name">%s</span>`,
+		html.EscapeString(name))
+	if trigger != "" {
+		fmt.Fprintf(b, `<span class="slashing-penalties__trigger">%s</span>`, html.EscapeString(trigger))
+	}
+	fmt.Fprintf(b, `</td><td class="data-table__num">%s</td><td class="data-table__num">%s</td><td class="data-table__num">%s</td></tr>`,
+		slash, jail, tomb)
+}
+
+func downtimeTriggerLabel(d model.Report) string {
+	if d.SlashWindow == "" || d.SlashWindow == "0" || d.SlashMaxMissed <= 0 {
+		return "missed blocks in window"
+	}
+	return fmt.Sprintf("miss > %s / %s window", report.FormatInt(d.SlashMaxMissed), d.SlashWindow)
+}
+
+func slashPenaltyCell(amount string, inactive bool) string {
+	if inactive || amount == "" {
+		return `<span class="penalty-tag penalty-tag--off">off</span>`
+	}
+	return fmt.Sprintf(`<span class="penalty-tag penalty-tag--slash">%s</span>`, html.EscapeString(amount))
+}
+
+func jailPenaltyCell(detail string, severe bool) string {
+	if detail == "" {
+		return penaltyNoCell()
+	}
+	cls := "penalty-tag penalty-tag--jail"
+	if severe {
+		cls += " penalty-tag--severe"
+	}
+	return fmt.Sprintf(`<span class="%s">%s</span>`, cls, html.EscapeString(detail))
+}
+
+func penaltyYesCell() string {
+	return `<span class="penalty-tag penalty-tag--yes" title="permanent">yes</span>`
+}
+
+func penaltyNoCell() string {
+	return `<span class="penalty-tag penalty-tag--off">—</span>`
 }

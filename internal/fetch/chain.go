@@ -140,6 +140,7 @@ type ChainParams struct {
 	BondDenom                string
 	SignedBlocksWindow       int64
 	MinSignedPerWindow       float64
+	DowntimeJailDuration     time.Duration
 	SlashFractionDowntime    string
 	SlashFractionDoubleSign  string
 	BlocksPerYear            int64
@@ -397,6 +398,7 @@ type slashingParamsResp struct {
 	Params struct {
 		SignedBlocksWindow      string `json:"signed_blocks_window"`
 		MinSignedPerWindow      string `json:"min_signed_per_window"`
+		DowntimeJailDuration    string `json:"downtime_jail_duration"`
 		SlashFractionDowntime   string `json:"slash_fraction_downtime"`
 		SlashFractionDoubleSign string `json:"slash_fraction_double_sign"`
 	} `json:"params"`
@@ -1106,6 +1108,7 @@ func FetchParams(rest string) ChainParams {
 	if err := doJSON(rest+"/cosmos/slashing/v1beta1/params", &slp); err == nil {
 		p.SignedBlocksWindow = parseInt64(slp.Params.SignedBlocksWindow)
 		p.MinSignedPerWindow = parseFloat(slp.Params.MinSignedPerWindow)
+		p.DowntimeJailDuration = parseDuration(slp.Params.DowntimeJailDuration)
 		p.SlashFractionDowntime = slp.Params.SlashFractionDowntime
 		p.SlashFractionDoubleSign = slp.Params.SlashFractionDoubleSign
 	}
