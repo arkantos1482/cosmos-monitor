@@ -9,7 +9,6 @@ import (
 
 func writeOverview(w Writer, d model.Report) {
 	w.WriteHTML(`<div class="dash-overview">`)
-	w.WriteHTML(`<p class="dash-overview__lead">Live snapshot — scroll for all sections. Refreshes every 5s.</p>`)
 
 	writeOverviewGroup(w, d, NavScopeRuntime, []struct {
 		slug string
