@@ -15,9 +15,12 @@ type identityRow struct {
 	hex    string
 }
 
-func writeValidatorIdentityBoard(w Writer, d model.Report, lv model.LocalValidator) {
-	w.WriteHTML(validatorIdentityBoardHTML(d, lv))
-	w.Hint("`consensus` → x/slashing / staking pubkey; `p2p` → CometBFT GET /status node_info.id.")
+func localConsensusBech32(lv model.LocalValidator) string {
+	consBech := lv.ConsensusBech32
+	if consBech == "" && lv.ConsensusAddr != "" {
+		consBech = fetch.ConsHexToBech32(lv.ConsensusAddr)
+	}
+	return consBech
 }
 
 func writeStakingIdentityBoard(w Writer, d model.Report, lv model.LocalValidator) {
@@ -26,12 +29,8 @@ func writeStakingIdentityBoard(w Writer, d model.Report, lv model.LocalValidator
 }
 
 func validatorIdentityBoardHTML(d model.Report, lv model.LocalValidator) string {
-	consBech := lv.ConsensusBech32
-	if consBech == "" && lv.ConsensusAddr != "" {
-		consBech = fetch.ConsHexToBech32(lv.ConsensusAddr)
-	}
 	return identityBoardHTML(d, lv, []identityRow{
-		{role: "consensus", bech32: consBech, hex: formatConsensusHex(lv.ConsensusAddr)},
+		{role: "consensus", bech32: localConsensusBech32(lv), hex: formatConsensusHex(lv.ConsensusAddr)},
 		{role: "p2p", bech32: "", hex: strings.ToLower(d.NodeID)},
 	}, "")
 }

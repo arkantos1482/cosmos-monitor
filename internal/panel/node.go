@@ -3,6 +3,7 @@ package panel
 import (
 	"fmt"
 	"html"
+	"strings"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 	"github.com/arkantos1482/cosmos-monitor/internal/report"
@@ -31,7 +32,7 @@ func writeNodeSummary(w Writer, d model.Report, mode SummaryMode) {
 	for _, row := range []struct{ label, val string }{
 		{"height", d.BlockHeight + " · " + d.TimeSinceBlock},
 		{"next proposer", proposer},
-		{"peers", fmt.Sprintf("%d cosmos · %d evm", d.PeerCount, d.EVMPeerCount)},
+		{"peers", fmt.Sprintf("%d cosmos", d.PeerCount)},
 	} {
 		if row.val == "" || row.val == " · " {
 			continue
@@ -60,8 +61,6 @@ func writeNode(w Writer, d model.Report) {
 	writeNodeSummary(w, d, SummaryEmbedded)
 	w.Em("This node — CometBFT consensus and P2P live state, plus validator-set dial identities. Stake and operator addresses → § Staking. Signing health → § Slashing.")
 
-	writeValidatorIdentityBoard(w, d, lv)
-
 	writeNodeCometBFT(w, d, lv, syncStr)
 	writeValidatorP2PNetwork(w, d)
 	w.BlankLine()
@@ -84,7 +83,7 @@ func writeNodeCometBFT(w Writer, d model.Report, lv model.LocalValidator, syncSt
 
 	if lv.IsValidator || d.LocalConsensusAddr != "" {
 		w.Subsection("Proposer")
-		w.Hint("`voting power` → CometBFT GET /status validator_info; `proposer priority` → GET /validators.")
+		w.Hint("`voting power` → CometBFT GET /status validator_info; `proposer priority` → GET /validators; `consensus` → x/slashing / staking pubkey.")
 		if d.LocalVotingPower != "" {
 			w.Row("voting power", d.LocalVotingPower+"  _(consensus units — `/status` validator_info)_")
 		}
@@ -94,12 +93,17 @@ func writeNodeCometBFT(w Writer, d model.Report, lv model.LocalValidator, syncSt
 		} else if d.NextProposer != "" {
 			w.Row("proposer", "not next  _(next: "+d.NextProposer+")_")
 		}
+		if cons := localConsensusBech32(lv); cons != "" {
+			w.Row("consensus", cons+"  _(consensus pubkey — bech32)_")
+		}
 	}
 
 	w.Subsection("P2P & RPC")
-	w.Hint("`cosmos peers` → CometBFT GET /net_info; `evm peers` → JSON-RPC net_peerCount; `p2p listen`, `p2p dial`, `rpc listen` → CometBFT GET /status (node_info; dial is node_id@listen_addr).")
+	w.Hint("`cosmos peers` → CometBFT GET /net_info; `node ID`, `p2p listen`, `p2p dial`, `rpc listen` → CometBFT GET /status (node_info; dial is node_id@listen_addr).")
 	w.Row("cosmos peers", fmt.Sprintf("%d  _(CometBFT P2P connections)_", d.PeerCount))
-	w.Row("evm peers", fmt.Sprintf("%d  _(JSON-RPC net_peerCount — often 0 on validators)_", d.EVMPeerCount))
+	if d.NodeID != "" {
+		w.Row("node ID", strings.ToLower(d.NodeID)+"  _(CometBFT P2P peer ID — hex)_")
+	}
 	p2pDial := lv.P2PDial
 	if p2pDial == "" {
 		p2pDial = formatP2PDial(d.NodeID, d.ListenAddr)

@@ -112,9 +112,7 @@ func TestBuildViewSingleSection(t *testing.T) {
 		t.Fatal("node view should only render validator section")
 	}
 	for _, sub := range []string{
-		`class="id-board"`,
-		`id-board__row--consensus`,
-		`id-board__row--p2p`,
+		`class="dash-subheading">Proposer</h3>`,
 		"cosmos peers",
 		"CometBFT (consensus + networking)",
 		`class="dash-layer__title">Validator set</h3>`,
@@ -124,8 +122,12 @@ func TestBuildViewSingleSection(t *testing.T) {
 		}
 	}
 	for _, gone := range []string{
+		`class="id-board"`,
+		`id-board__row--consensus`,
+		`id-board__row--p2p`,
 		`id-board__row--account`,
 		`id-board__row--operator`,
+		"evm peers",
 		`node-summary__label">voting power`,
 		`node-summary__label">signing`,
 	} {
