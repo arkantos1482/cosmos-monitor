@@ -28,7 +28,7 @@ func TestStakingSectionConsolidatesLocalAndChain(t *testing.T) {
 		`class="dash-layer__title">Staking</h3>`,
 		`class="dash-layer__title">Slashing</h3>`,
 		`class="dash-subheading">This validator</h3>`,
-		`class="dash-subheading">Chain</h3>`,
+		`class="dash-subheading">Network-wide</h3>`,
 		`eco-domain--staking`,
 		`eco-domain--slashing`,
 		"bonded_tokens_pool",

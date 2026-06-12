@@ -12,7 +12,7 @@ func writeRewards(w Writer, d model.Report) {
 	writeRewardsSummary(w, d, SummaryEmbedded)
 	w.Em("Block reward sources (PMT emissions, mint inflation), distribution routing through `fee_collector` and `x/distribution`, and unclaimed balances chain-wide and for this validator.")
 
-	w.Layer("Chain")
+	w.Layer("Network-wide")
 	w.WriteHTML(economicsDomainCardsHTML(d, false))
 	writeRewardsLedger(w, d)
 	writeRewardsDistribution(w, d)

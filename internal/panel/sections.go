@@ -16,21 +16,27 @@ const (
 	ViewEVM        View = "evm"
 )
 
-// NavScope groups sidebar and home cards into chain-wide vs this-node views.
+// NavScope groups sidebar and home cards by operational concern.
 type NavScope string
 
 const (
-	NavScopeChain NavScope = "chain"
-	NavScopeNode  NavScope = "node"
+	NavScopeRuntime    NavScope = "runtime"
+	NavScopeValidator  NavScope = "validator"
+	NavScopeEconomics  NavScope = "economics"
+	NavScopeGovernance NavScope = "governance"
 )
 
 // NavScopeLabel is the human heading for a nav/home group.
 func NavScopeLabel(s NavScope) string {
 	switch s {
-	case NavScopeChain:
-		return "Chain"
-	case NavScopeNode:
-		return "This node"
+	case NavScopeRuntime:
+		return "Runtime"
+	case NavScopeValidator:
+		return "Validator"
+	case NavScopeEconomics:
+		return "Economics"
+	case NavScopeGovernance:
+		return "Governance"
 	default:
 		return ""
 	}
@@ -44,16 +50,16 @@ type NavItem struct {
 	Scope NavScope // empty for Overview only
 }
 
-// Nav lists home plus monitoring sections (this node group, then chain).
+// Nav lists home plus monitoring sections (runtime → validator → economics → governance).
 var Nav = []NavItem{
 	{ViewHome, "Overview", "/", ""},
-	{ViewInfra, "Infrastructure", "/s/infra", NavScopeNode},
-	{ViewNode, "Validator", "/s/node", NavScopeNode},
-	{ViewEVM, "EVM JSON-RPC", "/s/evm", NavScopeNode},
-	{ViewStaking, "Staking", "/s/staking", NavScopeChain},
-	{ViewRewards, "Rewards", "/s/rewards", NavScopeChain},
-	{ViewFeemarket, "Fee market", "/s/feemarket", NavScopeChain},
-	{ViewGovernance, "Governance", "/s/governance", NavScopeChain},
+	{ViewInfra, "Infrastructure", "/s/infra", NavScopeRuntime},
+	{ViewEVM, "EVM JSON-RPC", "/s/evm", NavScopeRuntime},
+	{ViewNode, "Validator", "/s/node", NavScopeValidator},
+	{ViewStaking, "Staking", "/s/staking", NavScopeEconomics},
+	{ViewRewards, "Rewards", "/s/rewards", NavScopeEconomics},
+	{ViewFeemarket, "Fee market", "/s/feemarket", NavScopeEconomics},
+	{ViewGovernance, "Governance", "/s/governance", NavScopeGovernance},
 }
 
 // NavLabelForSlug returns the sidebar label for a section slug (e.g. "validators").

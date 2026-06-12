@@ -70,7 +70,7 @@ func writeStaking(w Writer, d model.Report) {
 		w.Hint("`role` → CometBFT GET /status; derived when consensus address is absent from x/staking.")
 		w.Row("role", lv.SigningStatus)
 	}
-	w.Subsection("Chain")
+	w.Subsection("Network-wide")
 	w.WriteHTML(stakingCardHTML(d, false))
 	writeValidatorStakeTable(w, d)
 
@@ -79,7 +79,7 @@ func writeStaking(w Writer, d model.Report) {
 	if lv.IsValidator {
 		writeStakingLocalSlashing(w, d, lv)
 	}
-	w.Subsection("Chain")
+	w.Subsection("Network-wide")
 	w.WriteHTML(slashingCardHTML(d, false))
 	writeValidatorSlashingTable(w, d)
 

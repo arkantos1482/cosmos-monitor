@@ -361,12 +361,20 @@ body::after {
   margin: 0 0 0.75rem;
 }
 
-.dash-overview__group--chain .dash-overview__group-title {
-  color: color-mix(in srgb, var(--accent-validators) 55%, var(--muted));
+.dash-overview__group--runtime .dash-overview__group-title {
+  color: color-mix(in srgb, var(--accent-infra) 55%, var(--muted));
 }
 
-.dash-overview__group--node .dash-overview__group-title {
+.dash-overview__group--validator .dash-overview__group-title {
   color: color-mix(in srgb, var(--accent-node) 55%, var(--muted));
+}
+
+.dash-overview__group--economics .dash-overview__group-title {
+  color: color-mix(in srgb, var(--accent-economics) 55%, var(--muted));
+}
+
+.dash-overview__group--governance .dash-overview__group-title {
+  color: color-mix(in srgb, var(--accent-governance) 55%, var(--muted));
 }
 
 .dash-overview__stack {

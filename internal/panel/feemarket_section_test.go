@@ -219,7 +219,7 @@ func TestWriteFeemarketFeeAcceptance(t *testing.T) {
 	}
 	chunk := feemarketChunk(t, Build(d))
 	for _, want := range []string{
-		"Fee acceptance (app.toml)",
+		"Local policy (app.toml)",
 		"minimum-gas-prices",
 		"evm.min-tip",
 		"evm.mempool.price-limit",
@@ -230,17 +230,17 @@ func TestWriteFeemarketFeeAcceptance(t *testing.T) {
 			t.Fatalf("fee market section missing %q", want)
 		}
 	}
-	acceptIdx := strings.Index(chunk, "Fee acceptance (app.toml)")
+	acceptIdx := strings.Index(chunk, "Local policy (app.toml)")
 	chainIdx := strings.Index(chunk, "Chain state &amp; parameters")
 	if acceptIdx < 0 || chainIdx < 0 || acceptIdx > chainIdx {
-		t.Fatal("node fee acceptance should appear before chain state")
+		t.Fatal("local policy should appear before chain state")
 	}
 	node := BuildView(ViewNode, d)
-	if strings.Contains(node, "Fee acceptance (app.toml)") {
-		t.Fatal("validator section should not contain app.toml fee acceptance")
+	if strings.Contains(node, "Local policy (app.toml)") {
+		t.Fatal("validator section should not contain app.toml local policy")
 	}
 	infra := BuildView(ViewInfra, d)
-	if strings.Contains(infra, "Fee acceptance (app.toml)") {
-		t.Fatal("infra section should not contain app.toml fee acceptance")
+	if strings.Contains(infra, "Local policy (app.toml)") {
+		t.Fatal("infra section should not contain app.toml local policy")
 	}
 }

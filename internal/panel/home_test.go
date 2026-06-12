@@ -25,8 +25,10 @@ func TestBuildOverviewStack(t *testing.T) {
 	out := BuildView(ViewHome, d)
 	for _, want := range []string{
 		`class="dash-overview"`,
-		`dash-overview__group--node`,
-		`dash-overview__group--chain`,
+		`dash-overview__group--runtime`,
+		`dash-overview__group--validator`,
+		`dash-overview__group--economics`,
+		`dash-overview__group--governance`,
 		`dash-overview__stack`,
 		`class="dash-overview__card-title">Infrastructure</p>`,
 		`class="dash-overview__card-title">Staking</p>`,
@@ -63,10 +65,13 @@ func TestBuildOverviewStack(t *testing.T) {
 	if strings.Contains(out, `dash-overview__footer`) || strings.Contains(out, `View section →`) {
 		t.Fatal("overview cards should not include footer CTA bar")
 	}
-	nodeIdx := strings.Index(out, `dash-overview__group--node`)
-	chainIdx := strings.Index(out, `dash-overview__group--chain`)
-	if nodeIdx < 0 || chainIdx < 0 || nodeIdx > chainIdx {
-		t.Fatal("overview should show This node group before Chain group")
+	runtimeIdx := strings.Index(out, `dash-overview__group--runtime`)
+	validatorIdx := strings.Index(out, `dash-overview__group--validator`)
+	economicsIdx := strings.Index(out, `dash-overview__group--economics`)
+	governanceIdx := strings.Index(out, `dash-overview__group--governance`)
+	if runtimeIdx < 0 || validatorIdx < 0 || economicsIdx < 0 || governanceIdx < 0 ||
+		runtimeIdx > validatorIdx || validatorIdx > economicsIdx || economicsIdx > governanceIdx {
+		t.Fatal("overview should show Runtime → Validator → Economics → Governance groups")
 	}
 	
 	rewardsCard := strings.Index(out, `dash-overview__card--rewards`)

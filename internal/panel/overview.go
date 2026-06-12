@@ -11,21 +11,31 @@ func writeOverview(w Writer, d model.Report) {
 	w.WriteHTML(`<div class="dash-overview">`)
 	w.WriteHTML(`<p class="dash-overview__lead">Live snapshot — scroll for all sections. Refreshes every 5s.</p>`)
 
-	writeOverviewGroup(w, d, NavScopeNode, []struct {
+	writeOverviewGroup(w, d, NavScopeRuntime, []struct {
 		slug string
 		fn   func(Writer, model.Report, SummaryMode)
 	}{
 		{"infra", writeInfraSummary},
-		{"node", writeNodeSummary},
 		{"evm", writeEVMSummary},
 	})
-	writeOverviewGroup(w, d, NavScopeChain, []struct {
+	writeOverviewGroup(w, d, NavScopeValidator, []struct {
+		slug string
+		fn   func(Writer, model.Report, SummaryMode)
+	}{
+		{"node", writeNodeSummary},
+	})
+	writeOverviewGroup(w, d, NavScopeEconomics, []struct {
 		slug string
 		fn   func(Writer, model.Report, SummaryMode)
 	}{
 		{"staking", writeStakingSummary},
 		{"rewards", writeRewardsSummary},
 		{"feemarket", writeFeemarketSummary},
+	})
+	writeOverviewGroup(w, d, NavScopeGovernance, []struct {
+		slug string
+		fn   func(Writer, model.Report, SummaryMode)
+	}{
 		{"governance", writeGovernanceSummary},
 	})
 

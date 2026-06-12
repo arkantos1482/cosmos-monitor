@@ -61,8 +61,8 @@ func writeFeemarketFeeAcceptance(w Writer, d model.Report) {
 		c.NodeMaxTxGasWanted == "" && c.NodeAppTomlPath == "" {
 		return
 	}
-	w.Subsection("Fee acceptance (app.toml)")
-	w.Hint("`minimum-gas-prices`, `evm.min-tip`, `evm.mempool.price-limit`, `evm.max-tx-gas-wanted` → local app.toml (APPTOML_PATH or ~/.evmd/config/app.toml). This node's local policy — chain-wide fee params are below.")
+	w.Subsection("Local policy (app.toml)")
+	w.Hint("`minimum-gas-prices`, `evm.min-tip`, `evm.mempool.price-limit`, `evm.max-tx-gas-wanted` → local app.toml (APPTOML_PATH or ~/.evmd/config/app.toml). This node's local policy — network-wide fee params are below.")
 	for _, row := range feeAcceptanceRows(c) {
 		w.Row(row[0], row[1])
 	}
@@ -94,7 +94,7 @@ func feemarketSourcesHint(c feemarket.Context) string {
 			"`no_base_fee`, `elasticity`, `min_gas_*`, … → REST GET /cosmos/evm/feemarket/v1/params; "+
 			"`evm_denom` → REST GET /cosmos/evm/vm/v1/params; "+
 			"`london_block` → REST GET /cosmos/evm/vm/v1/config; "+
-			"node fee acceptance (app.toml) → %s (subsection above).",
+			"local policy (app.toml) → %s (subsection above).",
 		c.ParentBlock, c.CurrentBlock, appToml,
 	)
 }

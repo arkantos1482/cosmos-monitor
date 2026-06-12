@@ -67,10 +67,13 @@ func TestNavLinksPlainHref(t *testing.T) {
 
 func TestNavGroupOrder(t *testing.T) {
 	out := navHTML(panel.ViewHome)
-	nodeIdx := strings.Index(out, `>This node</p>`)
-	chainIdx := strings.Index(out, `>Chain</p>`)
-	if nodeIdx < 0 || chainIdx < 0 || nodeIdx > chainIdx {
-		t.Fatal("nav should list This node group before Chain group")
+	runtimeIdx := strings.Index(out, `>Runtime</p>`)
+	validatorIdx := strings.Index(out, `>Validator</p>`)
+	economicsIdx := strings.Index(out, `>Economics</p>`)
+	governanceIdx := strings.Index(out, `>Governance</p>`)
+	if runtimeIdx < 0 || validatorIdx < 0 || economicsIdx < 0 || governanceIdx < 0 ||
+		runtimeIdx > validatorIdx || validatorIdx > economicsIdx || economicsIdx > governanceIdx {
+		t.Fatal("nav should list Runtime → Validator → Economics → Governance groups")
 	}
 }
 
