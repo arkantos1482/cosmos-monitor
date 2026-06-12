@@ -197,27 +197,43 @@ func TestSectionSummariesEmbedded(t *testing.T) {
 		want string
 		gone string
 	}{
-		{ViewStaking, `staking-summary`, `class="dash-subheading">Summary</h3>`},
-		{ViewSlashing, `slashing-summary`, `class="dash-subheading">Summary</h3>`},
+		{ViewStaking, `staking-summary`, "At a glance"},
+		{ViewSlashing, `slashing-summary`, "At a glance"},
 		{ViewRewards, `eco-summary--compact`, "At a glance"},
 		{ViewDistribution, `dist-summary`, "At a glance"},
-		{ViewFeemarket, `class="fee-summary"`, ""},
-		{ViewGovernance, `class="gov-summary"`, ""},
-		{ViewInfra, `class="infra-summary"`, ""},
-		{ViewNode, `class="node-summary"`, `class="dash-subheading">Summary</h3>`},
-		{ViewEVM, `evm-summary__probe`, "<strong>RPC:"},
+		{ViewFeemarket, `class="fee-summary"`, "At a glance"},
+		{ViewGovernance, `class="gov-summary"`, "At a glance"},
+		{ViewInfra, `class="infra-summary"`, "At a glance"},
+		{ViewNode, `class="node-summary"`, "At a glance"},
+		{ViewEVM, `evm-summary__probe`, "At a glance"},
 	} {
 		out := BuildView(tc.view, d)
 		if !strings.Contains(out, tc.want) {
 			t.Fatalf("view %s missing summary marker %q", tc.view, tc.want)
 		}
+		if !strings.Contains(out, `dash-section__summary-title">Summary</h3>`) {
+			t.Fatalf("view %s missing summary title", tc.view)
+		}
 		if tc.gone != "" && strings.Contains(out, tc.gone) {
-			t.Fatalf("view %s should not contain duplicate %q", tc.view, tc.gone)
+			t.Fatalf("view %s should not contain stale %q", tc.view, tc.gone)
+		}
+		if !sectionIntroBeforeSummary(out) {
+			t.Fatalf("view %s lead and summary title should precede summary card", tc.view)
 		}
 		if !summaryAfterHeading(out) {
 			t.Fatalf("view %s summary should follow section heading", tc.view)
 		}
 	}
+}
+
+func sectionIntroBeforeSummary(out string) bool {
+	lead := strings.Index(out, `class="dash-callout dash-callout--note note"`)
+	title := strings.Index(out, `dash-section__summary-title">Summary</h3>`)
+	summary := strings.Index(out, `-summary`)
+	if lead < 0 || title < 0 || summary < 0 {
+		return false
+	}
+	return lead < title && title < summary
 }
 
 func summaryAfterHeading(out string) bool {

@@ -58,6 +58,11 @@ func writeSlashingEmbeddedSummary(w Writer, d model.Report, lv model.LocalValida
 		w.WriteHTML(`</div>`)
 	}
 	writeSlashingNetworkSummaryBody(w, d)
+	if d.JailedCount == 0 && d.BelowThreshold == 0 && d.SlashWindow != "" && d.SlashWindow != "0" {
+		w.WriteHTML(fmt.Sprintf(
+			`<div class="slashing-summary__row">window %s · min signed %.0f%%</div>`,
+			html.EscapeString(d.SlashWindow), d.MinSigned))
+	}
 	w.WriteHTML(`</div>`)
 }
 
@@ -83,8 +88,8 @@ func writeSlashing(w Writer, d model.Report) {
 	lv := d.Local
 
 	w.Section("2. SLASHING")
+	writeEmbeddedSectionIntro(w, "Local missed blocks and jail/tombstone status; network slashing parameters and per-validator security table.")
 	writeSlashingSummary(w, d, SummaryEmbedded)
-	w.Em("Signing health for this validator, network slashing parameters, and per-validator missed-block status.")
 
 	w.Subsection("This validator")
 	if lv.IsValidator {

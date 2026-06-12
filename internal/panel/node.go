@@ -58,8 +58,8 @@ func writeNode(w Writer, d model.Report) {
 	}
 
 	w.Section("2. VALIDATOR")
+	writeEmbeddedSectionIntro(w, "This node's CometBFT sync, block timing, mempool, and proposer turn, plus the full validator-set P2P dial table.")
 	writeNodeSummary(w, d, SummaryEmbedded)
-	w.Em("This node — CometBFT consensus and P2P live state, plus validator-set dial identities. Stake and operator addresses → § Staking. Signing health → § Slashing.")
 
 	writeNodeCometBFT(w, d, lv, syncStr)
 	writeValidatorP2PNetwork(w, d)

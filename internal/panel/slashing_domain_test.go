@@ -68,9 +68,9 @@ func TestSlashingSectionNoDuplicateFields(t *testing.T) {
 	if summaryEnd < 0 {
 		t.Fatal("expected slashing body")
 	}
-	summary := chunk[:summaryEnd]
-	if strings.Contains(summary, "signing health") {
-		t.Fatal("signing health belongs in body only, not embedded summary")
+	summaryCard := chunk[strings.Index(chunk, `class="dash-section__summary"`):summaryEnd]
+	if strings.Contains(summaryCard, "signing health") {
+		t.Fatal("signing health belongs in body only, not embedded summary card")
 	}
 }
 

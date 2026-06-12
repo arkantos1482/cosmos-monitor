@@ -17,6 +17,25 @@ const (
 	SummaryOverviewClickable
 )
 
+// writeSectionLead is a one-line description shown above the embedded summary card.
+func writeSectionLead(w Writer, text string) {
+	if text == "" {
+		return
+	}
+	w.Em(text)
+}
+
+// writeSectionSummaryTitle labels the summary card within a section page.
+func writeSectionSummaryTitle(w Writer) {
+	w.WriteHTML(`<h3 class="dash-subheading dash-section__summary-title">Summary</h3>`)
+}
+
+// writeEmbeddedSectionIntro renders lead text and the Summary heading before the card.
+func writeEmbeddedSectionIntro(w Writer, lead string) {
+	writeSectionLead(w, lead)
+	writeSectionSummaryTitle(w)
+}
+
 func summaryWrapStart(w Writer, mode SummaryMode, slug string) {
 	switch mode {
 	case SummaryOverviewClickable:

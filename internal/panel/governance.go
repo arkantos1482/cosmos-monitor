@@ -56,6 +56,7 @@ func writeGovernanceSummary(w Writer, d model.Report, mode SummaryMode) {
 
 func writeGovernance(w Writer, d model.Report) {
 	w.Section("6. GOVERNANCE")
+	writeEmbeddedSectionIntro(w, "Active and deposit-period proposals, `x/gov` voting rules, scheduled upgrades, IBC clients, and ERC-20 token pairs.")
 	writeGovernanceSummary(w, d, SummaryEmbedded)
 
 	if len(d.Proposals) > 0 {

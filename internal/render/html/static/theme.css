@@ -422,13 +422,25 @@ body::after {
 
 /* ── Section summaries ────────────────────────────────────────── */
 
+.dash-section__summary-title {
+  margin: 0.55rem 0 0.35rem;
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.dash-callout--note + .dash-section__summary-title,
+.note + .dash-section__summary-title {
+  margin-top: 0.65rem;
+}
+
 .dash-section__summary {
   margin: 0 0 0.85rem;
 }
 
-.dash-section__summary + .dash-callout--note,
-.dash-section__summary + .note {
-  margin-top: -0.15rem;
+.dash-section__summary-title + .dash-section__summary {
+  margin-top: 0;
 }
 
 .val-summary,

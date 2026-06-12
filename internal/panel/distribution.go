@@ -9,8 +9,8 @@ import (
 
 func writeDistribution(w Writer, d model.Report) {
 	w.Section("5. DISTRIBUTION")
+	writeEmbeddedSectionIntro(w, "Per-block reward ledger, `fee_collector` and `x/distribution` routing, community tax and pool, and unclaimed balances network-wide and for this validator.")
 	writeDistributionSummary(w, d, SummaryEmbedded)
-	w.Em("Reward routing through `fee_collector` and `x/distribution`, community tax and pool, and unclaimed balances chain-wide and for this validator.")
 
 	w.Layer("Network-wide")
 	writeDistributionLedger(w, d)

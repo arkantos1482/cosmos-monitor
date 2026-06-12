@@ -16,8 +16,8 @@ const maxProbeJSONBytes = 12_000
 
 func writeEVMSection(w Writer, d model.Report) {
 	w.Section("3. EVM JSON-RPC")
+	writeEmbeddedSectionIntro(w, "`x/vm` EVM state and hardfork schedule, JSON-RPC live metrics and probe health, plus wallet/dApp connection endpoints.")
 	writeEVMSummary(w, d, SummaryEmbedded)
-	w.Em("Wallet and dApp connectivity (`eth_*`, `net_*`, `txpool_*`) on this node's JSON-RPC.")
 	writeEVMRPCSection(w, d)
 	w.BlankLine()
 }
@@ -205,7 +205,7 @@ func writeEVMRPCSection(w Writer, d model.Report) {
 	w.Pre(wallet)
 
 	w.Subsection("Live (JSON-RPC)")
-	w.Hint("`block height` → JSON-RPC eth_blockNumber; `last block age` → JSON-RPC eth_getBlockByNumber timestamp; `sync` → JSON-RPC eth_syncing; `txpool` → JSON-RPC txpool_status; `EVM peers` → JSON-RPC net_peerCount. EIP-1559 fees: use REST feemarket base_fee (§5), not eth_gasPrice (Cosmos EVM stub).")
+	w.Hint("`block height` → JSON-RPC eth_blockNumber; `last block age` → JSON-RPC eth_getBlockByNumber timestamp; `sync` → JSON-RPC eth_syncing; `txpool` → JSON-RPC txpool_status; `EVM peers` → JSON-RPC net_peerCount. EIP-1559 fees: use REST feemarket base_fee (Fee market section), not eth_gasPrice (Cosmos EVM stub).")
 	w.Row("block height", d.EVMBlock+"  _(eth_blockNumber)_")
 	if d.EVMBlockAge != "" {
 		ageStr := d.EVMBlockAge + "  _(eth_getBlockByNumber timestamp)_"

@@ -47,8 +47,8 @@ func writeFeemarketSummary(w Writer, d model.Report, mode SummaryMode) {
 func writeFeemarket(w Writer, d model.Report) {
 	c := feemarket.LoadContext(d)
 	w.Section("3. FEE MARKET")
+	writeEmbeddedSectionIntro(w, "Live EIP-1559 base fee and block demand, block-lifecycle fee math (L1–L3), chain parameters, and this node's local mempool policy from app.toml.")
 	writeFeemarketSummary(w, d, SummaryEmbedded)
-	w.Em("Chain-wide EIP-1559 fee market — live base fee, demand, and governance parameters.")
 	writeFeemarketFeeAcceptance(w, d)
 	writeFeemarketPage(w, d)
 	w.Hint(feemarketSourcesHint(c))

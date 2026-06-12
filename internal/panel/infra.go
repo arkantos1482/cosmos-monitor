@@ -36,8 +36,8 @@ func writeInfraSummary(w Writer, d model.Report, mode SummaryMode) {
 
 func writeInfra(w Writer, d model.Report) {
 	w.Section("1. INFRASTRUCTURE")
+	writeEmbeddedSectionIntro(w, "Host CPU, memory, disk, and load averages, plus `evmd-node` Docker container status and cgroup use.")
 	writeInfraSummary(w, d, SummaryEmbedded)
-	w.Em("Host and container for this node.")
 
 	w.Subsection("OS")
 	w.Hint("`load` → proc /proc/loadavg; `ram` → proc /proc/meminfo (MemTotal, MemAvailable); `disk` → fs statfs /.")

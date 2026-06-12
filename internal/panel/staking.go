@@ -47,6 +47,9 @@ func writeStakingEmbeddedSummary(w Writer, d model.Report, lv model.LocalValidat
 		w.WriteHTML(`</div>`)
 	}
 	writeStakingChainSummaryBody(w, d)
+	w.WriteHTML(fmt.Sprintf(
+		`<div class="staking-summary__row">%.2f%% bonded · %d active</div>`,
+		d.BondedPct, d.BondedCount))
 	w.WriteHTML(`</div>`)
 }
 
@@ -54,8 +57,8 @@ func writeStaking(w Writer, d model.Report) {
 	lv := d.Local
 
 	w.Section("1. STAKING")
+	writeEmbeddedSectionIntro(w, "Local validator stake, commission, and account identities; network bonded pool, module balances, and validator set tables.")
 	writeStakingSummary(w, d, SummaryEmbedded)
-	w.Em("This validator stake and commission, then network bonded pool and stake table.")
 
 	w.Subsection("This validator")
 	if lv.IsValidator {

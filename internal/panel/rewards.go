@@ -9,8 +9,8 @@ import (
 
 func writeRewards(w Writer, d model.Report) {
 	w.Section("4. REWARDS")
+	writeEmbeddedSectionIntro(w, "PMT emission pool and mint inflation parameters, with per-block reward estimates for this validator when applicable.")
 	writeRewardsSummary(w, d, SummaryEmbedded)
-	w.Em("Block reward sources: PMT emissions and mint inflation, with per-block estimates for this validator.")
 
 	if d.Local.IsValidator {
 		w.Subsection("This validator")
@@ -35,6 +35,13 @@ func writeRewardsSummary(w Writer, d model.Report, mode SummaryMode) {
 func writeRewardsCompactSummary(w Writer, d model.Report) {
 	w.WriteHTML(`<div class="eco-summary eco-summary--compact">`)
 	writeRewardsChainStatusRows(w, d)
+	if d.Local.IsValidator {
+		if op, del, _, ok := localValidatorPerBlockRewards(d); ok {
+			w.WriteHTML(fmt.Sprintf(
+				`<div class="eco-summary__row">Per-block: %s commission · %s delegators</div>`,
+				html.EscapeString(op), html.EscapeString(del)))
+		}
+	}
 	w.WriteHTML(`</div>`)
 }
 
