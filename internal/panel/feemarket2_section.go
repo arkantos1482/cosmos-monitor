@@ -1,0 +1,134 @@
+package panel
+
+import (
+	"fmt"
+	"html"
+	"strconv"
+	"strings"
+
+	"github.com/arkantos1482/cosmos-monitor/internal/feemarket2"
+	"github.com/arkantos1482/cosmos-monitor/internal/model"
+)
+
+func writeFeemarket2Summary(w Writer, d model.Report, mode SummaryMode) {
+	s := feemarket2.LoadState(d)
+	summaryWrapStart(w, mode, "feemarket2")
+	writeFeemarket2SummaryBody(w, s, d)
+	summaryWrapEnd(w, mode)
+}
+
+func writeFeemarket2SummaryBody(w Writer, s feemarket2.State, d model.Report) {
+	baseFee := d.BaseFee
+	if baseFee == "" {
+		baseFee = "—"
+	}
+	w.WriteHTML(`<div class="fm2-summary">`)
+	w.WriteHTML(`<div class="fm2-summary__top">`)
+	w.WriteHTML(fmt.Sprintf(`<span class="fm2-summary__base">%s</span>`, html.EscapeString(baseFee)))
+	w.WriteHTML(fmt.Sprintf(`<span class="badge %s">%s</span>`, s.Adj.BadgeClass(), html.EscapeString(s.Adj.Label())))
+	w.WriteHTML(`</div>`)
+	if s.UtilPct > 0 {
+		writeMiniGauge(w, "block demand vs target", s.UtilPct)
+	}
+	w.WriteHTML(`<div class="fm2-summary__kpis">`)
+	writeFm2SummaryKPI(w, "mode", s.Mode)
+	if s.GasWanted > 0 {
+		writeFm2SummaryKPI(w, "block gas (W)", formatUint(s.GasWanted))
+	}
+	if s.GasTarget > 0 {
+		writeFm2SummaryKPI(w, "gas target", formatUint(s.GasTarget))
+	}
+	transfer := feemarket2.TransferCost(s.BaseFeeRaw, s.Denom)
+	if transfer != "—" {
+		writeFm2SummaryKPI(w, "21k transfer", transfer)
+	}
+	w.WriteHTML(`</div></div>`)
+}
+
+func writeFm2SummaryKPI(w Writer, label, value string) {
+	if value == "" {
+		return
+	}
+	w.WriteHTML(fmt.Sprintf(
+		`<div class="fm2-summary__kpi"><span class="fm2-summary__kpi-label">%s</span>`+
+			`<span class="fm2-summary__kpi-val">%s</span></div>`,
+		html.EscapeString(label), html.EscapeString(value)))
+}
+
+func writeFeemarket2(w Writer, d model.Report) {
+	s := feemarket2.LoadState(d)
+
+	w.Section("4b. FEE MARKET 2")
+	writeEmbeddedSectionIntro(w, "x/feemarket module state: EIP-1559 base fee, block gas demand, on-chain parameters, and this node's local fee policy.")
+	writeFeemarket2Summary(w, d, SummaryEmbedded)
+
+	w.Subsection("Live state")
+	w.Hint("`base_fee` → REST GET /cosmos/evm/feemarket/v1/base_fee; `block_gas` (W) → …/block_gas; parent `gas_used` → CometBFT GET /block_results.")
+	w.Row("block height", d.BlockHeight)
+	w.Row("base fee", orDash(d.BaseFee))
+	if s.GasWanted > 0 {
+		bar := ""
+		if s.UtilPct > 0 {
+			bar = fmt.Sprintf(`<div class="kpi-bar"><div class="kpi-bar__fill" style="width:%d%%"></div></div>`, s.UtilPct)
+		}
+		w.RowHTML("block gas (W)", formatUint(s.GasWanted)+" gas", bar)
+	}
+	if s.GasUsed > 0 {
+		w.Row("parent gas used", formatUint(s.GasUsed)+" gas")
+	}
+	if s.GasTarget > 0 {
+		w.Row("gas target", formatUint(s.GasTarget)+" gas  _(max_gas ÷ elasticity)_")
+	}
+	if s.GasLimit > 0 {
+		w.Row("block gas limit", formatUint(s.GasLimit)+" gas")
+	}
+	if s.LastBlockFees != "" {
+		w.Row("parent block fees", s.LastBlockFees+"  _(gas_used × base_fee)_")
+	}
+	if s.HasProjection {
+		w.Row("projected next base fee", fm2ProjectedFee(s)+"  _(CalcGasBaseFee from module)_")
+	}
+
+	w.Subsection("EIP-1559 mechanics")
+	w.WriteHTML(fm2MechanicsHTML(s))
+
+	w.Subsection("Module & policy")
+	w.WriteHTML(feemarket2DomainCardsHTML(s, d))
+
+	w.Hint(feemarket2SourcesHint())
+	w.BlankLine()
+}
+
+func fm2MechanicsHTML(s feemarket2.State) string {
+	var b strings.Builder
+	b.WriteString(`<div class="fm2-mechanics">`)
+	b.WriteString(`<ol class="fm2-mechanics__steps">`)
+	b.WriteString(`<li><strong>EndBlock</strong> — store block gas wanted: ` +
+		`W = max(gas_used, gas_wanted × min_gas_multiplier). Emits <code>block_gas</code> event.</li>`)
+	b.WriteString(`<li><strong>BeginBlock</strong> — read parent W, compute gas target = max_gas ÷ elasticity_multiplier, ` +
+		`then adjust base fee with <code>CalcGasBaseFee</code> (same formula as go-ethereum EIP-1559).</li>`)
+	b.WriteString(`<li><strong>CheckTx / ante</strong> — txs must meet base fee (EVM) and node <code>minimum-gas-prices</code> (Cosmos).</li>`)
+	b.WriteString(`</ol>`)
+	b.WriteString(`<pre class="fm2-mechanics__formula">`)
+	b.WriteString(html.EscapeString(
+		"if gas_used > target:  base_fee += max(base_fee × Δ / target / denom, 1 apmt)\n" +
+			"if gas_used < target:  base_fee -= base_fee × Δ / target / denom  (floor = min_gas_price)\n" +
+			"if gas_used == target: base_fee unchanged"))
+	b.WriteString(`</pre>`)
+	if s.Mode != "" {
+		b.WriteString(fmt.Sprintf(`<p class="fm2-mechanics__mode">Current mode: <strong>%s</strong></p>`,
+			html.EscapeString(s.Mode)))
+	}
+	b.WriteString(`</div>`)
+	return b.String()
+}
+
+func feemarket2SourcesHint() string {
+	return "`base_fee`, `params`, `block_gas` → REST GET /cosmos/evm/feemarket/v1/*; " +
+		"`gas_used` → CometBFT GET /block_results; `max_gas` → CometBFT GET /status (consensus params); " +
+		"node policy → local app.toml (minimum-gas-prices, mempool, evm.min-tip)."
+}
+
+func formatUint(n uint64) string {
+	return strconv.FormatUint(n, 10)
+}

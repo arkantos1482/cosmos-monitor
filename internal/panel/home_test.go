@@ -247,6 +247,7 @@ func TestSectionSummariesEmbedded(t *testing.T) {
 		{ViewRewards, `rewards-summary`, "At a glance"},
 		{ViewDistribution, `dist-summary`, "At a glance"},
 		{ViewFeemarket, `class="fee-summary"`, "At a glance"},
+		{ViewFeemarket2, `class="fm2-summary"`, "At a glance"},
 		{ViewGovernance, `class="gov-summary"`, "At a glance"},
 		{ViewInfra, `class="infra-summary"`, "At a glance"},
 		{ViewNode, `class="node-summary"`, "At a glance"},

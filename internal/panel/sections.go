@@ -14,6 +14,7 @@ const (
 	ViewRewards       View = "rewards"
 	ViewDistribution  View = "distribution"
 	ViewFeemarket     View = "feemarket"
+	ViewFeemarket2    View = "feemarket2"
 	ViewGovernance View = "governance"
 	ViewEVM        View = "evm"
 )
@@ -61,6 +62,7 @@ var Nav = []NavItem{
 	{ViewStaking, "Staking", "/s/staking", NavScopeEconomics},
 	{ViewSlashing, "Slashing", "/s/slashing", NavScopeEconomics},
 	{ViewFeemarket, "Fee market", "/s/feemarket", NavScopeEconomics},
+	{ViewFeemarket2, "Fee market 2", "/s/feemarket2", NavScopeEconomics},
 	{ViewRewards, "Rewards", "/s/rewards", NavScopeEconomics},
 	{ViewDistribution, "Distribution", "/s/distribution", NavScopeEconomics},
 	{ViewGovernance, "Governance", "/s/governance", NavScopeGovernance},
@@ -84,7 +86,7 @@ func ParseView(s string) View {
 		return ViewNode
 	case "economics": // legacy path — merged into rewards
 		return ViewRewards
-	case ViewHome, ViewInfra, ViewNode, ViewStaking, ViewSlashing, ViewRewards, ViewDistribution, ViewFeemarket, ViewGovernance, ViewEVM:
+	case ViewHome, ViewInfra, ViewNode, ViewStaking, ViewSlashing, ViewRewards, ViewDistribution, ViewFeemarket, ViewFeemarket2, ViewGovernance, ViewEVM:
 		return View(s)
 	default:
 		return ViewHome
@@ -107,6 +109,8 @@ func writeView(w Writer, v View, d model.Report) {
 		writeDistribution(w, d)
 	case ViewFeemarket:
 		writeFeemarket(w, d)
+	case ViewFeemarket2:
+		writeFeemarket2(w, d)
 	case ViewGovernance:
 		writeGovernance(w, d)
 	case ViewEVM:
