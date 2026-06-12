@@ -7,7 +7,7 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-func TestBuildEconomicsUsesTablesNotMermaid(t *testing.T) {
+func TestBuildRewardsUsesTablesNotMermaid(t *testing.T) {
 	d := model.Report{
 		Inflation: 3.5, PMTEnabled: true, PMTRate: "0.1 PMT/block",
 		BaseFee: "1000", Elasticity: 2, BlockGas: "21000",
@@ -21,21 +21,19 @@ func TestBuildEconomicsUsesTablesNotMermaid(t *testing.T) {
 	}
 	out := Build(d)
 	rewardsIdx := strings.Index(out, "2. REWARDS")
-	ecoIdx := strings.Index(out, "3. ECONOMICS")
-	end := strings.Index(out, `class="dash-heading">4. FEE MARKET</h2>`)
-	if rewardsIdx < 0 || ecoIdx < 0 || end < 0 {
-		t.Fatal("expected rewards, economics, and fee market sections")
+	end := strings.Index(out, `class="dash-heading">3. FEE MARKET</h2>`)
+	if rewardsIdx < 0 || end < 0 {
+		t.Fatal("expected rewards and fee market sections")
 	}
-	rewards := out[rewardsIdx:ecoIdx]
-	eco := out[ecoIdx:end]
-	if strings.Contains(eco, `class="diagram-panel mermaid"`) || strings.Contains(eco, "graph LR") {
-		t.Fatal("economics section should not use mermaid")
+	rewards := out[rewardsIdx:end]
+	if strings.Contains(rewards, `class="diagram-panel mermaid"`) || strings.Contains(rewards, "graph LR") {
+		t.Fatal("rewards section should not use mermaid")
 	}
 	if !strings.Contains(rewards, "Block reward ledger") {
 		t.Fatal("rewards should use block reward ledger")
 	}
-	if strings.Contains(eco, "At a glance") {
-		t.Fatal("economics should not duplicate at-a-glance subsection")
+	if strings.Contains(rewards, "At a glance") {
+		t.Fatal("rewards should not duplicate at-a-glance subsection")
 	}
 	if !strings.Contains(rewards, `eco-domains`) {
 		t.Fatal("rewards summary should use domain cards")
@@ -50,34 +48,25 @@ func TestBuildEconomicsUsesTablesNotMermaid(t *testing.T) {
 	for _, want := range []string{
 		"eco-domain--pmtrewards",
 		"eco-domain--inflation",
+		`class="dash-subheading">Distribution</h3>`,
 	} {
 		if !strings.Contains(rewards, want) {
 			t.Fatalf("rewards should include %q", want)
 		}
 	}
-	if !strings.Contains(eco, `class="dash-subheading">Distribution</h3>`) {
-		t.Fatal("economics should include distribution subsection")
-	}
 	for _, gone := range []string{
 		"eco-domain--staking",
 		"eco-domain--slashing",
-	} {
-		if strings.Contains(eco, gone) {
-			t.Fatalf("economics should not include %q", gone)
-		}
-	}
-	if strings.Contains(eco, "Module accounts") || strings.Contains(eco, "eco-module-accounts") {
-		t.Fatal("economics should not include unified module accounts table")
-	}
-	for _, gone := range []string{
+		"Module accounts",
+		"eco-module-accounts",
 		"eco-domain--txfees",
 		"eco-domain--distribution",
 		"eco-domain--rewards",
 		`class="dash-subheading">Advanced parameters (reward flow)</h3>`,
 		`class="dash-subheading">Chain parameters (reference)</h3>`,
 	} {
-		if strings.Contains(eco, gone) {
-			t.Fatalf("economics should not contain %q", gone)
+		if strings.Contains(rewards, gone) {
+			t.Fatalf("rewards should not contain %q", gone)
 		}
 	}
 }
@@ -97,8 +86,8 @@ func TestBuildFeeMarketPanel(t *testing.T) {
 	if strings.Contains(out, `class="fee-flow"`) {
 		t.Fatal("fee market section should not use legacy fee-flow")
 	}
-	idx := strings.Index(out, `class="dash-heading">4. FEE MARKET</h2>`)
-	end := strings.Index(out, "5. GOVERNANCE")
+	idx := strings.Index(out, `class="dash-heading">3. FEE MARKET</h2>`)
+	end := strings.Index(out, "4. GOVERNANCE")
 	if idx < 0 || end < 0 {
 		t.Fatal("expected fee market and governance sections")
 	}
@@ -140,9 +129,8 @@ func TestContentInventory(t *testing.T) {
 	for _, want := range []string{
 		`class="dash-heading">1. STAKING</h2>`,
 		`class="dash-heading">2. REWARDS</h2>`,
-		`class="dash-heading">3. ECONOMICS</h2>`,
-		`class="dash-heading">4. FEE MARKET</h2>`,
-		`class="dash-heading">5. GOVERNANCE</h2>`,
+		`class="dash-heading">3. FEE MARKET</h2>`,
+		`class="dash-heading">4. GOVERNANCE</h2>`,
 		`class="dash-heading">1. INFRASTRUCTURE</h2>`,
 		`class="dash-heading">2. VALIDATOR</h2>`,
 		`class="dash-heading">3. EVM JSON-RPC</h2>`,

@@ -35,7 +35,6 @@ var navIcons = map[panel.View]string{
 	panel.ViewNode: `<svg class="dash-nav__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="8" cy="8" r="5"/><path d="M8 5v3l2 1"/></svg>`,
 	panel.ViewStaking: `<svg class="dash-nav__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M8 2l2 3.5h4l-3.2 2.5 1.2 4L8 10.5 3.8 12l1.2-4L2 5.5h4L8 2z"/></svg>`,
 	panel.ViewRewards: `<svg class="dash-nav__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M8 2l1.8 3.6L14 6.3l-3 2.9.7 4.1L8 11.2 4.3 13.3 5 9.2 2 6.3l4.2-.7L8 2z"/></svg>`,
-	panel.ViewEconomics: `<svg class="dash-nav__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="8" cy="8" r="5"/><path d="M8 5v6M6 7h3.5a1.5 1.5 0 010 3H6"/></svg>`,
 	panel.ViewFeemarket: `<svg class="dash-nav__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 12h10"/><path d="M8 3l4 6H4l4-6z"/><circle cx="8" cy="11" r="1"/></svg>`,
 	panel.ViewGovernance: `<svg class="dash-nav__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 4h10M3 8h10M3 12h6"/></svg>`,
 	panel.ViewEVM: `<svg class="dash-nav__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 8l3-5 3 5-3 5-3-5zM8 8l3-5 3 5-3 5-3-5z"/></svg>`,
@@ -51,8 +50,6 @@ func navSlug(v panel.View) string {
 		return "staking"
 	case panel.ViewRewards:
 		return "rewards"
-	case panel.ViewEconomics:
-		return "economics"
 	case panel.ViewFeemarket:
 		return "feemarket"
 	case panel.ViewGovernance:

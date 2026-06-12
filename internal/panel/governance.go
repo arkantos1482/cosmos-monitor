@@ -55,7 +55,7 @@ func writeGovernanceSummary(w Writer, d model.Report, mode SummaryMode) {
 }
 
 func writeGovernance(w Writer, d model.Report) {
-	w.Section("5. GOVERNANCE")
+	w.Section("4. GOVERNANCE")
 	writeGovernanceSummary(w, d, SummaryEmbedded)
 
 	if len(d.Proposals) > 0 {

@@ -7,7 +7,7 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-func TestWriteEconomicsOverviewLedger(t *testing.T) {
+func TestWriteRewardsOverviewLedger(t *testing.T) {
 	d := model.Report{
 		Inflation:           0,
 		InflationPerBlock:   "",
@@ -40,14 +40,14 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		},
 	}
 	out := Build(d)
-	idx := strings.Index(out, "3. ECONOMICS")
-	end := strings.Index(out, `class="dash-heading">4. FEE MARKET</h2>`)
+	idx := strings.Index(out, "2. REWARDS")
+	end := strings.Index(out, `class="dash-heading">3. FEE MARKET</h2>`)
 	if idx < 0 || end < 0 {
-		t.Fatal("expected economics and fee market sections")
+		t.Fatal("expected rewards and fee market sections")
 	}
 	chunk := out[idx:end]
 	if strings.Contains(chunk, `class="diagram-panel mermaid"`) {
-		t.Fatal("economics section should not use mermaid")
+		t.Fatal("rewards section should not use mermaid")
 	}
 
 	for _, want := range []string{
@@ -60,17 +60,17 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		"delegator share",
 		"validator commission",
 		"community tax",
-	} {
-		if !strings.Contains(chunk, want) {
-			t.Fatalf("economics chunk missing %q", want)
-		}
-	}
-
-	for _, gone := range []string{
 		"Block reward ledger",
 		"eco-domains",
 		"eco-domain--pmtrewards",
 		"eco-domain--inflation",
+	} {
+		if !strings.Contains(chunk, want) {
+			t.Fatalf("rewards chunk missing %q", want)
+		}
+	}
+
+	for _, gone := range []string{
 		"eco-domain--staking",
 		"eco-domain--slashing",
 		"bonded_tokens_pool",
@@ -84,32 +84,15 @@ func TestWriteEconomicsOverviewLedger(t *testing.T) {
 		`id="eco-flags"`,
 		"eco-domain--distribution",
 		"eco-domain--rewards",
-		"Total/block",
-		"per-block commission",
-	} {
-		if strings.Contains(chunk, gone) {
-			t.Fatalf("economics chunk should not contain %q", gone)
-		}
-	}
-	
-	// Check that old KPI + badges layout is gone
-	if strings.Contains(chunk, "At a glance") {
-		t.Fatal("economics should not duplicate at-a-glance subsection")
-	}
-	for _, gone := range []string{
+		"At a glance",
 		"Money flow (live balances)",
-		"This validator", 
-		"this validator → commission",
-		"your commission",
 		"Distribution split",
 		"Network total",
-		"per-block commission",
 	} {
 		if strings.Contains(chunk, gone) {
-			t.Fatalf("economics chunk should not contain old table %q", gone)
+			t.Fatalf("rewards chunk should not contain %q", gone)
 		}
 	}
-	
 }
 
 func TestEconomicsPerBlockSplit(t *testing.T) {
@@ -158,7 +141,7 @@ func TestFeeCollectorBalanceAndChecks(t *testing.T) {
 	}
 }
 
-func TestEconomicsSourcesProvenance(t *testing.T) {
+func TestRewardsSourcesProvenance(t *testing.T) {
 	d := model.Report{
 		PMTEnabled:          true,
 		PMTRate:             "0.1 PMT/block",
@@ -169,29 +152,23 @@ func TestEconomicsSourcesProvenance(t *testing.T) {
 		},
 	}
 	out := BuildWithOptions(d, Options{ShowSources: true})
-	idx := strings.Index(out, "3. ECONOMICS")
-	end := strings.Index(out, `class="dash-heading">4. FEE MARKET</h2>`)
+	idx := strings.Index(out, "2. REWARDS")
+	end := strings.Index(out, `class="dash-heading">3. FEE MARKET</h2>`)
 	if idx < 0 || end < 0 {
-		t.Fatal("expected economics section")
+		t.Fatal("expected rewards section")
 	}
 	chunk := out[idx:end]
 	for _, want := range []string{
 		`class="dash-sources"`,
 		`>Data sources</summary>`,
 		`class="hint-provenance"`,
+		"pmtrewards/v1/params",
 		"distribution/v1beta1/validators",
 		"outstanding_rewards",
 		"distribution/v1beta1/community_pool",
 	} {
 		if !strings.Contains(chunk, want) {
-			t.Fatalf("economics data sources missing %q", want)
-		}
-	}
-	for _, gone := range []string{
-		"pmtrewards/v1/params",
-	} {
-		if strings.Contains(chunk, gone) {
-			t.Fatalf("economics should not contain rewards source %q", gone)
+			t.Fatalf("rewards data sources missing %q", want)
 		}
 	}
 	for _, gone := range []string{
@@ -199,7 +176,7 @@ func TestEconomicsSourcesProvenance(t *testing.T) {
 		"Tx fees:",
 	} {
 		if strings.Contains(chunk, gone) {
-			t.Fatalf("economics should not contain %q", gone)
+			t.Fatalf("rewards should not contain %q", gone)
 		}
 	}
 }
@@ -217,10 +194,10 @@ func TestModuleAccountDisplayAddress(t *testing.T) {
 	}
 	out := Build(d)
 	if strings.Contains(out, bech) {
-		t.Fatal("economics should prefer EVM hex over bech32 for module addresses")
+		t.Fatal("rewards should prefer EVM hex over bech32 for module addresses")
 	}
 	if !strings.Contains(out, wantEVM) {
-		t.Fatalf("economics should show EVM address %q", wantEVM)
+		t.Fatalf("rewards should show EVM address %q", wantEVM)
 	}
 }
 

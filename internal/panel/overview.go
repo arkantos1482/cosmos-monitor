@@ -25,7 +25,6 @@ func writeOverview(w Writer, d model.Report) {
 	}{
 		{"staking", writeStakingSummary},
 		{"rewards", writeRewardsSummary},
-		{"economics", writeEconomicsSummary},
 		{"feemarket", writeFeemarketSummary},
 		{"governance", writeGovernanceSummary},
 	})

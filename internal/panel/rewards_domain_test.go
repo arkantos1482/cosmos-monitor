@@ -35,6 +35,7 @@ func TestRewardsSectionConsolidatesChainAndLocal(t *testing.T) {
 		"eco-domain--pmtrewards",
 		"eco-domain--inflation",
 		"Block reward ledger",
+		`class="dash-subheading">Distribution</h3>`,
 		`class="dash-subheading">Unclaimed</h3>`,
 		"outstanding rewards",
 		"commission earned",
@@ -43,14 +44,6 @@ func TestRewardsSectionConsolidatesChainAndLocal(t *testing.T) {
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("rewards view missing %q", want)
-		}
-	}
-	for _, gone := range []string{
-		`class="dash-subheading">Distribution</h3>`,
-		"Unclaimed rewards",
-	} {
-		if strings.Contains(out, gone) {
-			t.Fatalf("rewards view should not contain %q", gone)
 		}
 	}
 }
@@ -79,30 +72,6 @@ func TestLocalValidatorRewardsMovedFromNodeSection(t *testing.T) {
 	} {
 		if strings.Contains(nodeOut, gone) {
 			t.Fatalf("validator section should not contain %q", gone)
-		}
-	}
-}
-
-func TestRewardsSourcesProvenance(t *testing.T) {
-	d := model.Report{
-		PMTEnabled: true,
-		PMTRate:    "0.1 PMT/block",
-	}
-	out := BuildViewWithOptions(ViewRewards, d, Options{ShowSources: true})
-	for _, want := range []string{
-		`class="dash-sources"`,
-		"pmtrewards/v1/params",
-		"mint/v1beta1/inflation",
-	} {
-		if !strings.Contains(out, want) {
-			t.Fatalf("rewards data sources missing %q", want)
-		}
-	}
-	for _, gone := range []string{
-		"distribution/v1beta1/community_pool",
-	} {
-		if strings.Contains(out, gone) {
-			t.Fatalf("rewards should not contain economics source %q", gone)
 		}
 	}
 }

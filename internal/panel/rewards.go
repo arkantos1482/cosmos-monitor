@@ -10,11 +10,12 @@ import (
 func writeRewards(w Writer, d model.Report) {
 	w.Section("2. REWARDS")
 	writeRewardsSummary(w, d, SummaryEmbedded)
-	w.Em("Block reward sources (PMT emissions and mint inflation) and this validator's unclaimed share. Distribution routing → § Economics.")
+	w.Em("Block reward sources (PMT emissions, mint inflation), distribution routing through `fee_collector` and `x/distribution`, and unclaimed balances chain-wide and for this validator.")
 
 	w.Layer("Chain")
 	w.WriteHTML(economicsDomainCardsHTML(d, false))
-	writeEconomicsLedger(w, d)
+	writeRewardsLedger(w, d)
+	writeRewardsDistribution(w, d)
 	w.Hint(rewardsSourcesHint())
 
 	if d.Local.IsValidator {
@@ -37,18 +38,15 @@ func writeRewardsSummary(w Writer, d model.Report, mode SummaryMode) {
 }
 
 func writeRewardsCompactSummary(w Writer, d model.Report) {
-	writeRewardsChainCompactSummary(w, d)
+	w.WriteHTML(`<div class="eco-summary eco-summary--compact">`)
+	writeRewardsChainStatusRows(w, d)
+	writeRewardsDistributionSummaryRows(w, d)
+	w.WriteHTML(`</div>`)
 	if d.Local.IsValidator && d.Local.Outstanding != "" {
 		w.WriteHTML(fmt.Sprintf(
 			`<div class="eco-summary__row">Outstanding: %s</div>`,
 			html.EscapeString(d.Local.Outstanding)))
 	}
-}
-
-func writeRewardsChainCompactSummary(w Writer, d model.Report) {
-	w.WriteHTML(`<div class="eco-summary eco-summary--compact">`)
-	writeRewardsChainStatusRows(w, d)
-	w.WriteHTML(`</div>`)
 }
 
 func writeRewardsChainStatusRows(w Writer, d model.Report) {
@@ -97,5 +95,9 @@ func rewardsSourcesHint() string {
 		"`inflation`, `annual provisions` → REST GET /cosmos/mint/v1beta1/inflation, /cosmos/mint/v1beta1/annual-provisions; " +
 		"`blocks / year`, mint params → REST GET /cosmos/mint/v1beta1/params; " +
 		"`ledger per-block amounts` → derived (PMT rate, mint inflation/block, parent-block fees); " +
-		"`fee_collector cleared` → derived (x/bank fee_collector balance)."
+		"`community tax`, `community pool` → REST GET /cosmos/distribution/v1beta1/params, /cosmos/distribution/v1beta1/community_pool; " +
+		"`unclaimed delegator`, `unclaimed commission` → REST GET /cosmos/distribution/v1beta1/validators/{valoper}/outstanding_rewards, …/commission (summed across validators); " +
+		"`module account balances` → REST GET /cosmos/bank/v1beta1/balances/{address}; " +
+		"`module account addresses` → REST GET /cosmos/auth/v1beta1/module_accounts; " +
+		"`fee_collector cleared`, `unclaimed check` → derived (x/bank balances, outstanding sums)."
 }

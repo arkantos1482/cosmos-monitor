@@ -15,7 +15,6 @@ func TestBuildOverviewStack(t *testing.T) {
 		MemPct: 42, DiskPct: 55, Load1: 0.5,
 		RPCProbeOK: 4, RPCProbeTotal: 4,
 		RPCProbes: []model.RPCProbe{{Method: "eth_blockNumber", OK: true}},
-		// Economics data for compact domain summary on overview card
 		PMTRate: "0.1 PMT/block",
 		CommunityTax: "2%", 
 		CommunityPool: "0.5 PMT",
@@ -33,7 +32,6 @@ func TestBuildOverviewStack(t *testing.T) {
 		`class="dash-overview__card-title">Staking</p>`,
 		`dash-overview__card--staking`,
 		`dash-overview__card--rewards`,
-		`dash-overview__card--economics`,
 		`dash-overview__card--feemarket`,
 		`dash-overview__card--governance`,
 		`dash-overview__card--infra`,
@@ -71,17 +69,16 @@ func TestBuildOverviewStack(t *testing.T) {
 		t.Fatal("overview should show This node group before Chain group")
 	}
 	
-	// Verify rewards overview card shows PMT/inflation compact summary
 	rewardsCard := strings.Index(out, `dash-overview__card--rewards`)
-	ecoCard := strings.Index(out, `dash-overview__card--economics`)
-	if rewardsCard < 0 || ecoCard < 0 {
-		t.Fatal("overview should include rewards and economics cards")
+	feeCard := strings.Index(out, `dash-overview__card--feemarket`)
+	if rewardsCard < 0 || feeCard < 0 {
+		t.Fatal("overview should include rewards and fee market cards")
 	}
-	if !strings.Contains(out[rewardsCard:ecoCard], `eco-summary--compact`) {
-		t.Fatal("rewards overview card should show compact domain summary")
+	if !strings.Contains(out[rewardsCard:feeCard], `eco-summary--compact`) {
+		t.Fatal("rewards overview card should show compact summary with PMT/inflation and distribution")
 	}
-	if !strings.Contains(out[ecoCard:], `eco-summary--compact`) {
-		t.Fatal("economics overview card should show compact distribution summary")
+	if !strings.Contains(out[rewardsCard:feeCard], "Community pool:") {
+		t.Fatal("rewards overview card should include distribution summary rows")
 	}
 }
 
@@ -173,7 +170,6 @@ func TestSectionSummariesEmbedded(t *testing.T) {
 	}{
 		{ViewStaking, `staking-summary`, `class="dash-subheading">Summary</h3>`},
 		{ViewRewards, `eco-domains`, "At a glance"},
-		{ViewEconomics, `eco-summary--compact`, "At a glance"},
 		{ViewFeemarket, `class="fee-summary"`, ""},
 		{ViewGovernance, `class="gov-summary"`, ""},
 		{ViewInfra, `class="infra-summary"`, ""},

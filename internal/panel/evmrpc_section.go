@@ -14,6 +14,14 @@ import (
 
 const maxProbeJSONBytes = 12_000
 
+func writeEVMSection(w Writer, d model.Report) {
+	w.Section("3. EVM JSON-RPC")
+	writeEVMSummary(w, d, SummaryEmbedded)
+	w.Em("Wallet and dApp connectivity (`eth_*`, `net_*`, `txpool_*`) on this node's JSON-RPC.")
+	writeEVMRPCSection(w, d)
+	w.BlankLine()
+}
+
 func evmDisplaySymbol(denom string) string {
 	switch strings.ToLower(denom) {
 	case "apmt", "upmt":

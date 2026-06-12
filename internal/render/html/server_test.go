@@ -15,10 +15,10 @@ func stubRender(v panel.View) model.Report {
 }
 
 func TestServeViewPollReturnsFragment(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/s/economics", nil)
+	req := httptest.NewRequest(http.MethodGet, "/s/rewards", nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
-	serveView(rec, req, panel.ViewEconomics, stubRender, panel.Options{})
+	serveView(rec, req, panel.ViewRewards, stubRender, panel.Options{})
 	body := rec.Body.String()
 	if strings.Contains(body, "<!DOCTYPE html>") || strings.Contains(body, `id="dash-nav"`) {
 		t.Fatal("poll request should return fragment only")
@@ -32,11 +32,11 @@ func TestServeViewPollReturnsFragment(t *testing.T) {
 }
 
 func TestServeViewBoostReturnsFullPage(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/s/economics", nil)
+	req := httptest.NewRequest(http.MethodGet, "/s/rewards", nil)
 	req.Header.Set("HX-Request", "true")
 	req.Header.Set("HX-Boosted", "true")
 	rec := httptest.NewRecorder()
-	serveView(rec, req, panel.ViewEconomics, stubRender, panel.Options{})
+	serveView(rec, req, panel.ViewRewards, stubRender, panel.Options{})
 	body := rec.Body.String()
 	for _, want := range []string{"<!DOCTYPE html>", `hx-boost="true"`, `id="dash-status"`, `id="dash-nav"`, `id="data"`} {
 		if !strings.Contains(body, want) {

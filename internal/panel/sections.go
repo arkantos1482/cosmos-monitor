@@ -2,19 +2,18 @@ package panel
 
 import "github.com/arkantos1482/cosmos-monitor/internal/model"
 
-// View identifies a dashboard page (home or one of seven sections).
+// View identifies a dashboard page (home or one of six chain/node sections).
 type View string
 
 const (
-	ViewHome      View = "home"
-	ViewInfra     View = "infra"
-	ViewNode      View = "node"
-	ViewStaking   View = "staking"
-	ViewRewards   View = "rewards"
-	ViewEconomics View = "economics"
-	ViewFeemarket View = "feemarket"
+	ViewHome       View = "home"
+	ViewInfra      View = "infra"
+	ViewNode       View = "node"
+	ViewStaking    View = "staking"
+	ViewRewards    View = "rewards"
+	ViewFeemarket  View = "feemarket"
 	ViewGovernance View = "governance"
-	ViewEVM       View = "evm"
+	ViewEVM        View = "evm"
 )
 
 // NavScope groups sidebar and home cards into chain-wide vs this-node views.
@@ -53,7 +52,6 @@ var Nav = []NavItem{
 	{ViewEVM, "EVM JSON-RPC", "/s/evm", NavScopeNode},
 	{ViewStaking, "Staking", "/s/staking", NavScopeChain},
 	{ViewRewards, "Rewards", "/s/rewards", NavScopeChain},
-	{ViewEconomics, "Economics", "/s/economics", NavScopeChain},
 	{ViewFeemarket, "Fee market", "/s/feemarket", NavScopeChain},
 	{ViewGovernance, "Governance", "/s/governance", NavScopeChain},
 }
@@ -74,7 +72,9 @@ func ParseView(s string) View {
 	switch View(s) {
 	case "local", "validators": // legacy paths — merged into Validator
 		return ViewNode
-	case ViewHome, ViewInfra, ViewNode, ViewStaking, ViewRewards, ViewEconomics, ViewFeemarket, ViewGovernance, ViewEVM:
+	case "economics": // legacy path — merged into rewards
+		return ViewRewards
+	case ViewHome, ViewInfra, ViewNode, ViewStaking, ViewRewards, ViewFeemarket, ViewGovernance, ViewEVM:
 		return View(s)
 	default:
 		return ViewHome
@@ -91,8 +91,6 @@ func writeView(w Writer, v View, d model.Report) {
 		writeStaking(w, d)
 	case ViewRewards:
 		writeRewards(w, d)
-	case ViewEconomics:
-		writeEconomics(w, d)
 	case ViewFeemarket:
 		writeFeemarket(w, d)
 	case ViewGovernance:

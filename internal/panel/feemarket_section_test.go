@@ -159,7 +159,7 @@ func TestWriteFeemarketL5ChainParams(t *testing.T) {
 		`CometBFT GET /block_results`,
 		"consensus_params",
 		"vm/v1/config",
-		"subsection below",
+		"subsection above",
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("L5 missing %q", want)
@@ -229,6 +229,11 @@ func TestWriteFeemarketFeeAcceptance(t *testing.T) {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("fee market section missing %q", want)
 		}
+	}
+	acceptIdx := strings.Index(chunk, "Fee acceptance (app.toml)")
+	chainIdx := strings.Index(chunk, "Chain state &amp; parameters")
+	if acceptIdx < 0 || chainIdx < 0 || acceptIdx > chainIdx {
+		t.Fatal("node fee acceptance should appear before chain state")
 	}
 	node := BuildView(ViewNode, d)
 	if strings.Contains(node, "Fee acceptance (app.toml)") {

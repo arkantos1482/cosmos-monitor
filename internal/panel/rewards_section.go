@@ -8,27 +8,7 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-func writeEconomicsSummary(w Writer, d model.Report, mode SummaryMode) {
-	summaryWrapStart(w, mode, "economics")
-
-	if mode == SummaryOverviewClickable {
-		writeEconomicsCompactSummary(w, d)
-	} else {
-		w.WriteHTML(`<div class="eco-summary eco-summary--compact">`)
-		writeEconomicsDistributionSummaryRows(w, d)
-		w.WriteHTML(`</div>`)
-	}
-
-	summaryWrapEnd(w, mode)
-}
-
-func writeEconomicsCompactSummary(w Writer, d model.Report) {
-	w.WriteHTML(`<div class="eco-summary eco-summary--compact">`)
-	writeEconomicsDistributionSummaryRows(w, d)
-	w.WriteHTML(`</div>`)
-}
-
-func writeEconomicsDistributionSummaryRows(w Writer, d model.Report) {
+func writeRewardsDistributionSummaryRows(w Writer, d model.Report) {
 	if d.CommunityPool != "" {
 		w.WriteHTML(fmt.Sprintf(`<div class="eco-summary__row">Community pool: %s</div>`, html.EscapeString(d.CommunityPool)))
 	}
@@ -43,46 +23,14 @@ func writeEconomicsDistributionSummaryRows(w Writer, d model.Report) {
 	}
 }
 
-func writeEconomicsKPIRows(w Writer, d model.Report) {
-	if total := RewardInPerBlockTotal(d); total != "—" {
-		w.Row("reward in / block", total)
-	}
-	if bal := FeeCollectorBalance(d); bal != "" {
-		check := economicsFeeCollectorCheck(d)
-		val := bal
-		if check == "cleared" {
-			val = bal + "  _(cleared each block)_"
-		} else if check == "not cleared?" {
-			val = bal + "  _(stuck — check distribution)_"
-		}
-		w.Row("fee_collector", val)
-	}
-	if d.CommunityPool != "" {
-		w.Row("community pool", d.CommunityPool)
-	}
-	if del := economicsUnclaimedDelegator(d); del != "" {
-		w.Row("unclaimed delegator", del)
-	}
-	if comm := economicsUnclaimedCommission(d); comm != "" {
-		w.Row("unclaimed commission", comm)
-	}
-	if d.PMTEnabled && d.PMTBalance != "" {
-		val := d.PMTBalance
-		if d.PMTRunway != "" {
-			val += "  (" + d.PMTRunway + ")"
-		}
-		w.Row("PMT pool", val)
-	}
-}
-
-func writeEconomicsOverview(w Writer, d model.Report) {
+func writeRewardsDistribution(w Writer, d model.Report) {
 	w.Subsection("Distribution")
-	writeEconomicsDistributionModule(w, d)
-	writeEconomicsUnclaimedBalances(w, d)
-	writeEconomicsCommunityTax(w, d)
+	writeRewardsDistributionModule(w, d)
+	writeRewardsUnclaimedBalances(w, d)
+	writeRewardsCommunityTax(w, d)
 }
 
-func writeEconomicsDistributionModule(w Writer, d model.Report) {
+func writeRewardsDistributionModule(w Writer, d model.Report) {
 	bal := distributionModuleBalance(d)
 	addr := economicsDistributionModuleAddr(d)
 	if bal == "" && addr == "" {
@@ -97,7 +45,7 @@ func writeEconomicsDistributionModule(w Writer, d model.Report) {
 	w.WriteHTML(html)
 }
 
-func writeEconomicsCommunityTax(w Writer, d model.Report) {
+func writeRewardsCommunityTax(w Writer, d model.Report) {
 	if d.CommunityTax == "" && d.CommunityPool == "" {
 		return
 	}
@@ -118,8 +66,7 @@ func writeEconomicsCommunityTax(w Writer, d model.Report) {
 	}}))
 }
 
-
-func writeEconomicsUnclaimedBalances(w Writer, d model.Report) {
+func writeRewardsUnclaimedBalances(w Writer, d model.Report) {
 	del := economicsUnclaimedDelegator(d)
 	comm := economicsUnclaimedCommission(d)
 	total := economicsUnclaimedTotal(d)
@@ -163,19 +110,19 @@ func writeEconomicsUnclaimedBalances(w Writer, d model.Report) {
 	w.WriteHTML(economicsDistItemsHTML(items))
 }
 
-func writeEconomicsLedger(w Writer, d model.Report) {
+func writeRewardsLedger(w Writer, d model.Report) {
 	rows := economicsLedgerRows(d)
 	if len(rows) == 0 {
 		return
 	}
 	w.Subsection("Block reward ledger")
-	if intro := economicsLedgerIntro(d); intro != "" {
+	if intro := rewardsLedgerIntro(d); intro != "" {
 		w.Em(intro)
 	}
 	w.WriteHTML(economicsLedgerTableHTML(rows))
 }
 
-func economicsLedgerIntro(d model.Report) string {
+func rewardsLedgerIntro(d model.Report) string {
 	addr := moduleAccountDisplayAddress(d, "fee_collector")
 	bal := FeeCollectorBalance(d)
 	if addr == "" && bal == "" {
@@ -190,4 +137,3 @@ func economicsLedgerIntro(d model.Report) string {
 	}
 	return strings.Join(parts, " · ")
 }
-

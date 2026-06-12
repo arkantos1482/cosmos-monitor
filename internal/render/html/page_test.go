@@ -10,24 +10,24 @@ import (
 
 func TestFullPageHTMXShell(t *testing.T) {
 	status := panel.RenderStatusStrip(model.Report{Moniker: "node1", Synced: true, BlockHeight: "1"})
-	out := FullPage("node1", panel.ViewEconomics, status, "<p>body</p>")
+	out := FullPage("node1", panel.ViewRewards, status, "<p>body</p>")
 	for _, want := range []string{
 		`id="dash-status"`,
 		`id="dash-nav"`,
 		`dash-nav__link--active`,
-		`dash-nav__link--economics`,
+		`dash-nav__link--rewards`,
 		`dash-nav__icon`,
-		`href="/s/economics"`,
-		`Economics`,
+		`href="/s/rewards"`,
+		`Rewards`,
 		`<p>body</p>`,
 		`class="dash-content"`,
 		`id="data"`,
-		`hx-get="/s/economics"`,
+		`hx-get="/s/rewards"`,
 		`hx-trigger="every 5s"`,
 		`hx-swap="innerHTML settle:0.15s"`,
 		`hx-boost="true"`,
 		`htmx.org`,
-		`--accent-economics`,
+		`--accent-rewards`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("page missing %q", want)
@@ -43,6 +43,8 @@ func TestFullPageHTMXShell(t *testing.T) {
 		`setInterval`,
 		`/fragment`,
 		`hx-target="#data"`,
+		`dash-nav__link--economics`,
+		`href="/s/economics"`,
 	} {
 		if strings.Contains(out, bad) {
 			t.Fatalf("page should not contain %q", bad)
@@ -76,7 +78,7 @@ func TestDataURL(t *testing.T) {
 	if dataURL(panel.ViewHome) != "/" {
 		t.Fatal("home data URL should be /")
 	}
-	if dataURL(panel.ViewEconomics) != "/s/economics" {
-		t.Fatal("economics data URL should be /s/economics")
+	if dataURL(panel.ViewRewards) != "/s/rewards" {
+		t.Fatal("rewards data URL should be /s/rewards")
 	}
 }

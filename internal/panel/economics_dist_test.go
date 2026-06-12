@@ -70,7 +70,7 @@ func TestEconomicsUnclaimedRewardsWithAddress(t *testing.T) {
 			{Name: "distribution", Address: "cosmos1akkvh0ahmve830rj4mhkdnqs49kzw23c63nhdx", Balance: "0 PMT"},
 		},
 	}
-	out := BuildView(ViewEconomics, d)
+	out := BuildView(ViewRewards, d)
 	idx := strings.Index(out, "Unclaimed rewards")
 	if idx < 0 {
 		t.Fatal("missing Unclaimed rewards subsection")
