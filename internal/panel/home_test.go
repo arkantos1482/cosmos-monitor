@@ -67,6 +67,9 @@ func TestBuildOverviewStack(t *testing.T) {
 	if strings.Contains(out, `dash-overview__footer`) || strings.Contains(out, `View section →`) {
 		t.Fatal("overview cards should not include footer CTA bar")
 	}
+	if strings.Contains(out, `dash-overview__group-title`) {
+		t.Fatal("overview should not render group headings; each card has its own title")
+	}
 	runtimeIdx := strings.Index(out, `dash-overview__group--runtime`)
 	validatorIdx := strings.Index(out, `dash-overview__group--validator`)
 	economicsIdx := strings.Index(out, `dash-overview__group--economics`)

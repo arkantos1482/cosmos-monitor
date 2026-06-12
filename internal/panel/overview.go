@@ -48,12 +48,10 @@ func writeOverviewGroup(w Writer, d model.Report, scope NavScope, items []struct
 	slug string
 	fn   func(Writer, model.Report, SummaryMode)
 }) {
-	label := NavScopeLabel(scope)
-	if label == "" {
+	if NavScopeLabel(scope) == "" {
 		return
 	}
 	w.WriteHTML(fmt.Sprintf(`<div class="dash-overview__group dash-overview__group--%s">`, html.EscapeString(string(scope))))
-	w.WriteHTML(fmt.Sprintf(`<h2 class="dash-overview__group-title">%s</h2>`, html.EscapeString(label)))
 	w.WriteHTML(`<div class="dash-overview__stack">`)
 	for _, item := range items {
 		item.fn(w, d, SummaryOverviewClickable)
