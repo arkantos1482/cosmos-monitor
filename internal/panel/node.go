@@ -25,18 +25,13 @@ func writeNodeSummary(w Writer, d model.Report, mode SummaryMode) {
 	w.WriteHTML(`<div class="node-summary">`)
 	w.WriteHTML(`<div class="node-summary__header">`)
 	w.WriteHTML(fmt.Sprintf(`<span class="node-summary__moniker">%s</span>`, html.EscapeString(d.Moniker)))
-	var badges []summaryBadge
-	badges = append(badges, summaryBadge{syncStr, syncKind})
-	badges = append(badges, localBadges(d)...)
-	writeSummaryBadges(w, "node-summary__badges", badges...)
+	writeSummaryBadges(w, "node-summary__badges", summaryBadge{syncStr, syncKind})
 	w.WriteHTML(`</div>`)
 	w.WriteHTML(`<div class="node-summary__grid">`)
 	for _, row := range []struct{ label, val string }{
 		{"height", d.BlockHeight + " · " + d.TimeSinceBlock},
-		{"voting power", nodeVPRow(lv)},
 		{"next proposer", proposer},
 		{"peers", fmt.Sprintf("%d cosmos · %d evm", d.PeerCount, d.EVMPeerCount)},
-		{"signing", lv.SigningStatus},
 	} {
 		if row.val == "" || row.val == " · " {
 			continue
@@ -54,13 +49,6 @@ func writeNodeSummary(w Writer, d model.Report, mode SummaryMode) {
 	summaryWrapEnd(w, mode)
 }
 
-func nodeVPRow(lv model.LocalValidator) string {
-	if !lv.IsValidator {
-		return lv.SigningStatus
-	}
-	return fmt.Sprintf("%.1f%% · %s · %.1f%% commission", lv.VPPercent, lv.Status, lv.Commission)
-}
-
 func writeNode(w Writer, d model.Report) {
 	lv := d.Local
 	syncStr := "synced"
@@ -70,16 +58,9 @@ func writeNode(w Writer, d model.Report) {
 
 	w.Section("2. VALIDATOR")
 	writeNodeSummary(w, d, SummaryEmbedded)
-	w.Em("This validator on this node — identities, CometBFT live state, and the full validator set (P2P). Stake → § Staking. Slashing → § Slashing. Rewards → § Rewards.")
+	w.Em("This node — CometBFT consensus and P2P live state, plus validator-set dial identities. Stake and operator addresses → § Staking. Signing health → § Slashing.")
 
-	writeIdentityBoard(w, d, lv)
-
-	if !lv.IsValidator {
-		w.Layer("Application (Cosmos SDK / ABCI state)")
-		w.Subsection("Role")
-		w.Hint("`role` → CometBFT GET /status; derived when consensus address is absent from x/staking.")
-		w.Row("role", lv.SigningStatus)
-	}
+	writeValidatorIdentityBoard(w, d, lv)
 
 	writeNodeCometBFT(w, d, lv, syncStr)
 	writeValidatorP2PNetwork(w, d)
@@ -116,7 +97,9 @@ func writeNodeCometBFT(w Writer, d model.Report, lv model.LocalValidator, syncSt
 	}
 
 	w.Subsection("P2P & RPC")
-	w.Hint("`p2p listen`, `p2p dial`, `rpc listen` → CometBFT GET /status (node_info; dial is node_id@listen_addr).")
+	w.Hint("`cosmos peers` → CometBFT GET /net_info; `evm peers` → JSON-RPC net_peerCount; `p2p listen`, `p2p dial`, `rpc listen` → CometBFT GET /status (node_info; dial is node_id@listen_addr).")
+	w.Row("cosmos peers", fmt.Sprintf("%d  _(CometBFT P2P connections)_", d.PeerCount))
+	w.Row("evm peers", fmt.Sprintf("%d  _(JSON-RPC net_peerCount — often 0 on validators)_", d.EVMPeerCount))
 	p2pDial := lv.P2PDial
 	if p2pDial == "" {
 		p2pDial = formatP2PDial(d.NodeID, d.ListenAddr)

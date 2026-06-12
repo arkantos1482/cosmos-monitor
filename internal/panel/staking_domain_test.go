@@ -32,6 +32,8 @@ func TestStakingSectionLocalAndNetwork(t *testing.T) {
 		"unbonding time",
 		`<th>vp%</th>`,
 		`staking-summary__vp`,
+		`id-board__row--account`,
+		`id-board__row--operator`,
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("staking section missing %q", want)

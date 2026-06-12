@@ -15,38 +15,48 @@ type identityRow struct {
 	hex    string
 }
 
-func writeIdentityBoard(w Writer, d model.Report, lv model.LocalValidator) {
-	w.WriteHTML(identityBoardHTML(d, lv))
-	w.Hint("`account`, `operator` → x/staking + GET /cosmos/evm/vm/v1/validator_account/{cons_address}; `consensus` → x/slashing / staking pubkey; `p2p` → CometBFT GET /status node_info.id.")
+func writeValidatorIdentityBoard(w Writer, d model.Report, lv model.LocalValidator) {
+	w.WriteHTML(validatorIdentityBoardHTML(d, lv))
+	w.Hint("`consensus` → x/slashing / staking pubkey; `p2p` → CometBFT GET /status node_info.id.")
 }
 
-func identityBoardHTML(d model.Report, lv model.LocalValidator) string {
+func writeStakingIdentityBoard(w Writer, d model.Report, lv model.LocalValidator) {
+	w.WriteHTML(stakingIdentityBoardHTML(d, lv))
+	w.Hint("`account`, `operator` → x/staking + GET /cosmos/evm/vm/v1/validator_account/{cons_address}.")
+}
+
+func validatorIdentityBoardHTML(d model.Report, lv model.LocalValidator) string {
 	consBech := lv.ConsensusBech32
 	if consBech == "" && lv.ConsensusAddr != "" {
 		consBech = fetch.ConsHexToBech32(lv.ConsensusAddr)
 	}
-	consHex := formatConsensusHex(lv.ConsensusAddr)
+	return identityBoardHTML(d, lv, []identityRow{
+		{role: "consensus", bech32: consBech, hex: formatConsensusHex(lv.ConsensusAddr)},
+		{role: "p2p", bech32: "", hex: strings.ToLower(d.NodeID)},
+	}, "")
+}
 
+func stakingIdentityBoardHTML(d model.Report, lv model.LocalValidator) string {
 	accountBech := lv.AccountAddr
 	accountHex := lv.EVMAddr
 	if accountHex == "" && accountBech != "" {
 		accountHex = fetch.AccBech32ToEVM(accountBech)
 	}
-
 	rows := []identityRow{
 		{role: "account", bech32: accountBech, hex: accountHex},
 		{role: "operator", bech32: lv.OperatorAddr, hex: ""},
-		{role: "consensus", bech32: consBech, hex: consHex},
-		{role: "p2p", bech32: "", hex: strings.ToLower(d.NodeID)},
 	}
-
-	accData := bech32DataPart(rows[0].bech32)
-	opData := bech32DataPart(rows[1].bech32)
-	sharedStem := longestCommonPrefix(accData, opData)
+	sharedStem := longestCommonPrefix(bech32DataPart(rows[0].bech32), bech32DataPart(rows[1].bech32))
 	if len(sharedStem) < 8 {
 		sharedStem = ""
 	}
+	return identityBoardHTML(d, lv, rows, sharedStem)
+}
 
+func identityBoardHTML(d model.Report, lv model.LocalValidator, rows []identityRow, sharedStem string) string {
+	if len(rows) == 0 {
+		return ""
+	}
 	var b strings.Builder
 	b.WriteString(`<div class="id-board">`)
 	if moniker := strings.TrimSpace(lv.Moniker); moniker != "" {

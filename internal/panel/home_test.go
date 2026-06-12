@@ -113,11 +113,24 @@ func TestBuildViewSingleSection(t *testing.T) {
 	}
 	for _, sub := range []string{
 		`class="id-board"`,
+		`id-board__row--consensus`,
+		`id-board__row--p2p`,
+		"cosmos peers",
 		"CometBFT (consensus + networking)",
 		`class="dash-layer__title">Validator set</h3>`,
 	} {
 		if !strings.Contains(out, sub) {
 			t.Fatalf("node view missing subsection %q", sub)
+		}
+	}
+	for _, gone := range []string{
+		`id-board__row--account`,
+		`id-board__row--operator`,
+		`node-summary__label">voting power`,
+		`node-summary__label">signing`,
+	} {
+		if strings.Contains(out, gone) {
+			t.Fatalf("node view should not include %q", gone)
 		}
 	}
 	if strings.Contains(out, `dash-overview__card`) {
