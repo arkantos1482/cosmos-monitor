@@ -9,8 +9,8 @@ import (
 
 func distributionChunk(t *testing.T, out string) string {
 	t.Helper()
-	idx := strings.Index(out, "4. DISTRIBUTION")
-	end := strings.Index(out, `class="dash-heading">5. FEE MARKET</h2>`)
+	idx := strings.Index(out, "3. DISTRIBUTION")
+	end := strings.Index(out, `class="dash-heading">4. FEE MARKET</h2>`)
 	if idx < 0 || end < 0 {
 		t.Fatal("expected distribution and fee market sections")
 	}

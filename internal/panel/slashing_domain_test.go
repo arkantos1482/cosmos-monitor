@@ -77,9 +77,9 @@ func TestSlashingSectionNoDuplicateFields(t *testing.T) {
 func slashingChunk(t *testing.T, out string) string {
 	t.Helper()
 	idx := strings.Index(out, `class="dash-heading">2. SLASHING</h2>`)
-	end := strings.Index(out, `class="dash-heading">3. REWARDS</h2>`)
+	end := strings.Index(out, `class="dash-heading">3. DISTRIBUTION</h2>`)
 	if idx < 0 || end < 0 {
-		t.Fatal("expected slashing and rewards sections")
+		t.Fatal("expected slashing and distribution sections")
 	}
 	return out[idx:end]
 }

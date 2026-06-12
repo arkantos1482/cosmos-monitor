@@ -60,9 +60,9 @@ var Nav = []NavItem{
 	{ViewNode, "Validator", "/s/node", NavScopeValidator},
 	{ViewStaking, "Staking", "/s/staking", NavScopeEconomics},
 	{ViewSlashing, "Slashing", "/s/slashing", NavScopeEconomics},
-	{ViewRewards, "Rewards", "/s/rewards", NavScopeEconomics},
 	{ViewDistribution, "Distribution", "/s/distribution", NavScopeEconomics},
 	{ViewFeemarket, "Fee market", "/s/feemarket", NavScopeEconomics},
+	{ViewRewards, "Rewards", "/s/rewards", NavScopeEconomics},
 	{ViewGovernance, "Governance", "/s/governance", NavScopeGovernance},
 }
 

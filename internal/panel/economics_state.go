@@ -166,18 +166,30 @@ func economicsDistributionModuleAddr(d model.Report) string {
 }
 
 func economicsDomainCardsHTML(d model.Report, compact bool) string {
+	return ecoDomainsWrap(blockRewardsCardHTML(d, compact))
+}
+
+func blockRewardsCardHTML(d model.Report, compact bool) string {
 	var b strings.Builder
-	b.WriteString(`<div class="eco-domains">`)
-	b.WriteString(pmtRewardsCardHTML(d, compact))
-	b.WriteString(inflationCardHTML(d, compact))
+	fmt.Fprintf(&b, `<div class="eco-domain eco-domain--blockrewards">`)
+	writePMTRewardsSection(&b, d, compact)
+	b.WriteString(`<div class="eco-domain__divider">Inflation · x/mint</div>`)
+	writeInflationSection(&b, d, compact)
 	b.WriteString(`</div>`)
 	return b.String()
 }
 
 func pmtRewardsCardHTML(d model.Report, compact bool) string {
 	var b strings.Builder
+	b.WriteString(`<div class="eco-domain eco-domain--pmtrewards">`)
+	writePMTRewardsSection(&b, d, compact)
+	b.WriteString(`</div>`)
+	return b.String()
+}
+
+func writePMTRewardsSection(b *strings.Builder, d model.Report, compact bool) {
 	st := ecoPMTCardStatus(d)
-	fmt.Fprintf(&b, `<div class="eco-domain eco-domain--pmtrewards %s">`, st.cardMod)
+	fmt.Fprintf(b, `<div class="eco-domain__section eco-domain--pmtrewards %s">`, st.cardMod)
 	b.WriteString(ecoDomainTitleHTML("PMT Rewards", "x/pmtrewards", st.badgeClass, st.label))
 	b.WriteString(`<div class="eco-domain__rows">`)
 
@@ -185,7 +197,7 @@ func pmtRewardsCardHTML(d model.Report, compact bool) string {
 	if !d.PMTEnabled {
 		enabledCls = ` class="eco-domain__row--inactive"`
 	}
-	ecoDomainRow(&b, enabledCls, "enabled", boolStr(d.PMTEnabled), ecoPMTEffect(d))
+	ecoDomainRow(b, enabledCls, "enabled", boolStr(d.PMTEnabled), ecoPMTEffect(d))
 
 	rateCls := ""
 	if !d.PMTEnabled {
@@ -193,7 +205,7 @@ func pmtRewardsCardHTML(d model.Report, compact bool) string {
 	} else if d.PMTPoolEmpty || d.PMTRate == "" {
 		rateCls = ` class="eco-domain__row--warn"`
 	}
-	ecoDomainRow(&b, rateCls, "reward / block", orEcoDash(d.PMTRate), ecoPMTRateEffect(d))
+	ecoDomainRow(b, rateCls, "reward / block", orEcoDash(d.PMTRate), ecoPMTRateEffect(d))
 
 	poolCls := ""
 	if !d.PMTEnabled {
@@ -202,24 +214,30 @@ func pmtRewardsCardHTML(d model.Report, compact bool) string {
 		poolCls = ` class="eco-domain__row--warn"`
 	}
 	poolVal := ecoBalanceAddrHTML(orEcoDash(d.PMTBalance), displayAddress(d.PMTPoolAddress))
-	ecoDomainRowHTML(&b, poolCls, "reward pool", poolVal, ecoPoolEffect(d))
+	ecoDomainRowHTML(b, poolCls, "reward pool", poolVal, ecoPoolEffect(d))
 
 	if !compact && d.PMTAnnual != "" {
 		annualCls := ""
 		if !d.PMTEnabled {
 			annualCls = ` class="eco-domain__row--inactive"`
 		}
-		ecoDomainRow(&b, annualCls, "annual emissions", d.PMTAnnual, "estimated yearly payout at current rate")
+		ecoDomainRow(b, annualCls, "annual emissions", d.PMTAnnual, "estimated yearly payout at current rate")
 	}
 
 	b.WriteString(`</div></div>`)
-	return b.String()
 }
 
 func inflationCardHTML(d model.Report, compact bool) string {
 	var b strings.Builder
+	b.WriteString(`<div class="eco-domain eco-domain--inflation">`)
+	writeInflationSection(&b, d, compact)
+	b.WriteString(`</div>`)
+	return b.String()
+}
+
+func writeInflationSection(b *strings.Builder, d model.Report, compact bool) {
 	st := ecoInflationCardStatus(d)
-	fmt.Fprintf(&b, `<div class="eco-domain eco-domain--inflation %s">`, st.cardMod)
+	fmt.Fprintf(b, `<div class="eco-domain__section eco-domain--inflation %s">`, st.cardMod)
 	b.WriteString(ecoDomainTitleHTML("Inflation", "x/mint", st.badgeClass, st.label))
 	b.WriteString(`<div class="eco-domain__rows">`)
 
@@ -231,26 +249,25 @@ func inflationCardHTML(d model.Report, compact bool) string {
 	if d.Inflation > 0 && d.InflationPerBlock != "" && !compact {
 		inflVal += " (" + d.InflationPerBlock + "/block)"
 	}
-	ecoDomainRow(&b, inflCls, "inflation", inflVal, ecoInflationEffect(d))
+	ecoDomainRow(b, inflCls, "inflation", inflVal, ecoInflationEffect(d))
 
 	provCls := ""
 	if d.Inflation <= 0 || d.AnnualProvisions == "" {
 		provCls = ` class="eco-domain__row--inactive"`
 	}
-	ecoDomainRow(&b, provCls, "annual provisions", orEcoDash(d.AnnualProvisions), ecoAnnualProvEffect(d))
+	ecoDomainRow(b, provCls, "annual provisions", orEcoDash(d.AnnualProvisions), ecoAnnualProvEffect(d))
 
-	ecoDomainRow(&b, "", "bonded vs goal",
+	ecoDomainRow(b, "", "bonded vs goal",
 		fmt.Sprintf("%.2f%% vs %.0f%%", d.BondedPct, d.GoalBonded),
 		ecoBondedVsGoalEffect(d))
 
-	ecoDomainDivider(&b)
-	ecoDomainRow(&b, "", "goal bonded", fmt.Sprintf("%.0f%%", d.GoalBonded), "target stake ratio for inflation")
+	ecoDomainDivider(b)
+	ecoDomainRow(b, "", "goal bonded", fmt.Sprintf("%.0f%%", d.GoalBonded), "target stake ratio for inflation")
 	if d.BlocksPerYear != "" {
-		ecoDomainRow(&b, "", "blocks / year", d.BlocksPerYear, "mint schedule denominator")
+		ecoDomainRow(b, "", "blocks / year", d.BlocksPerYear, "mint schedule denominator")
 	}
 
 	b.WriteString(`</div></div>`)
-	return b.String()
 }
 
 func stakingCardHTML(d model.Report, compact bool) string {

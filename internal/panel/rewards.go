@@ -8,18 +8,18 @@ import (
 )
 
 func writeRewards(w Writer, d model.Report) {
-	w.Section("3. REWARDS")
+	w.Section("5. REWARDS")
 	writeRewardsSummary(w, d, SummaryEmbedded)
 	w.Em("Block reward sources: PMT emissions and mint inflation, with per-block estimates for this validator.")
-
-	w.Layer("Network-wide")
-	w.WriteHTML(economicsDomainCardsHTML(d, false))
-	w.Hint(rewardsSourcesHint())
 
 	if d.Local.IsValidator {
 		w.Layer("This validator")
 		writeRewardsLocalValidator(w, d)
 	}
+
+	w.Layer("Network-wide")
+	w.WriteHTML(economicsDomainCardsHTML(d, false))
+	w.Hint(rewardsSourcesHint())
 	w.BlankLine()
 }
 

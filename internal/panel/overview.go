@@ -30,9 +30,9 @@ func writeOverview(w Writer, d model.Report) {
 	}{
 		{"staking", writeStakingSummary},
 		{"slashing", writeSlashingSummary},
-		{"rewards", writeRewardsSummary},
 		{"distribution", writeDistributionSummary},
 		{"feemarket", writeFeemarketSummary},
+		{"rewards", writeRewardsSummary},
 	})
 	writeOverviewGroup(w, d, NavScopeGovernance, []struct {
 		slug string

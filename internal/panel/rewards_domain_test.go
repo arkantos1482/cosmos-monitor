@@ -29,9 +29,10 @@ func TestRewardsSectionConsolidatesChainAndLocal(t *testing.T) {
 	}
 	out := BuildView(ViewRewards, d)
 	for _, want := range []string{
-		`class="dash-heading">3. REWARDS</h2>`,
-		`class="dash-layer__title">Network-wide</h3>`,
+		`class="dash-heading">5. REWARDS</h2>`,
 		`class="dash-layer__title">This validator</h3>`,
+		`class="dash-layer__title">Network-wide</h3>`,
+		"eco-domain--blockrewards",
 		"eco-domain--pmtrewards",
 		"eco-domain--inflation",
 		"per-block commission",
@@ -40,6 +41,11 @@ func TestRewardsSectionConsolidatesChainAndLocal(t *testing.T) {
 		if !strings.Contains(out, want) {
 			t.Fatalf("rewards view missing %q", want)
 		}
+	}
+	localIdx := strings.Index(out, `class="dash-layer__title">This validator</h3>`)
+	networkIdx := strings.Index(out, `class="dash-layer__title">Network-wide</h3>`)
+	if localIdx < 0 || networkIdx < 0 || localIdx > networkIdx {
+		t.Fatal("This validator layer must precede Network-wide")
 	}
 }
 
