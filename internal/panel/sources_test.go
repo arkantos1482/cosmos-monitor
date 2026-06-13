@@ -88,6 +88,29 @@ func TestExchangesForViewHome(t *testing.T) {
 	}
 }
 
+func TestExchangesForViewEVM(t *testing.T) {
+	all := append(sampleExchanges(), []model.SourceExchange{
+		{
+			Kind: "jsonrpc", Method: "POST",
+			URL:      "http://localhost:8545",
+			Request:  `{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}`,
+			Response: `{"jsonrpc":"2.0","id":1,"result":"0x46f32"}`,
+			OK:       true, Latency: "4ms",
+		},
+		{
+			Kind: "http", Method: "GET",
+			URL:      "http://localhost:1317/cosmos/evm/vm/v1/params",
+			Request:  "(none)",
+			Response: `{"params":{}}`,
+			OK:       true, Latency: "2ms",
+		},
+	}...)
+	got := exchangesForView(ViewEVM, all)
+	if len(got) != 2 {
+		t.Fatalf("EVM view should match jsonrpc + evm REST, got %d", len(got))
+	}
+}
+
 func TestSourceLogDeferredToSectionBottom(t *testing.T) {
 	var b strings.Builder
 	w := newWriter(&b, Options{ShowSources: true})

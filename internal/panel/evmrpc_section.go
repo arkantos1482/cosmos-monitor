@@ -4,18 +4,15 @@ import (
 	"fmt"
 	"html"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 	"github.com/arkantos1482/cosmos-monitor/internal/report"
 )
 
-const maxProbeJSONBytes = 12_000
-
 func writeEVMSection(w Writer, d model.Report) {
 	w.Section("3. EVM JSON-RPC")
-	writeEmbeddedSectionIntro(w, "`x/vm` EVM state and hardfork schedule, JSON-RPC live metrics and probe health, plus wallet/dApp connection endpoints.")
+	writeEmbeddedSectionIntro(w, "`x/vm` EVM state and hardfork schedule, JSON-RPC live metrics, plus wallet/dApp connection endpoints.")
 	writeEVMSummary(w, d, SummaryEmbedded)
 	writeEVMRPCSection(w, d)
 	writeSectionSources(w, ViewEVM, d)
@@ -65,20 +62,6 @@ func sortedRPCProbes(probes []model.RPCProbe) []model.RPCProbe {
 		return pi.Method < pj.Method
 	})
 	return out
-}
-
-func probeLatencyMs(latency string) int {
-	latency = strings.TrimSpace(strings.TrimSuffix(latency, "ms"))
-	v, err := strconv.Atoi(latency)
-	if err != nil {
-		return -1
-	}
-	return v
-}
-
-func jsonRPCCurl(endpoint, requestJSON string) string {
-	escaped := strings.ReplaceAll(requestJSON, `'`, `'\''`)
-	return fmt.Sprintf("curl -sS -X POST %s \\\n  -H 'Content-Type: application/json' \\\n  -d '%s'", endpoint, escaped)
 }
 
 func writeEVMSummary(w Writer, d model.Report, mode SummaryMode) {
@@ -220,9 +203,6 @@ func writeEVMRPCSection(w Writer, d model.Report) {
 		formatTxpoolCount(d.QueuedTx, d.TxpoolGlobalQueue))
 	w.Row("txpool", txpool)
 	w.Row("EVM peers", fmt.Sprintf("%d  _(net_peerCount — often 0 on validators)_", d.EVMPeerCount))
-
-	w.Subsection("Probe health")
-	writeEVMProbeLog(w, d, httpEP)
 }
 
 func formatTxpoolCount(n, limit uint64) string {
@@ -230,78 +210,4 @@ func formatTxpoolCount(n, limit uint64) string {
 		return fmt.Sprintf("%d", n)
 	}
 	return fmt.Sprintf("%d / %d", n, limit)
-}
-
-func renderProbeLog(probes []model.RPCProbe) string {
-	const (
-		padMethod  = 24
-		padStatus  = 6
-		padLatency = 7
-	)
-	var b strings.Builder
-	b.WriteString("  method                    status  latency\n")
-	b.WriteString("  ─────────────────────────────────────────\n")
-
-	lastNS := ""
-	for _, p := range sortedRPCProbes(probes) {
-		ns := probeNamespace(p.Method)
-		if ns != lastNS {
-			if lastNS != "" {
-				b.WriteByte('\n')
-			}
-			fmt.Fprintf(&b, "  [%s]\n", strings.ToUpper(ns))
-			lastNS = ns
-		}
-		status := "ok"
-		mark := "·"
-		if !p.OK {
-			status = "FAIL"
-			mark = "✗"
-		}
-		line := fmt.Sprintf("  %s  %-*s  %-*s  %-*s",
-			mark, padMethod, p.Method, padStatus, status, padLatency, p.Latency)
-		if !p.OK && p.Error != "" {
-			line += "  " + report.Truncate(p.Error, 44)
-		}
-		b.WriteString(line + "\n")
-	}
-	return strings.TrimRight(b.String(), "\n")
-}
-
-func probeStatusLabel(ok bool) string {
-	if ok {
-		return "ok"
-	}
-	return "FAIL"
-}
-
-func formatProbeExchangeHTML(p model.RPCProbe) string {
-	var b strings.Builder
-	b.WriteString(`<div class="dash-sources__exchange">`)
-	fmt.Fprintf(&b, `<div class="dash-sources__exchange-hdr">── %s · %s · %s ──</div>`,
-		htmlEscape(p.Method), htmlEscape(probeStatusLabel(p.OK)), htmlEscape(p.Latency))
-	if !p.OK && p.Error != "" {
-		fmt.Fprintf(&b, `<div class="dash-sources__error">err » %s</div>`, htmlEscape(truncateJSON(p.Error, maxProbeJSONBytes)))
-	}
-	if p.Request != "" {
-		b.WriteString(`<div class="dash-sources__payload"><span class="dash-sources__tag">req</span>`)
-		b.WriteString(jsonCodeBlock(p.Request, maxProbeJSONBytes))
-		b.WriteString(`</div>`)
-	}
-	b.WriteString(`<div class="dash-sources__payload"><span class="dash-sources__tag">res</span>`)
-	b.WriteString(jsonCodeBlock(p.Response, maxProbeJSONBytes))
-	b.WriteString(`</div></div>`)
-	return b.String()
-}
-
-func writeEVMProbeLog(w Writer, d model.Report, endpoint string) {
-	log := renderProbeLog(d.RPCProbes)
-	w.Pre(log)
-
-	for _, p := range sortedRPCProbes(d.RPCProbes) {
-		w.WriteHTML(formatProbeExchangeHTML(p))
-		if !p.OK {
-			w.PreBash(jsonRPCCurl(endpoint, p.Request))
-		}
-	}
 }

@@ -29,21 +29,53 @@ func TestBuildEVMRPCSection(t *testing.T) {
 	if !strings.Contains(out, `evm-summary__probe`) {
 		t.Fatal("EVM summary should include probe dots")
 	}
-	if !strings.Contains(out, `class="dash-subheading">Probe health</h3>`) {
-		t.Fatal("expected Probe health subsection")
+	if strings.Contains(out, `class="dash-subheading">Probe health</h3>`) {
+		t.Fatal("probe details should not render inline; use data sources footer")
 	}
 }
 
-func TestFormatProbeExchange(t *testing.T) {
-	body := formatProbeExchangeHTML(model.RPCProbe{
-		Method: "eth_blockNumber", OK: true, Latency: "3ms",
-		Request:  `{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}`,
-		Response: `{"jsonrpc":"2.0","id":1,"result":"0x10"}`,
-	})
-	for _, want := range []string{`dash-sources__tag">req`, `dash-sources__tag">res`, `json-key`, `json-block`} {
-		if !strings.Contains(body, want) {
-			t.Fatalf("expected %q in probe exchange HTML: %q", want, body)
+func TestEVMDataSourcesProvenance(t *testing.T) {
+	d := model.Report{
+		EVMRPCOk: true, EVMSynced: true, EVMBlock: "100", EVMChainID: 290290,
+		Exchanges: []model.SourceExchange{
+			{
+				Kind: "jsonrpc", Method: "POST",
+				URL:      "http://localhost:8545",
+				Request:  `{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}`,
+				Response: `{"jsonrpc":"2.0","id":1,"result":"0x10"}`,
+				OK:       true, Latency: "3ms",
+			},
+			{
+				Kind: "http", Method: "GET",
+				URL:      "http://localhost:1317/cosmos/evm/vm/v1/params",
+				Request:  "(none)",
+				Response: `{"params":{}}`,
+				OK:       true, Latency: "2ms",
+			},
+		},
+	}
+	out := BuildViewWithOptions(ViewEVM, d, Options{ShowSources: true})
+	for _, want := range []string{
+		`class="dash-sources"`,
+		`>Data sources</summary>`,
+		`dash-sources__exchange`,
+		`dash-sources__tag">req`,
+		`dash-sources__tag">res`,
+		`POST eth_blockNumber`,
+		`/cosmos/evm/vm/v1/params`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("EVM data sources missing %q", want)
 		}
+	}
+	liveIdx := strings.Index(out, `class="dash-subheading">Live (JSON-RPC)</h3>`)
+	sourcesIdx := strings.Index(out, `class="dash-sources"`)
+	if liveIdx < 0 || sourcesIdx < 0 || sourcesIdx < liveIdx {
+		t.Fatal("data sources should render after section content")
+	}
+	outDefault := BuildView(ViewEVM, d)
+	if strings.Contains(outDefault, `class="dash-sources"`) {
+		t.Fatal("EVM section should hide data sources by default")
 	}
 }
 
