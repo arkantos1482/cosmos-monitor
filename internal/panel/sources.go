@@ -20,6 +20,9 @@ func writeSectionSources(w Writer, v View, d model.Report) {
 }
 
 func exchangesForView(v View, all []model.SourceExchange) []model.SourceExchange {
+	if v == ViewHome {
+		return all
+	}
 	matchers := viewExchangeMatchers(v)
 	if len(matchers) == 0 {
 		return nil

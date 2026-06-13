@@ -190,6 +190,42 @@ func TestBuildViewSingleSection(t *testing.T) {
 	}
 }
 
+func TestOverviewDataSourcesProvenance(t *testing.T) {
+	d := model.Report{
+		Moniker: "node1", Synced: true, BlockHeight: "100",
+		NodeRunning: true, BondedCount: 4, PMTEnabled: true,
+		Exchanges: []model.SourceExchange{
+			{
+				Kind: "http", Method: "GET",
+				URL: "http://localhost:26657/status", Request: "(none)",
+				Response: `{"result":{}}`, OK: true, Latency: "1ms",
+			},
+			{
+				Kind: "http", Method: "GET",
+				URL: "http://localhost:1317/cosmos/distribution/v1beta1/params",
+				Request: "(none)",
+				Response: `{"params":{}}`, OK: true, Latency: "2ms",
+			},
+		},
+	}
+	out := BuildViewWithOptions(ViewHome, d, Options{ShowSources: true})
+	if !strings.Contains(out, `class="dash-sources"`) {
+		t.Fatal("overview should include data sources footer when enabled")
+	}
+	if !strings.Contains(out, `/status`) || !strings.Contains(out, `distribution/v1beta1/params`) {
+		t.Fatal("overview data sources should include all traced endpoints")
+	}
+	governanceIdx := strings.Index(out, `dash-overview__group--governance`)
+	sourcesIdx := strings.Index(out, `class="dash-sources"`)
+	if governanceIdx < 0 || sourcesIdx < 0 || sourcesIdx < governanceIdx {
+		t.Fatal("overview data sources should render after overview content")
+	}
+	outHidden := BuildView(ViewHome, d)
+	if strings.Contains(outHidden, `class="dash-sources"`) {
+		t.Fatal("overview should hide data sources by default")
+	}
+}
+
 func TestNodeSectionDataSourcesProvenance(t *testing.T) {
 	d := model.Report{
 		Moniker: "node1", Synced: true, BlockHeight: "1", NodeID: "abc",

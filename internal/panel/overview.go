@@ -41,6 +41,7 @@ func writeOverview(w Writer, d model.Report) {
 	})
 
 	w.WriteHTML(`</div>`)
+	writeSectionSources(w, ViewHome, d)
 }
 
 func writeOverviewGroup(w Writer, d model.Report, scope NavScope, items []struct {

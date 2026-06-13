@@ -80,6 +80,14 @@ func TestExchangesForViewDistribution(t *testing.T) {
 	}
 }
 
+func TestExchangesForViewHome(t *testing.T) {
+	all := sampleExchanges()
+	got := exchangesForView(ViewHome, all)
+	if len(got) != len(all) {
+		t.Fatalf("home view should include all exchanges, got %d want %d", len(got), len(all))
+	}
+}
+
 func TestSourceLogDeferredToSectionBottom(t *testing.T) {
 	var b strings.Builder
 	w := newWriter(&b, Options{ShowSources: true})
