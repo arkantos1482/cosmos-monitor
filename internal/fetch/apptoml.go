@@ -45,14 +45,17 @@ func FetchAppTomlGasConfig() AppTomlGasConfig {
 
 	f, err := os.Open(path)
 	if err != nil {
+		recordFileExchange(path, "", err)
 		return cfg
 	}
 	defer f.Close()
 
+	var lines []string
 	inEVMMempool := false
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {
 		line := strings.TrimSpace(sc.Text())
+		lines = append(lines, sc.Text())
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
@@ -78,6 +81,11 @@ func FetchAppTomlGasConfig() AppTomlGasConfig {
 	}
 	cfg.OK = cfg.MinGasPrices != "" || cfg.EVMMinTip != "" ||
 		cfg.MempoolPriceLimit != "" || cfg.MaxTxGasWanted != ""
+	if err := sc.Err(); err != nil {
+		recordFileExchange(path, strings.Join(lines, "\n"), err)
+	} else {
+		recordFileExchange(path, strings.Join(lines, "\n"), nil)
+	}
 	return cfg
 }
 

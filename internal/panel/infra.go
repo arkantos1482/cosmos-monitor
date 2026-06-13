@@ -40,13 +40,11 @@ func writeInfra(w Writer, d model.Report) {
 	writeInfraSummary(w, d, SummaryEmbedded)
 
 	w.Subsection("OS")
-	w.Hint("`load` → proc /proc/loadavg; `ram` → proc /proc/meminfo (MemTotal, MemAvailable); `disk` → fs statfs /.")
 	w.Row("load", fmt.Sprintf("%.2f / %.2f / %.2f  (1m 5m 15m)", d.Load1, d.Load5, d.Load15))
 	w.Row("ram", fmt.Sprintf("%s / %s  (%d%%)", d.MemUsed, d.MemTotal, d.MemPct))
 	w.Row("disk", fmt.Sprintf("%s / %s  (%d%%)", d.DiskUsed, d.DiskTotal, d.DiskPct))
 
 	w.Subsection("Container")
-	w.Hint("`status`, `restarts`, `uptime` → docker GET /containers/{name}/json; `cpu`, `ram` → docker GET /containers/{name}/stats?stream=false (unix socket).")
 	nodeStatus := "stopped"
 	if d.NodeRunning {
 		nodeStatus = "running"
@@ -58,4 +56,5 @@ func writeInfra(w Writer, d model.Report) {
 	if d.NodeUptime != "" {
 		w.Row("uptime", d.NodeUptime)
 	}
+	writeSectionSources(w, ViewInfra, d)
 }

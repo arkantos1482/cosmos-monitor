@@ -50,7 +50,9 @@ func FetchSystem() SystemSnapshot {
 }
 
 func readLoadAvg(s *SystemSnapshot) error {
-	data, err := os.ReadFile("/proc/loadavg")
+	path := "/proc/loadavg"
+	data, err := os.ReadFile(path)
+	recordFileExchange(path, string(data), err)
 	if err != nil {
 		return err
 	}
@@ -65,15 +67,19 @@ func readLoadAvg(s *SystemSnapshot) error {
 }
 
 func readMemInfo(s *SystemSnapshot) error {
-	f, err := os.Open("/proc/meminfo")
+	path := "/proc/meminfo"
+	f, err := os.Open(path)
 	if err != nil {
+		recordFileExchange(path, "", err)
 		return err
 	}
 	defer f.Close()
 
+	var lines []string
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {
 		line := sc.Text()
+		lines = append(lines, line)
 		parts := strings.Fields(line)
 		if len(parts) < 2 {
 			continue
@@ -86,16 +92,57 @@ func readMemInfo(s *SystemSnapshot) error {
 			s.MemAvail = val * 1024
 		}
 	}
-	return sc.Err()
+	if err := sc.Err(); err != nil {
+		recordFileExchange(path, strings.Join(lines, "\n"), err)
+		return err
+	}
+	recordFileExchange(path, strings.Join(lines, "\n"), nil)
+	return nil
 }
 
 func readDisk(s *SystemSnapshot) error {
 	var stat syscall.Statfs_t
 	if err := syscall.Statfs(diskRoot, &stat); err != nil {
+		recordFSExchange(diskRoot, stat, err)
 		return err
 	}
 	bs := uint64(stat.Bsize)
 	s.DiskTotal = stat.Blocks * bs
 	s.DiskUsed = (stat.Blocks - stat.Bfree) * bs
+	recordFSExchange(diskRoot, stat, nil)
 	return nil
+}
+
+func recordFileExchange(path, content string, err error) {
+	ex := Exchange{
+		Kind:    "file",
+		Method:  "READ",
+		URL:     path,
+		Request: "(none)",
+		OK:      err == nil,
+	}
+	if err != nil {
+		ex.Error = err.Error()
+	} else {
+		ex.Response = truncateExchangeResponse(content)
+	}
+	recordTrace(ex)
+}
+
+func recordFSExchange(path string, stat syscall.Statfs_t, err error) {
+	ex := Exchange{
+		Kind:    "fs",
+		Method:  "statfs",
+		URL:     path,
+		Request: "(none)",
+		OK:      err == nil,
+	}
+	if err != nil {
+		ex.Error = err.Error()
+	} else {
+		ex.Response = truncateExchangeResponse(fmt.Sprintf(
+			"blocks=%d bfree=%d bavail=%d bsize=%d",
+			stat.Blocks, stat.Bfree, stat.Bavail, stat.Bsize))
+	}
+	recordTrace(ex)
 }

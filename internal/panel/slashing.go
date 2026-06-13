@@ -149,19 +149,17 @@ func writeSlashing(w Writer, d model.Report) {
 	if lv.IsValidator {
 		writeSlashingLocal(w, d, lv)
 	} else {
-		w.Hint("`role` → CometBFT GET /status; derived when consensus address is absent from x/staking.")
 		w.Row("role", lv.SigningStatus)
 	}
 	w.Subsection("Network-wide")
 	w.WriteHTML(slashingCardHTML(d, false))
 	writeValidatorSlashingTable(w, d)
 
-	w.Hint(slashingSourcesHint())
+	writeSectionSources(w, ViewSlashing, d)
 	w.BlankLine()
 }
 
 func writeSlashingLocal(w Writer, d model.Report, lv model.LocalValidator) {
-	w.Hint("`jailed`, `tombstoned`, `signing health`, `missed / window` → x/staking validators + REST GET /cosmos/slashing/v1beta1/signing_infos and params.")
 	if lv.Jailed {
 		w.Row("jailed", "yes")
 	}
@@ -175,7 +173,6 @@ func writeSlashingLocal(w Writer, d model.Report, lv model.LocalValidator) {
 }
 
 func writeValidatorSlashingTable(w Writer, d model.Report) {
-	w.Hint("`missed`, `tombstoned` → REST GET /cosmos/slashing/v1beta1/signing_infos; `jailed` → module x/staking validators; `health` → derived (missed vs min_signed_per_window from slashing params).")
 	secRows := make([][]string, 0, len(d.Validators))
 	for _, v := range d.Validators {
 		missed := fmt.Sprintf("%d", v.Missed)
@@ -212,12 +209,6 @@ func validatorSlashingHealth(v model.Validator, missed *string) string {
 	default:
 		return "ok"
 	}
-}
-
-func slashingSourcesHint() string {
-	return "`jailed` → REST GET /cosmos/staking/v1beta1/validators; " +
-		"`missed`, `tombstoned` → REST GET /cosmos/slashing/v1beta1/signing_infos; " +
-		"`signed blocks window`, `min signed`, `slash fractions` → REST GET /cosmos/slashing/v1beta1/params."
 }
 
 // writeSlashingPenaltyMatrix renders a compact infraction → penalty map per Cosmos SDK x/slashing + x/evidence.

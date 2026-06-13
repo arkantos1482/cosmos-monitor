@@ -66,20 +66,17 @@ func writeStaking(w Writer, d model.Report) {
 		writeStakingLocal(w, lv)
 		writeStakingDelegators(w, lv, d.BondDenom)
 	} else {
-		w.Hint("`role` → CometBFT GET /status; derived when consensus address is absent from x/staking.")
 		w.Row("role", lv.SigningStatus)
 	}
 	w.Subsection("Network-wide")
 	w.WriteHTML(stakingCardHTML(d, false))
 	writeValidatorStakingTable(w, d)
 
-	w.Hint(stakingSourcesHint())
+	writeSectionSources(w, ViewStaking, d)
 	w.BlankLine()
 }
 
 func writeStakingLocal(w Writer, lv model.LocalValidator) {
-	w.Hint("`operator`, `account`, `status`, `voting power`, `commission` → REST GET /cosmos/staking/v1beta1/validators; " +
-		"`liquid balance` → REST GET /cosmos/bank/v1beta1/balances/{address}.")
 	if moniker := strings.TrimSpace(lv.Moniker); moniker != "" {
 		w.Row("moniker", moniker)
 	}
@@ -114,7 +111,6 @@ func writeStakingLocal(w Writer, lv model.LocalValidator) {
 }
 
 func writeValidatorStakingTable(w Writer, d model.Report) {
-	w.Hint("`operator`, `vp%`, `commission`, `status` → REST GET /cosmos/staking/v1beta1/validators.")
 	rows := make([][]string, 0, len(d.Validators))
 	for _, v := range d.Validators {
 		rows = append(rows, []string{
@@ -126,11 +122,4 @@ func writeValidatorStakingTable(w Writer, d model.Report) {
 		})
 	}
 	writeValidatorSetTable(w, []string{"moniker", "operator", "vp%", "commission", "status"}, rows, d.Validators)
-}
-
-func stakingSourcesHint() string {
-	return "`status`, `voting power`, `commission` → REST GET /cosmos/staking/v1beta1/validators; " +
-		"`bonded`, `bond denom`, `unbonding time`, `max validators` → REST GET /cosmos/staking/v1beta1/pool, /cosmos/staking/v1beta1/params; " +
-		"`module account balances` → REST GET /cosmos/bank/v1beta1/balances/{address}; " +
-		"`module account addresses` → REST GET /cosmos/auth/v1beta1/module_accounts."
 }

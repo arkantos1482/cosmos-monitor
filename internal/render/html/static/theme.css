@@ -1190,6 +1190,18 @@ body::after {
   margin-bottom: 0;
 }
 
+.dash-sources__log {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dash-sources__summary-log,
+.dash-sources__exchange {
+  margin: 0;
+  font-size: 0.72rem;
+}
+
 /* ── KPI tiles ────────────────────────────────────────────────── */
 
 .kpi-grid {

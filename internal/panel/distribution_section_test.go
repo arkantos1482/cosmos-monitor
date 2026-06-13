@@ -95,16 +95,17 @@ func TestDistributionSourcesProvenance(t *testing.T) {
 		ModuleAccounts: []model.ModuleAccountRow{
 			{Name: "fee_collector", Balance: "0 PMT"},
 		},
+		Exchanges: sampleExchanges(),
 	}
 	out := BuildWithOptions(d, Options{ShowSources: true})
 	chunk := distributionChunk(t, out)
 	for _, want := range []string{
 		`class="dash-sources"`,
 		`>Data sources</summary>`,
-		`class="hint-provenance"`,
+		`dash-sources__exchange`,
+		`req »`,
+		`res »`,
 		"distribution/v1beta1/params",
-		"distribution/v1beta1/community_pool",
-		"outstanding_rewards",
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("distribution data sources missing %q", want)

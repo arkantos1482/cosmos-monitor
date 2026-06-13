@@ -63,6 +63,7 @@ func writeNode(w Writer, d model.Report) {
 
 	writeNodeCometBFT(w, d, lv, syncStr)
 	writeValidatorP2PNetwork(w, d)
+	writeSectionSources(w, ViewNode, d)
 	w.BlankLine()
 }
 
@@ -70,7 +71,6 @@ func writeNodeCometBFT(w Writer, d model.Report, lv model.LocalValidator, syncSt
 	w.Layer("CometBFT (consensus + networking)")
 
 	w.Subsection("Live state")
-	w.Hint("`sync`, `height`, `last block`, `interval` → CometBFT GET /status, GET /block; `mempool` → GET /num_unconfirmed_txs.")
 	w.Row("sync", syncStr)
 	w.Row("height", d.BlockHeight)
 	if d.BlockInterval != "" {
@@ -83,7 +83,6 @@ func writeNodeCometBFT(w Writer, d model.Report, lv model.LocalValidator, syncSt
 
 	if lv.IsValidator || d.LocalConsensusAddr != "" {
 		w.Subsection("Proposer")
-		w.Hint("`voting power` → CometBFT GET /status validator_info; `proposer priority` → GET /validators; `consensus` → x/slashing / staking pubkey.")
 		if d.LocalVotingPower != "" {
 			w.Row("voting power", d.LocalVotingPower+"  _(consensus units — `/status` validator_info)_")
 		}
@@ -99,7 +98,6 @@ func writeNodeCometBFT(w Writer, d model.Report, lv model.LocalValidator, syncSt
 	}
 
 	w.Subsection("P2P & RPC")
-	w.Hint("`cosmos peers` → CometBFT GET /net_info; `node ID`, `p2p listen`, `p2p dial`, `rpc listen` → CometBFT GET /status (node_info; dial is node_id@listen_addr).")
 	w.Row("cosmos peers", fmt.Sprintf("%d  _(CometBFT P2P connections)_", d.PeerCount))
 	if d.NodeID != "" {
 		w.Row("node ID", strings.ToLower(d.NodeID)+"  _(CometBFT P2P peer ID — hex)_")

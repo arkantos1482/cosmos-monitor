@@ -11,11 +11,13 @@ import (
 
 // Snapshots is the result of a parallel fetch from all data sources.
 type Snapshots struct {
-	Chain  fetch.ChainSnapshot
-	EVM    fetch.EVMSnapshot
-	System fetch.SystemSnapshot
-	Docker fetch.DockerSnapshot
-	Status model.StatusAvailability
+	Chain     fetch.ChainSnapshot
+	EVM       fetch.EVMSnapshot
+	System    fetch.SystemSnapshot
+	Docker    fetch.DockerSnapshot
+	AppToml   fetch.AppTomlGasConfig
+	Exchanges []fetch.Exchange
+	Status    model.StatusAvailability
 }
 
 const (
@@ -58,10 +60,15 @@ func LoadFor(view panel.View, rpc, rest, evm, container string) Snapshots {
 	}
 	cache.mu.Unlock()
 
+	fetch.BeginTrace()
 	viewSnap := fetchForView(view, rpc, rest, evm, container)
 	barSnap, barOK := fetchStatusBar(rpc, rest, evm, container)
+	viewSnap.AppToml = fetch.FetchAppTomlGasConfig()
+	exchanges := fetch.EndTrace()
+	viewSnap.Exchanges = exchanges
 	snap := mergeStatusOverlay(viewSnap, barSnap, barOK)
 	snap.Status = barOK
+	snap.Exchanges = exchanges
 
 	cache.mu.Lock()
 	if cache.byView == nil {

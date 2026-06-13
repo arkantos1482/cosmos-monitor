@@ -61,7 +61,6 @@ func writeGovernance(w Writer, d model.Report) {
 
 	if len(d.Proposals) > 0 {
 		w.Subsection(fmt.Sprintf("Active Proposals  (%d)", len(d.Proposals)))
-		w.Hint("`id`, `title`, `tally` → REST GET /cosmos/gov/v1beta1/proposals?proposal_status=2 (v1 fallback; per-proposal tally when available).")
 		for _, pr := range d.Proposals {
 			item := fmt.Sprintf("**#%d** %s  _(voting ends %s)_", pr.ID, report.Truncate(pr.Title, 40), pr.End)
 			if pr.HasTally {
@@ -75,7 +74,6 @@ func writeGovernance(w Writer, d model.Report) {
 
 	if len(d.DepositProposals) > 0 {
 		w.Subsection(fmt.Sprintf("Deposit-Period Proposals  (%d)", len(d.DepositProposals)))
-		w.Hint("`id`, `title` → REST GET /cosmos/gov/v1beta1/proposals?proposal_status=1 (deposit period).")
 		for _, pr := range d.DepositProposals {
 			w.ListItem(fmt.Sprintf("**#%d** %s  _(deposit ends %s)_", pr.ID, report.Truncate(pr.Title, 40), pr.End))
 		}
@@ -87,14 +85,10 @@ func writeGovernance(w Writer, d model.Report) {
 	}
 
 	w.WriteHTML(governanceDomainCardsHTML(d))
-	w.Hint("`voting period`, `quorum`, `threshold` → REST GET /cosmos/gov/v1beta1/params/voting, …/params/tallying; " +
-		"`upgrade` → REST GET /cosmos/upgrade/v1beta1/current_plan; " +
-		"`ibc clients` → REST GET /ibc/core/client/v1/client_states; " +
-		"`token pairs`, `enable_erc20` → REST GET /cosmos/evm/erc20/v1/token_pairs, /cosmos/evm/erc20/v1/params; " +
-		"`gov` module balance → REST GET /cosmos/bank/v1beta1/balances/{gov_module_addr}.")
 
 	if len(d.TokenPairs) > 0 {
 		w.Subsection(fmt.Sprintf("Token Pairs  (%d)", len(d.TokenPairs)))
 		w.WriteHTML(governanceTokenPairsHTML(d.TokenPairs))
 	}
+	writeSectionSources(w, ViewGovernance, d)
 }

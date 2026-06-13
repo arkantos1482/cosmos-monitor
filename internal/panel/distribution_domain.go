@@ -118,7 +118,6 @@ func writeDistributionValidatorTable(w Writer, d model.Report) {
 	if len(d.Validators) == 0 {
 		return
 	}
-	w.Hint("`outstanding`, `commission` → REST GET /cosmos/distribution/v1beta1/validators/{valoper}/outstanding_rewards, …/commission.")
 	rows := make([][]string, 0, len(d.Validators))
 	for _, v := range d.Validators {
 		out := v.Outstanding

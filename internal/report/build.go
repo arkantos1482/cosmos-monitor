@@ -10,9 +10,10 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, docker fetch.DockerSnapshot, evmHTTPEndpoint string, status model.StatusAvailability) model.Report {
+func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, docker fetch.DockerSnapshot, evmHTTPEndpoint string, status model.StatusAvailability, appCfg fetch.AppTomlGasConfig, exchanges []fetch.Exchange) model.Report {
 	p := chain.Params
 	d := model.Report{}
+	d.Exchanges = sourceExchangesFromFetch(exchanges)
 
 	d.Moniker = chain.Moniker
 	d.HasChainStatus = status.ChainOK
@@ -321,7 +322,6 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 	if chain.MaxBlockBytes > 0 {
 		d.MaxBlockBytes = chain.MaxBlockBytes
 	}
-	appCfg := fetch.FetchAppTomlGasConfig()
 	d.NodeAppTomlPath = appCfg.Path
 	if appCfg.MinGasPrices != "" {
 		d.NodeMinGasPrices = appCfg.MinGasPrices
@@ -550,4 +550,25 @@ func slashFraction(raw string) (string, bool) {
 	v := 0.0
 	fmt.Sscanf(raw, "%f", &v)
 	return FormatFraction(raw), v == 0
+}
+
+func sourceExchangesFromFetch(exchanges []fetch.Exchange) []model.SourceExchange {
+	out := make([]model.SourceExchange, 0, len(exchanges))
+	for _, e := range exchanges {
+		lat := ""
+		if e.Latency > 0 {
+			lat = e.Latency.Round(time.Millisecond).String()
+		}
+		out = append(out, model.SourceExchange{
+			Kind:     e.Kind,
+			Method:   e.Method,
+			URL:      e.URL,
+			Request:  e.Request,
+			Response: e.Response,
+			OK:       e.OK,
+			Error:    e.Error,
+			Latency:  lat,
+		})
+	}
+	return out
 }

@@ -25,12 +25,10 @@ func localConsensusBech32(lv model.LocalValidator) string {
 
 func writeStakingDelegators(w Writer, lv model.LocalValidator, bondDenom string) {
 	if len(lv.Delegations) == 0 {
-		w.Hint("No delegations returned for this validator.")
+		w.Em("No delegations returned for this validator.")
 	} else {
 		w.WriteHTML(delegationsTableHTML(lv.Delegations, bondDenom))
 	}
-	w.Hint("`delegator`, `delegated`, `delegation shares` → REST GET /cosmos/staking/v1beta1/validators/{valoper}/delegations; " +
-		"`spendable` → REST GET /cosmos/bank/v1beta1/balances/{address} (bank balance excl. bonded stake).")
 }
 
 func identityDualAddrHTML(bech32, evm, sharedStem string) string {

@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
 // Writer renders dashboard sections as an HTML fragment.
@@ -17,6 +19,7 @@ type Writer interface {
 	Row(label, value string)
 	RowHTML(label, valueHTML, extraHTML string)
 	Hint(text string)
+	SourceLog(exchanges []model.SourceExchange)
 	Em(text string)
 	StrongLine(text string)
 	BlankLine()
@@ -39,8 +42,9 @@ type docWriter struct {
 	inSubsection bool
 	inStatGrid   bool
 	inList       bool
-	sectionHints []string
-	sectionSlug  string
+	sectionHints      []string
+	sectionExchanges  []model.SourceExchange
+	sectionSlug       string
 }
 
 func newWriter(w io.Writer, opts Options) *docWriter {
@@ -102,14 +106,32 @@ func (d *docWriter) closeSection() {
 }
 
 func (d *docWriter) flushSectionHints() {
-	if len(d.sectionHints) == 0 {
+	d.flushSectionSources()
+}
+
+func (d *docWriter) flushSectionSources() {
+	if len(d.sectionHints) == 0 && len(d.sectionExchanges) == 0 {
 		return
 	}
 	d.closeList()
 	d.closeStatGrid()
 	hints := d.sectionHints
+	exchanges := d.sectionExchanges
 	d.sectionHints = nil
-	d.writeSourcesBlock(sectionHintsHTML(hints))
+	d.sectionExchanges = nil
+	body := sectionSourcesBody(hints, exchanges)
+	d.writeSourcesBlock(body)
+}
+
+func sectionSourcesBody(hints []string, exchanges []model.SourceExchange) string {
+	var parts []string
+	if html := sourceExchangesHTML(exchanges); html != "" {
+		parts = append(parts, html)
+	}
+	if len(hints) > 0 {
+		parts = append(parts, `<p class="dash-callout dash-callout--hint hint">`+sectionHintsHTML(hints)+`</p>`)
+	}
+	return strings.Join(parts, "\n")
 }
 
 func (d *docWriter) writeSourcesBlock(body string) {
@@ -121,7 +143,7 @@ func (d *docWriter) writeSourcesBlock(body string) {
 		idAttr = fmt.Sprintf(` id="dash-sources-%s"`, html.EscapeString(slug))
 	}
 	fmt.Fprintf(d.w, `<details class="dash-sources"%s hx-preserve><summary class="dash-sources__summary">Data sources</summary>`+"\n", idAttr)
-	fmt.Fprintf(d.w, `<div class="dash-sources__body"><p class="dash-callout dash-callout--hint hint">%s</p></div></details>`+"\n", body)
+	fmt.Fprintf(d.w, `<div class="dash-sources__body">%s</div></details>`+"\n", body)
 }
 
 // sectionHintsHTML renders deferred section hints as stacked provenance clauses.
@@ -368,6 +390,17 @@ func (d *docWriter) Hint(text string) {
 		return
 	}
 	d.sectionHints = append(d.sectionHints, text)
+}
+
+func (d *docWriter) SourceLog(exchanges []model.SourceExchange) {
+	if len(exchanges) == 0 {
+		return
+	}
+	if !d.inSection {
+		d.writeSourcesBlock(sourceExchangesHTML(exchanges))
+		return
+	}
+	d.sectionExchanges = append(d.sectionExchanges, exchanges...)
 }
 
 func (d *docWriter) writeHintCallout(text string) {

@@ -3,6 +3,8 @@ package panel
 import (
 	"strings"
 	"testing"
+
+	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
 func TestReferenceTableSoftWrap(t *testing.T) {
@@ -136,7 +138,6 @@ func TestHintProvenanceMarkup(t *testing.T) {
 	out := b.String()
 
 	for _, want := range []string{
-		`class="dash-callout dash-callout--hint hint"`,
 		`class="hint-provenance"`,
 		`class="hint-provenance__chip"`,
 		`class="hint-provenance__arrow"`,
@@ -234,8 +235,8 @@ func TestHintProvenanceVerticalClauses(t *testing.T) {
 	w.Hint("`load` → proc /proc/loadavg; `ram` → proc /proc/meminfo (MemTotal, MemAvailable); `disk` → fs statfs /.")
 	w.flush()
 	out := b.String()
-	if !strings.Contains(out, `class="dash-callout dash-callout--hint hint"`) {
-		t.Fatalf("expected hint callout wrapper in:\n%s", out)
+	if !strings.Contains(out, `class="hint-provenance"`) {
+		t.Fatalf("expected provenance markup in:\n%s", out)
 	}
 }
 
@@ -258,21 +259,25 @@ func TestHintDeferredToSectionBottom(t *testing.T) {
 	w := newWriter(&b, Options{ShowSources: true})
 	w.Section("1. TEST")
 	w.Subsection("Metrics")
-	w.Hint("`status` → docker GET /containers/{name}/json.")
+	w.SourceLog([]model.SourceExchange{{
+		Kind: "docker", Method: "GET",
+		URL: "http://localhost/containers/evmd-node/json",
+		Request: "(none)", Response: `{"State":{"Running":true}}`, OK: true, Latency: "1ms",
+	}})
 	w.Row("status", "running")
 	w.flush()
 	out := b.String()
 
-	hintIdx := strings.Index(out, `class="dash-sources"`)
-	rowIdx := strings.Index(out, `class="kpi-tile`)
-	if hintIdx < 0 || rowIdx < 0 {
+	sourcesIdx := strings.Index(out, `class="dash-sources"`)
+	rowIdx := strings.Index(out, `class="kpi-tile"`)
+	if sourcesIdx < 0 || rowIdx < 0 {
 		t.Fatalf("expected deferred sources footer and KPI row in:\n%s", out)
 	}
-	if hintIdx < rowIdx {
-		t.Fatal("data sources hint should render after section content")
+	if sourcesIdx < rowIdx {
+		t.Fatal("data sources should render after section content")
 	}
 	if !strings.Contains(out, `>Data sources</summary>`) {
-		t.Fatal("deferred hints should use collapsible Data sources summary")
+		t.Fatal("deferred sources should use collapsible Data sources summary")
 	}
 	if !strings.Contains(out, `id="dash-sources-test"`) {
 		t.Fatal("data sources details should have stable id for hx-preserve across refresh")
@@ -283,7 +288,7 @@ func TestShowSourcesHiddenByDefault(t *testing.T) {
 	var b strings.Builder
 	w := newWriter(&b, Options{})
 	w.Section("1. TEST")
-	w.Hint("`status` → docker GET /containers/{name}/json.")
+	w.SourceLog([]model.SourceExchange{{Kind: "http", URL: "http://x"}})
 	w.flush()
 	out := b.String()
 	if strings.Contains(out, `class="dash-sources"`) {

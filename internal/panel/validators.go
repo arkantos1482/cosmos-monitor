@@ -35,7 +35,6 @@ func chipClass(v model.Validator) string {
 func writeValidatorP2PNetwork(w Writer, d model.Report) {
 	w.Layer("Validator set")
 	w.Subsection("Network (P2P)")
-	w.Hint("`p2p dial`, `node ID` → CometBFT GET /status (local) or GET /net_info (peers); `consensus` → REST GET /cosmos/staking/v1beta1/validators.")
 	p2pRows := make([][]string, 0, len(d.Validators))
 	for _, v := range d.Validators {
 		cons := v.ConsensusBech32

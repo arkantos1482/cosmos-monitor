@@ -198,10 +198,18 @@ func TestNodeSectionDataSourcesProvenance(t *testing.T) {
 			IsValidator: true, Moniker: "node1", Status: "BOND_STATUS_BONDED",
 			VotingPower: "100", VPPercent: 25, Commission: 10,
 		},
+		Exchanges: []model.SourceExchange{{
+			Kind: "http", Method: "GET",
+			URL: "http://localhost:26657/status", Request: "(none)",
+			Response: `{"result":{}}`, OK: true, Latency: "1ms",
+		}},
 	}
 	out := BuildViewWithOptions(ViewNode, d, Options{ShowSources: true})
 	if !strings.Contains(out, `class="dash-sources"`) {
 		t.Fatal("validator section should include data sources footer when enabled")
+	}
+	if !strings.Contains(out, `req »`) {
+		t.Fatal("validator data sources should show raw request")
 	}
 	outHidden := BuildView(ViewNode, d)
 	if strings.Contains(outHidden, `class="dash-sources"`) {

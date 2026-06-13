@@ -19,6 +19,7 @@ func writeEVMSection(w Writer, d model.Report) {
 	writeEmbeddedSectionIntro(w, "`x/vm` EVM state and hardfork schedule, JSON-RPC live metrics and probe health, plus wallet/dApp connection endpoints.")
 	writeEVMSummary(w, d, SummaryEmbedded)
 	writeEVMRPCSection(w, d)
+	writeSectionSources(w, ViewEVM, d)
 	w.BlankLine()
 }
 
@@ -171,7 +172,6 @@ func writeEVMRPCSection(w Writer, d model.Report) {
 	w.WriteHTML(evmDomainCardsHTML(d))
 
 	w.Subsection("For operators")
-	w.Hint("`HTTP JSON-RPC` → config app.toml [json-rpc] address; `WebSocket` → config app.toml [json-rpc] ws-address; `enabled APIs` → config app.toml [json-rpc] api; `chain ID` → JSON-RPC eth_chainId + genesis EVM config; `native denom`, `client` → genesis + JSON-RPC web3_clientVersion.")
 	httpEP := d.EVMHTTPEndpoint
 	if httpEP == "" {
 		httpEP = "http://localhost:8545"
@@ -205,7 +205,6 @@ func writeEVMRPCSection(w Writer, d model.Report) {
 	w.Pre(wallet)
 
 	w.Subsection("Live (JSON-RPC)")
-	w.Hint("`block height` → JSON-RPC eth_blockNumber; `last block age` → JSON-RPC eth_getBlockByNumber timestamp; `sync` → JSON-RPC eth_syncing; `txpool` → JSON-RPC txpool_status; `EVM peers` → JSON-RPC net_peerCount. EIP-1559 fees: use REST feemarket base_fee (Fee market section), not eth_gasPrice (Cosmos EVM stub).")
 	w.Row("block height", d.EVMBlock+"  _(eth_blockNumber)_")
 	if d.EVMBlockAge != "" {
 		ageStr := d.EVMBlockAge + "  _(eth_getBlockByNumber timestamp)_"
@@ -224,7 +223,6 @@ func writeEVMRPCSection(w Writer, d model.Report) {
 	w.Row("EVM peers", fmt.Sprintf("%d  _(net_peerCount — often 0 on validators)_", d.EVMPeerCount))
 
 	w.Subsection("Probe health")
-	w.Hint("`method`, `status`, `latency` → JSON-RPC POST (client probe each refresh; request/response below).")
 	writeEVMProbeLog(w, d, httpEP)
 }
 

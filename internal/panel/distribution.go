@@ -21,7 +21,7 @@ func writeDistribution(w Writer, d model.Report) {
 	w.WriteHTML(distributionDomainCardsHTML(d))
 	writeDistributionValidatorTable(w, d)
 
-	w.Hint(distributionSourcesHint())
+	writeSectionSources(w, ViewDistribution, d)
 	w.BlankLine()
 }
 
@@ -68,7 +68,6 @@ func writeDistributionSummaryKPI(w Writer, label, value, tone string) {
 }
 
 func writeDistributionLocal(w Writer, lv model.LocalValidator) {
-	w.Hint("`outstanding rewards`, `commission` → REST GET /cosmos/distribution/v1beta1/validators/{valoper}/outstanding_rewards, …/commission.")
 	if lv.Outstanding != "" {
 		w.Row("outstanding rewards", lv.Outstanding+"  _(unclaimed delegator share)_")
 	} else {
@@ -79,12 +78,4 @@ func writeDistributionLocal(w Writer, lv model.LocalValidator) {
 	} else {
 		w.Row("commission", "—")
 	}
-}
-
-func distributionSourcesHint() string {
-	return "`community_tax`, `withdraw_addr_enabled` → REST GET /cosmos/distribution/v1beta1/params; " +
-		"`community pool` → REST GET /cosmos/distribution/v1beta1/community_pool; " +
-		"`outstanding rewards`, `commission` → REST GET /cosmos/distribution/v1beta1/validators/{valoper}/outstanding_rewards, …/commission; " +
-		"`module account balances` → REST GET /cosmos/bank/v1beta1/balances/{address}; " +
-		"`module account addresses` → REST GET /cosmos/auth/v1beta1/module_accounts."
 }

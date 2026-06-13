@@ -75,16 +75,27 @@ func evmCallP(endpoint, method string, params []any, target any) error {
 func evmProbe(endpoint, method string, params []any) RPCProbe {
 	req := rpcRequest{JSONRPC: "2.0", Method: method, Params: params, ID: 1}
 	reqBody, _ := json.Marshal(req)
+	reqJSON := compactJSONFull(reqBody)
 	p := RPCProbe{
 		Method:  method,
-		Request: compactJSONFull(reqBody),
+		Request: reqJSON,
 	}
 
 	start := time.Now()
 	resp, err := httpClient.Post(endpoint, "application/json", bytes.NewReader(reqBody))
 	p.Latency = time.Since(start)
+
+	ex := Exchange{
+		Kind:    "jsonrpc",
+		Method:  "POST",
+		URL:     endpoint,
+		Request: reqJSON,
+		Latency: p.Latency,
+	}
 	if err != nil {
 		p.Error = err.Error()
+		ex.Error = p.Error
+		recordTrace(ex)
 		return p
 	}
 	defer resp.Body.Close()
@@ -92,24 +103,35 @@ func evmProbe(endpoint, method string, params []any) RPCProbe {
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
 		p.Error = err.Error()
+		ex.Error = p.Error
+		recordTrace(ex)
 		return p
 	}
 	p.Response = compactJSONFull(raw)
+	ex.Response = truncateExchangeResponse(p.Response)
 	if resp.StatusCode != 200 {
 		p.Error = fmt.Sprintf("HTTP %d", resp.StatusCode)
+		ex.Error = p.Error
+		recordTrace(ex)
 		return p
 	}
 
 	var rpc rpcResponse
 	if err := json.Unmarshal(raw, &rpc); err != nil {
 		p.Error = err.Error()
+		ex.Error = p.Error
+		recordTrace(ex)
 		return p
 	}
 	if rpc.Error != nil {
 		p.Error = rpc.Error.Message
+		ex.Error = p.Error
+		recordTrace(ex)
 		return p
 	}
 	p.OK = true
+	ex.OK = true
+	recordTrace(ex)
 	return p
 }
 

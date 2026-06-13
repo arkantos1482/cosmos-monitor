@@ -1,0 +1,82 @@
+package panel
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/arkantos1482/cosmos-monitor/internal/model"
+)
+
+func sampleExchanges() []model.SourceExchange {
+	return []model.SourceExchange{
+		{
+			Kind: "http", Method: "GET",
+			URL:      "http://localhost:26657/status",
+			Request:  "(none)",
+			Response: `{"result":{"node_info":{"moniker":"node1"}}}`,
+			OK:       true, Latency: "2ms",
+		},
+		{
+			Kind: "http", Method: "GET",
+			URL:      "http://localhost:1317/cosmos/distribution/v1beta1/params",
+			Request:  "(none)",
+			Response: `{"params":{"community_tax":"0.02"}}`,
+			OK:       true, Latency: "3ms",
+		},
+	}
+}
+
+func TestSourceExchangesHTML(t *testing.T) {
+	html := sourceExchangesHTML(sampleExchanges())
+	for _, want := range []string{
+		`dash-sources__summary-log`,
+		`dash-sources__exchange`,
+		`GET /status`,
+		`req »`,
+		`res »`,
+		`distribution/v1beta1/params`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("missing %q in:\n%s", want, html)
+		}
+	}
+}
+
+func TestExchangesForViewNode(t *testing.T) {
+	all := sampleExchanges()
+	got := exchangesForView(ViewNode, all)
+	if len(got) != 1 || !strings.Contains(got[0].URL, "/status") {
+		t.Fatalf("node view should only match comet status, got %d", len(got))
+	}
+}
+
+func TestExchangesForViewDistribution(t *testing.T) {
+	all := sampleExchanges()
+	got := exchangesForView(ViewDistribution, all)
+	if len(got) != 1 || !strings.Contains(got[0].URL, "distribution") {
+		t.Fatalf("distribution view should match distribution endpoint, got %d", len(got))
+	}
+}
+
+func TestSourceLogDeferredToSectionBottom(t *testing.T) {
+	var b strings.Builder
+	w := newWriter(&b, Options{ShowSources: true})
+	w.Section("1. TEST")
+	w.Subsection("Metrics")
+	w.SourceLog(sampleExchanges()[:1])
+	w.Row("status", "running")
+	w.flush()
+	out := b.String()
+
+	sourcesIdx := strings.Index(out, `class="dash-sources"`)
+	rowIdx := strings.Index(out, `class="kpi-tile"`)
+	if sourcesIdx < 0 || rowIdx < 0 {
+		t.Fatalf("expected deferred sources footer and KPI row in:\n%s", out)
+	}
+	if sourcesIdx < rowIdx {
+		t.Fatal("data sources log should render after section content")
+	}
+	if !strings.Contains(out, `req »`) || !strings.Contains(out, `res »`) {
+		t.Fatal("data sources should include raw req/res blocks")
+	}
+}

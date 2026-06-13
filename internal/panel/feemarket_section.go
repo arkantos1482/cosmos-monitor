@@ -63,7 +63,6 @@ func writeFeemarket(w Writer, d model.Report) {
 	writeFeemarketSummary(w, d, SummaryEmbedded)
 
 	w.Subsection("Live state")
-	w.Hint("`base_fee` → REST GET /cosmos/evm/feemarket/v1/base_fee; `block_gas` (W) → …/block_gas; parent `gas_used` → CometBFT GET /block_results.")
 	w.Row("block height", d.BlockHeight)
 	w.Row("base fee", orDash(d.BaseFee))
 	if s.GasWanted > 0 {
@@ -95,7 +94,7 @@ func writeFeemarket(w Writer, d model.Report) {
 	w.Subsection("Module & policy")
 	w.WriteHTML(feemarketDomainCardsHTML(s, d))
 
-	w.Hint(feemarketSourcesHint())
+	writeSectionSources(w, ViewFeemarket, d)
 	w.BlankLine()
 }
 
@@ -121,12 +120,6 @@ func fmMechanicsHTML(s feemarket.State) string {
 	}
 	b.WriteString(`</div>`)
 	return b.String()
-}
-
-func feemarketSourcesHint() string {
-	return "`base_fee`, `params`, `block_gas` → REST GET /cosmos/evm/feemarket/v1/*; " +
-		"`gas_used` → CometBFT GET /block_results; `max_gas` → CometBFT GET /status (consensus params); " +
-		"node policy → local app.toml (minimum-gas-prices, mempool, evm.min-tip)."
 }
 
 func formatUint(n uint64) string {

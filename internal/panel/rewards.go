@@ -21,10 +21,10 @@ func writeRewards(w Writer, d model.Report) {
 	w.WriteHTML(rewardsDomainCardsHTML(d))
 
 	w.Subsection("Emission sources")
-	w.Hint("Per-block amounts from module queries; x/pmtrewards transfers run inside x/mint BeginBlock via evmd's custom MintFn.")
+	w.Em("Per-block amounts from module queries; x/pmtrewards transfers run inside x/mint BeginBlock via evmd's custom MintFn.")
 	w.WriteHTML(rewardsEmissionTableHTML(d))
 
-	w.Hint(rewardsSourcesHint())
+	writeSectionSources(w, ViewRewards, d)
 	w.BlankLine()
 }
 
@@ -73,20 +73,10 @@ func writeRewardsSummaryKPI(w Writer, label, value, tone string) {
 
 func writeRewardsLocal(w Writer, d model.Report) {
 	lv := d.Local
-	w.Hint("`per-block` → estimated from combined emission × VP% × commission (x/distribution applies VP weighting on chain).")
 	if op, del, _, ok := localValidatorPerBlockRewards(d); ok {
 		w.Row("per-block commission", op+fmt.Sprintf("  (%.2f%% VP · %.1f%% commission)", lv.VPPercent, lv.Commission))
 		w.Row("per-block delegators", del)
 	} else if emit := rewardsEmissionPerBlock(d); emit != "—" {
 		w.Row("per-block emission", "—  _(no VP or no active emission)_")
 	}
-}
-
-func rewardsSourcesHint() string {
-	return "`enabled`, `reward_per_block`, `pool_address` → REST GET /cosmos/evm/pmtrewards/v1/params; " +
-		"`pool balance` → REST GET /cosmos/bank/v1beta1/balances/{pool_address}; " +
-		"`inflation`, `annual_provisions` → REST GET /cosmos/mint/v1beta1/inflation, /cosmos/mint/v1beta1/annual-provisions; " +
-		"`goal_bonded`, `blocks_per_year` → REST GET /cosmos/mint/v1beta1/params; " +
-		"`bonded %` → REST GET /cosmos/staking/v1beta1/pool; " +
-		"`per-block estimates` → derived (annual_provisions ÷ blocks_per_year, reward_per_block, block interval)."
 }

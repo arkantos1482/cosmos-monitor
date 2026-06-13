@@ -158,6 +158,21 @@ type Report struct {
 	BlocksLeft       string
 	IBCClients       int
 	TokenPairs       []TokenPair
+
+	// Exchanges holds raw request/response traces from the last fetch (dev data sources).
+	Exchanges []SourceExchange
+}
+
+// SourceExchange is one traced data-source call for the Data sources panel.
+type SourceExchange struct {
+	Kind     string
+	Method   string
+	URL      string
+	Request  string
+	Response string
+	OK       bool
+	Error    string
+	Latency  string
 }
 
 type Validator struct {

@@ -20,14 +20,14 @@ func main() {
 	container := flag.String("container", "evmd-node", "Docker container name")
 	webAddr := flag.String("web", ":7777", "address to serve web UI (e.g. :7777); empty disables")
 	dump := flag.Bool("dump", false, "fetch once, print HTML fragment to stdout, and exit")
-	showSources := flag.Bool("show-sources", false, "show collapsible data-source provenance (dev only)")
+	showSources := flag.Bool("show-sources", false, "show collapsible raw endpoint request/response traces (dev only)")
 	flag.Parse()
 
 	opts := panel.Options{ShowSources: showSourcesEnabled(*showSources)}
 
 	load := func(v panel.View) model.Report {
 		sn := fetchall.LoadFor(v, *rpc, *rest, *evm, *container)
-		return report.Build(sn.Chain, sn.EVM, sn.System, sn.Docker, *evm, sn.Status)
+		return report.Build(sn.Chain, sn.EVM, sn.System, sn.Docker, *evm, sn.Status, sn.AppToml, sn.Exchanges)
 	}
 
 	if *dump {
