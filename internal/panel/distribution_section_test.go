@@ -103,8 +103,8 @@ func TestDistributionSourcesProvenance(t *testing.T) {
 		`class="dash-sources"`,
 		`>Data sources</summary>`,
 		`dash-sources__exchange`,
-		`req »`,
-		`res »`,
+		`dash-sources__tag">req`,
+		`dash-sources__tag">res`,
 		"distribution/v1beta1/params",
 	} {
 		if !strings.Contains(chunk, want) {

@@ -35,13 +35,15 @@ func TestBuildEVMRPCSection(t *testing.T) {
 }
 
 func TestFormatProbeExchange(t *testing.T) {
-	body := formatProbeExchange(model.RPCProbe{
+	body := formatProbeExchangeHTML(model.RPCProbe{
 		Method: "eth_blockNumber", OK: true, Latency: "3ms",
 		Request:  `{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}`,
 		Response: `{"jsonrpc":"2.0","id":1,"result":"0x10"}`,
 	})
-	if !strings.Contains(body, "req »") || !strings.Contains(body, "res »") {
-		t.Fatalf("expected req/res markers: %q", body)
+	for _, want := range []string{`dash-sources__tag">req`, `dash-sources__tag">res`, `json-key`, `json-block`} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected %q in probe exchange HTML: %q", want, body)
+		}
 	}
 }
 

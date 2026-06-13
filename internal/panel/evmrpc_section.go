@@ -1,7 +1,6 @@
 package panel
 
 import (
-	"encoding/json"
 	"fmt"
 	"html"
 	"sort"
@@ -276,50 +275,23 @@ func probeStatusLabel(ok bool) string {
 	return "FAIL"
 }
 
-func prettyProbeJSON(raw string, maxBytes int) string {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return "(empty)"
-	}
-	var v any
-	if err := json.Unmarshal([]byte(raw), &v); err != nil {
-		return truncateJSON(raw, maxBytes)
-	}
-	out, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
-		return truncateJSON(raw, maxBytes)
-	}
-	return truncateJSON(string(out), maxBytes)
-}
-
-func truncateJSON(s string, maxBytes int) string {
-	if maxBytes <= 0 || len(s) <= maxBytes {
-		return s
-	}
-	return s[:maxBytes] + "\n… (truncated)"
-}
-
-func formatProbeExchange(p model.RPCProbe) string {
+func formatProbeExchangeHTML(p model.RPCProbe) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "── %s · %s · %s ──\n", p.Method, probeStatusLabel(p.OK), p.Latency)
+	b.WriteString(`<div class="dash-sources__exchange">`)
+	fmt.Fprintf(&b, `<div class="dash-sources__exchange-hdr">── %s · %s · %s ──</div>`,
+		htmlEscape(p.Method), htmlEscape(probeStatusLabel(p.OK)), htmlEscape(p.Latency))
 	if !p.OK && p.Error != "" {
-		fmt.Fprintf(&b, "err » %s\n", p.Error)
+		fmt.Fprintf(&b, `<div class="dash-sources__error">err » %s</div>`, htmlEscape(truncateJSON(p.Error, maxProbeJSONBytes)))
 	}
 	if p.Request != "" {
-		fmt.Fprintf(&b, "req » %s\n", strings.TrimSpace(p.Request))
+		b.WriteString(`<div class="dash-sources__payload"><span class="dash-sources__tag">req</span>`)
+		b.WriteString(jsonCodeBlock(p.Request, maxProbeJSONBytes))
+		b.WriteString(`</div>`)
 	}
-	b.WriteString("res » ")
-	res := prettyProbeJSON(p.Response, maxProbeJSONBytes)
-	if !strings.Contains(res, "\n") {
-		b.WriteString(res + "\n")
-		return strings.TrimRight(b.String(), "\n")
-	}
-	lines := strings.Split(res, "\n")
-	b.WriteString(lines[0] + "\n")
-	for _, line := range lines[1:] {
-		b.WriteString("      " + line + "\n")
-	}
-	return strings.TrimRight(b.String(), "\n")
+	b.WriteString(`<div class="dash-sources__payload"><span class="dash-sources__tag">res</span>`)
+	b.WriteString(jsonCodeBlock(p.Response, maxProbeJSONBytes))
+	b.WriteString(`</div></div>`)
+	return b.String()
 }
 
 func writeEVMProbeLog(w Writer, d model.Report, endpoint string) {
@@ -327,8 +299,7 @@ func writeEVMProbeLog(w Writer, d model.Report, endpoint string) {
 	w.Pre(log)
 
 	for _, p := range sortedRPCProbes(d.RPCProbes) {
-		body := formatProbeExchange(p)
-		w.Pre(body)
+		w.WriteHTML(formatProbeExchangeHTML(p))
 		if !p.OK {
 			w.PreBash(jsonRPCCurl(endpoint, p.Request))
 		}

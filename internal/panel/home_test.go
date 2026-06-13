@@ -208,7 +208,7 @@ func TestNodeSectionDataSourcesProvenance(t *testing.T) {
 	if !strings.Contains(out, `class="dash-sources"`) {
 		t.Fatal("validator section should include data sources footer when enabled")
 	}
-	if !strings.Contains(out, `req »`) {
+	if !strings.Contains(out, `dash-sources__tag">req`) {
 		t.Fatal("validator data sources should show raw request")
 	}
 	outHidden := BuildView(ViewNode, d)

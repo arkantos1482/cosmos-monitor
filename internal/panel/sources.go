@@ -152,52 +152,41 @@ func exchangeStatusLabel(ok bool) string {
 	return "FAIL"
 }
 
-func prettySourceJSON(raw string) string {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return "(empty)"
-	}
-	var v any
-	if err := json.Unmarshal([]byte(raw), &v); err != nil {
-		return truncateSourceJSON(raw)
-	}
-	out, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
-		return truncateSourceJSON(raw)
-	}
-	return truncateSourceJSON(string(out))
-}
-
 func truncateSourceJSON(s string) string {
-	if len(s) <= maxSourceJSONBytes {
-		return s
-	}
-	return s[:maxSourceJSONBytes] + "\n… (truncated)"
+	return truncateJSON(s, maxSourceJSONBytes)
 }
 
-func formatSourceExchange(e model.SourceExchange) string {
+func formatSourceExchangeHTML(e model.SourceExchange) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "── %s · %s · %s ──\n", exchangeLabel(e), exchangeStatusLabel(e.OK), e.Latency)
+	b.WriteString(`<div class="dash-sources__exchange">`)
+	fmt.Fprintf(&b, `<div class="dash-sources__exchange-hdr">── %s · %s · %s ──</div>`,
+		htmlEscape(exchangeLabel(e)), htmlEscape(exchangeStatusLabel(e.OK)), htmlEscape(e.Latency))
 	if !e.OK && e.Error != "" {
-		fmt.Fprintf(&b, "err » %s\n", e.Error)
+		fmt.Fprintf(&b, `<div class="dash-sources__error">err » %s</div>`, htmlEscape(truncateSourceJSON(e.Error)))
 	}
+	if req := sourceRequestBody(e); req != "" {
+		b.WriteString(`<div class="dash-sources__payload"><span class="dash-sources__tag">req</span>`)
+		if isJSON(req) {
+			b.WriteString(jsonCodeBlock(req, maxSourceJSONBytes))
+		} else {
+			b.WriteString(plainCodeBlock(req))
+		}
+		b.WriteString(`</div>`)
+	}
+	b.WriteString(`<div class="dash-sources__payload"><span class="dash-sources__tag">res</span>`)
+	b.WriteString(jsonCodeBlock(e.Response, maxSourceJSONBytes))
+	b.WriteString(`</div></div>`)
+	return b.String()
+}
+
+func sourceRequestBody(e model.SourceExchange) string {
 	if e.Request != "" && e.Request != "(none)" {
-		fmt.Fprintf(&b, "req » %s\n", strings.TrimSpace(e.Request))
-	} else if e.Method == "GET" || e.Method == "POST" {
-		fmt.Fprintf(&b, "req » %s\n", e.Method+" "+e.URL)
+		return strings.TrimSpace(e.Request)
 	}
-	b.WriteString("res » ")
-	res := prettySourceJSON(e.Response)
-	if !strings.Contains(res, "\n") {
-		b.WriteString(res + "\n")
-		return strings.TrimRight(b.String(), "\n")
+	if e.Method == "GET" || e.Method == "POST" {
+		return e.Method + " " + e.URL
 	}
-	lines := strings.Split(res, "\n")
-	b.WriteString(lines[0] + "\n")
-	for _, line := range lines[1:] {
-		b.WriteString("      " + line + "\n")
-	}
-	return strings.TrimRight(b.String(), "\n")
+	return ""
 }
 
 func renderSourceExchangeLog(exchanges []model.SourceExchange) string {
@@ -235,9 +224,7 @@ func sourceExchangesHTML(exchanges []model.SourceExchange) string {
 	b.WriteString(htmlEscape(renderSourceExchangeLog(exchanges)))
 	b.WriteString(`</code></pre>`)
 	for _, e := range exchanges {
-		b.WriteString(`<pre class="code-block terminal-panel dash-sources__exchange"><code>`)
-		b.WriteString(htmlEscape(formatSourceExchange(e)))
-		b.WriteString(`</code></pre>`)
+		b.WriteString(formatSourceExchangeHTML(e))
 	}
 	b.WriteString(`</div>`)
 	return b.String()

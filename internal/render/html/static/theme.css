@@ -1202,6 +1202,90 @@ body::after {
   font-size: 0.72rem;
 }
 
+.dash-sources__exchange {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.dash-sources__exchange-hdr {
+  padding: 0.4rem 0.7rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.dash-sources__error {
+  padding: 0.35rem 0.7rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--bad);
+  border-bottom: 1px solid var(--border);
+}
+
+.dash-sources__payload {
+  position: relative;
+}
+
+.dash-sources__payload + .dash-sources__payload {
+  border-top: 1px solid var(--border);
+}
+
+.dash-sources__tag {
+  position: absolute;
+  top: 0.45rem;
+  left: 0.65rem;
+  z-index: 1;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.dash-sources__payload .json-block {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 1.55rem 0.75rem 0.65rem;
+  background: transparent;
+}
+
+.json-block code {
+  white-space: pre;
+}
+
+.json-key {
+  color: #7dd3fc;
+}
+
+.json-str {
+  color: #86efac;
+}
+
+.json-num {
+  color: #fbbf24;
+}
+
+.json-bool {
+  color: #c4b5fd;
+}
+
+.json-null {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.json-punct {
+  color: #64748b;
+}
+
 /* ── KPI tiles ────────────────────────────────────────────────── */
 
 .kpi-grid {

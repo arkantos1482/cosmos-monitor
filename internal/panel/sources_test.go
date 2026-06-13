@@ -31,9 +31,11 @@ func TestSourceExchangesHTML(t *testing.T) {
 	for _, want := range []string{
 		`dash-sources__summary-log`,
 		`dash-sources__exchange`,
+		`dash-sources__tag">req`,
+		`dash-sources__tag">res`,
+		`json-block`,
+		`json-key`,
 		`GET /status`,
-		`req »`,
-		`res »`,
 		`distribution/v1beta1/params`,
 	} {
 		if !strings.Contains(html, want) {
@@ -76,7 +78,7 @@ func TestSourceLogDeferredToSectionBottom(t *testing.T) {
 	if sourcesIdx < rowIdx {
 		t.Fatal("data sources log should render after section content")
 	}
-	if !strings.Contains(out, `req »`) || !strings.Contains(out, `res »`) {
+	if !strings.Contains(out, `dash-sources__tag">req`) || !strings.Contains(out, `dash-sources__tag">res`) {
 		t.Fatal("data sources should include raw req/res blocks")
 	}
 }
