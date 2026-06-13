@@ -1194,6 +1194,8 @@ body::after {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .dash-sources__summary-log,
@@ -1207,6 +1209,8 @@ body::after {
   border-radius: 9px;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.2);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .dash-sources__exchange-hdr {
@@ -1216,6 +1220,7 @@ body::after {
   color: var(--muted);
   border-bottom: 1px solid var(--border);
   background: rgba(0, 0, 0, 0.15);
+  overflow-wrap: anywhere;
 }
 
 .dash-sources__error {
@@ -1228,6 +1233,8 @@ body::after {
 
 .dash-sources__payload {
   position: relative;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .dash-sources__payload + .dash-sources__payload {
@@ -1255,10 +1262,26 @@ body::after {
   box-shadow: none;
   padding: 1.55rem 0.75rem 0.65rem;
   background: transparent;
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+.dash-sources__summary-log {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+.json-block {
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 .json-block code {
-  white-space: pre;
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .json-key {
@@ -2014,6 +2037,26 @@ body::after {
   font-size: 0.76rem;
   color: var(--fg);
   line-height: 1.5;
+}
+
+.code-block.json-block,
+.terminal-panel.json-block {
+  overflow-x: hidden;
+}
+
+.code-block.json-block code,
+.terminal-panel.json-block code {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.dash-sources__summary-log.code-block {
+  overflow-x: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 /* ── Economics KPI band ───────────────────────────────────────── */
