@@ -274,6 +274,9 @@ func TestHintDeferredToSectionBottom(t *testing.T) {
 	if !strings.Contains(out, `>Data sources</summary>`) {
 		t.Fatal("deferred hints should use collapsible Data sources summary")
 	}
+	if !strings.Contains(out, `id="dash-sources-test"`) {
+		t.Fatal("data sources details should have stable id for hx-preserve across refresh")
+	}
 }
 
 func TestShowSourcesHiddenByDefault(t *testing.T) {

@@ -40,6 +40,7 @@ type docWriter struct {
 	inStatGrid   bool
 	inList       bool
 	sectionHints []string
+	sectionSlug  string
 }
 
 func newWriter(w io.Writer, opts Options) *docWriter {
@@ -97,6 +98,7 @@ func (d *docWriter) closeSection() {
 	}
 	fmt.Fprint(d.w, "</section>\n")
 	d.inSection = false
+	d.sectionSlug = ""
 }
 
 func (d *docWriter) flushSectionHints() {
@@ -114,7 +116,11 @@ func (d *docWriter) writeSourcesBlock(body string) {
 	if !d.opts.ShowSources || body == "" {
 		return
 	}
-	fmt.Fprint(d.w, `<details class="dash-sources" hx-preserve><summary class="dash-sources__summary">Data sources</summary>`+"\n")
+	idAttr := ""
+	if slug := d.sectionSlug; slug != "" {
+		idAttr = fmt.Sprintf(` id="dash-sources-%s"`, html.EscapeString(slug))
+	}
+	fmt.Fprintf(d.w, `<details class="dash-sources"%s hx-preserve><summary class="dash-sources__summary">Data sources</summary>`+"\n", idAttr)
 	fmt.Fprintf(d.w, `<div class="dash-sources__body"><p class="dash-callout dash-callout--hint hint">%s</p></div></details>`+"\n", body)
 }
 
@@ -199,9 +205,35 @@ func sectionSlug(title string) string {
 	}
 }
 
+func fallbackSectionSlug(title string) string {
+	t := strings.TrimSpace(title)
+	if i := strings.Index(t, ". "); i >= 0 {
+		t = strings.TrimSpace(t[i+2:])
+	}
+	var b strings.Builder
+	prevDash := false
+	for _, r := range strings.ToLower(t) {
+		ok := (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9')
+		if ok {
+			b.WriteRune(r)
+			prevDash = false
+			continue
+		}
+		if !prevDash && b.Len() > 0 {
+			b.WriteByte('-')
+			prevDash = true
+		}
+	}
+	return strings.Trim(b.String(), "-")
+}
+
 func (d *docWriter) Section(title string) {
 	d.closeSection()
 	slug := sectionSlug(title)
+	d.sectionSlug = slug
+	if d.sectionSlug == "" {
+		d.sectionSlug = fallbackSectionSlug(title)
+	}
 	cls := "dash-section"
 	if slug != "" {
 		cls += " dash-section--" + slug
