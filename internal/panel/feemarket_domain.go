@@ -4,58 +4,73 @@ import (
 	"strings"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/feemarket"
+	"github.com/arkantos1482/cosmos-monitor/internal/fetch"
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-func feemarketDomainCardsHTML(d model.Report) string {
-	c := feemarket.LoadContext(d)
-	return ecoDomainsWrap(feemarketModuleCardHTML(c, d))
+func feemarketDomainCardsHTML(s feemarket.State, d model.Report) string {
+	return ecoDomainsWrap(
+		fmModuleCardHTML(s, d),
+		fmConsensusCardHTML(s, d),
+		fmNodePolicyCardHTML(s),
+	)
 }
 
-func feemarketModuleCardHTML(c feemarket.Context, d model.Report) string {
+func fmModuleCardHTML(s feemarket.State, d model.Report) string {
 	var b strings.Builder
-	ecoDomainCardOpen(&b, "eco-domain--feemarket", "Fee market", "x/feemarket")
-
-	verdict := map[string]string{
-		"busy": "BUSY", "quiet": "QUIET", "balanced": "BALANCED", "unknown": "UNKNOWN",
-	}[c.Verdict]
-	ecoDomainRow(&b, "", "base fee", orEcoDash(d.BaseFee), "minimum gas price this block")
-	ecoDomainRow(&b, "", "verdict", verdict, "parent-block demand vs target")
-	if c.UtilPct != "" {
-		ecoDomainRow(&b, "", "W vs target", c.UtilPct+" of target", "drives next base fee adjustment")
-	}
-	gasLine := formatGasAmount(c.GasUsed, d.ParentBlockResultsOK) + " used · " +
-		formatGasAmount(c.Wanted, d.ParentBlockResultsOK) + " W"
-	ecoDomainRow(&b, "", "parent gas", gasLine, "gas_used and W from parent block")
-	if c.Badge.Label != "" {
-		ecoDomainRow(&b, "", "next adjustment", c.Badge.Label, "base fee direction next block")
-	}
-
+	ecoDomainCardOpen(&b, "eco-domain--feemarket", "x/feemarket params", "on-chain module store")
+	ecoDomainRow(&b, "", "no_base_fee", boolStr(d.NoBaseFee), "disables dynamic base fee when true")
+	ecoDomainRow(&b, "", "enable_height", formatParamInt(s.EnableHeight), "block height EIP-1559 activates")
+	ecoDomainRow(&b, "", "base_fee", orEcoDash(s.BaseFeeParam), "stored genesis / governance floor")
+	ecoDomainRow(&b, "", "base_fee_change_denominator", formatParamInt(s.ChangeDenom), "max per-block delta as 1/N of base fee")
+	ecoDomainRow(&b, "", "elasticity_multiplier", formatParamInt(s.Elasticity), "gas target = block limit ÷ this")
+	ecoDomainRow(&b, "", "min_gas_price", orEcoDash(s.MinGasPrice), "floor when base fee decreases")
+	ecoDomainRow(&b, "", "min_gas_multiplier", orEcoDash(s.MinGasMult), "EndBlock: W ≥ gas_used and W ≥ wanted×multiplier")
 	ecoDomainCardClose(&b)
 	return b.String()
 }
 
-func feeChainParamsDomainHTML(c feemarket.Context, d model.Report) string {
-	rows := []struct{ param, value, effect string }{
-		{"no_base_fee", boolStr(d.NoBaseFee), "disables dynamic base fee when true"},
-		{"enable_height", formatEnableHeight(c.EnableHeight), "block when EIP-1559 fee market turns on"},
-		{"base_fee (param store)", orEcoDash(c.BaseFeeParam), "genesis / governance initial base fee"},
-		{"base_fee_change_denominator", formatParamUint(c.DenomU), "caps per-block base fee delta"},
-		{"elasticity_multiplier", formatParamInt(c.Elasticity), "target gas = max_gas / elasticity"},
-		{"min_gas_price", minGasPriceL5(c), "network minimum gas price floor"},
-		{"min_gas_multiplier", orEcoDash(c.MinGasMultiplier), "weights in-block gas accumulator for W"},
-		{"max_gas", maxGasL5(c), "consensus block gas limit"},
-		{"max_bytes", formatParamInt(c.MaxBlockBytes), "consensus max block size"},
-		{"evm_denom", orEcoDash(c.Denom), "native token for EVM gas"},
-		{"london_block", londonStatus(c), "EIP-1559 activation height"},
-		{"min_unit_gas", "1 apmt", "smallest gas price increment"},
-	}
+func fmConsensusCardHTML(s feemarket.State, d model.Report) string {
 	var b strings.Builder
-	b.WriteString(`<div class="eco-domain eco-domain--fee-params">`)
-	b.WriteString(`<div class="eco-domain__rows">`)
-	for _, row := range rows {
-		ecoDomainRow(&b, "", row.param, row.value, row.effect)
+	ecoDomainCardOpen(&b, "eco-domain--feemarket-consensus", "Consensus limits", "CometBFT block caps")
+	limit := "unlimited"
+	if s.GasLimit > 0 {
+		limit = formatUint(s.GasLimit) + " gas"
 	}
-	b.WriteString(`</div></div>`)
+	ecoDomainRow(&b, "", "max_gas", limit, "block gas meter ceiling")
+	target := "—"
+	if s.GasTarget > 0 {
+		target = formatUint(s.GasTarget) + " gas"
+	}
+	ecoDomainRow(&b, "", "gas target", target, "limit ÷ elasticity_multiplier")
+	if d.MaxBlockBytes > 0 {
+		ecoDomainRow(&b, "", "max_block_bytes", formatParamInt(d.MaxBlockBytes), "serialized block size cap")
+	}
+	ecoDomainCardClose(&b)
 	return b.String()
+}
+
+func fmNodePolicyCardHTML(s feemarket.State) string {
+	var b strings.Builder
+	ecoDomainCardOpen(&b, "eco-domain--feemarket-node", "Node policy", "local app.toml / mempool")
+	ecoDomainRow(&b, policyRowClass(s.NodeMinGas), "minimum-gas-prices", orEcoDash(s.NodeMinGas), "CometBFT CheckTx minimum")
+	ecoDomainRow(&b, policyRowClass(s.NodeEVMTip), "evm.min-tip", orEcoDash(s.NodeEVMTip), "EVM ante min effective gas price")
+	ecoDomainRow(&b, policyRowClass(s.NodePriceLimit), "mempool.price-bump", orEcoDash(s.NodePriceLimit), "replacement tx price bump %")
+	ecoDomainRow(&b, policyRowClass(s.NodeMaxGasWant), "max-tx-gas-wanted", orEcoDash(s.NodeMaxGasWant), "per-tx gas wanted cap in mempool")
+	ecoDomainCardClose(&b)
+	return b.String()
+}
+
+func policyRowClass(v string) string {
+	if strings.TrimSpace(v) == "" || v == "—" {
+		return "eco-domain__row--inactive"
+	}
+	return ""
+}
+
+func fmProjectedFee(s feemarket.State) string {
+	if !s.HasProjection {
+		return "—"
+	}
+	return fetch.FormatFeeAmount(s.ProjectedRaw, s.Denom)
 }

@@ -5,7 +5,6 @@ import (
 	"html"
 	"math"
 
-	"github.com/arkantos1482/cosmos-monitor/internal/feemarket"
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
@@ -99,19 +98,6 @@ func badgeKind(v string) string {
 		return "warn"
 	case "badge--bad":
 		return "bad"
-	default:
-		return ""
-	}
-}
-
-func feemarketBadgeKind(b feemarket.Badge) string {
-	switch b.Class {
-	case "rising":
-		return "bad"
-	case "falling", "floor":
-		return "ok"
-	case "disabled":
-		return "warn"
 	default:
 		return ""
 	}

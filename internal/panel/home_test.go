@@ -45,7 +45,7 @@ func TestBuildOverviewStack(t *testing.T) {
 		`href="/s/evm"`,
 		`staking-summary`,
 		`rewards-summary`,
-		`class="fee-summary"`,
+		`class="fm-summary"`,
 		`class="gov-summary"`,
 		`class="infra-summary"`,
 		`class="node-summary"`,
@@ -87,7 +87,7 @@ func TestBuildOverviewStack(t *testing.T) {
 	if feeCard > rewardsCard || rewardsCard > distCard {
 		t.Fatal("economics overview cards should be ordered fee market → rewards → distribution")
 	}
-	if !strings.Contains(out[feeCard:rewardsCard], `fee-summary`) {
+	if !strings.Contains(out[feeCard:rewardsCard], `fm-summary`) {
 		t.Fatal("fee market overview card should include fee summary")
 	}
 	if !strings.Contains(out[rewardsCard:distCard], `rewards-summary`) {
@@ -246,8 +246,7 @@ func TestSectionSummariesEmbedded(t *testing.T) {
 		{ViewSlashing, `slashing-summary`, "At a glance"},
 		{ViewRewards, `rewards-summary`, "At a glance"},
 		{ViewDistribution, `dist-summary`, "At a glance"},
-		{ViewFeemarket, `class="fee-summary"`, "At a glance"},
-		{ViewFeemarket2, `class="fm2-summary"`, "At a glance"},
+		{ViewFeemarket, `class="fm-summary"`, "At a glance"},
 		{ViewGovernance, `class="gov-summary"`, "At a glance"},
 		{ViewInfra, `class="infra-summary"`, "At a glance"},
 		{ViewNode, `class="node-summary"`, "At a glance"},

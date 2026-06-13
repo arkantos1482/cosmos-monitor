@@ -90,14 +90,11 @@ func TestBuildFeeMarketPanel(t *testing.T) {
 		BlockGas: "21000", ParentBlockGasWanted: 21000,
 		BlockGasLimit: 100_000_000, Elasticity: 2,
 		BaseFeeChangeDenominator: 8, MinGasMultiplier: "0.5",
-		ParentBlockResultsOK: true,
+		ParentBlockResultsOK: true, EVMDenom: "apmt",
 	}
 	out := Build(d)
-	if !strings.Contains(out, `id="fee-L1"`) {
-		t.Fatal("fee market section should render L1 ladder panel")
-	}
-	if strings.Contains(out, `class="fee-flow"`) {
-		t.Fatal("fee market section should not use legacy fee-flow")
+	if !strings.Contains(out, `class="fm-summary"`) {
+		t.Fatal("fee market section should render summary panel")
 	}
 	idx := strings.Index(out, `class="dash-heading">3. FEE MARKET</h2>`)
 	end := strings.Index(out, "4. REWARDS")
@@ -105,8 +102,8 @@ func TestBuildFeeMarketPanel(t *testing.T) {
 		t.Fatal("expected fee market and rewards sections")
 	}
 	fee := out[idx:end]
-	if strings.Contains(fee, `math-panel`) {
-		t.Fatal("fee market section should not use KaTeX")
+	if strings.Contains(fee, `id="fee-L1"`) {
+		t.Fatal("fee market section should not use legacy L1 ladder")
 	}
 	if !strings.Contains(out, `dash-section--feemarket`) {
 		t.Fatal("fee market section should have feemarket accent class")

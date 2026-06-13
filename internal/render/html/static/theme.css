@@ -20,8 +20,7 @@
   --accent-rewards: #f472b6;
   --accent-distribution: #e879f9;
   --accent-economics: #fbbf24;
-  --accent-feemarket: #2dd4bf;
-  --accent-feemarket2: #67e8f9;
+  --accent-feemarket: #67e8f9;
   --accent-governance: #fb923c;
   --accent-evm: #38bdf8;
   --sidebar-w: 220px;
@@ -228,7 +227,6 @@ body::after {
 .dash-nav__link--rewards { --nav-accent: var(--accent-rewards); }
 .dash-nav__link--distribution { --nav-accent: var(--accent-distribution); }
 .dash-nav__link--feemarket { --nav-accent: var(--accent-feemarket); }
-.dash-nav__link--feemarket2 { --nav-accent: var(--accent-feemarket2); }
 .dash-nav__link--governance { --nav-accent: var(--accent-governance); }
 .dash-nav__link--evm { --nav-accent: var(--accent-evm); }
 .dash-nav__link--home { --nav-accent: var(--accent); }
@@ -458,8 +456,7 @@ body::after {
 .eco-summary,
 .rewards-summary,
 .dist-summary,
-.fee-summary,
-.fm2-summary,
+.fm-summary,
 .gov-summary,
 .infra-summary,
 .node-summary,
@@ -478,8 +475,7 @@ body::after {
 .dash-section__summary-card .eco-summary,
 .dash-section__summary-card .rewards-summary,
 .dash-section__summary-card .dist-summary,
-.dash-section__summary-card .fee-summary,
-.dash-section__summary-card .fm2-summary,
+.dash-section__summary-card .fm-summary,
 .dash-section__summary-card .gov-summary,
 .dash-section__summary-card .infra-summary,
 .dash-section__summary-card .node-summary,
@@ -499,8 +495,7 @@ body::after {
 .dash-overview__card .eco-summary,
 .dash-overview__card .rewards-summary,
 .dash-overview__card .dist-summary,
-.dash-overview__card .fee-summary,
-.dash-overview__card .fm2-summary,
+.dash-overview__card .fm-summary,
 .dash-overview__card .gov-summary,
 .dash-overview__card .infra-summary,
 .dash-overview__card .node-summary,
@@ -807,14 +802,14 @@ body::after {
   color: var(--muted);
 }
 
-.fee-summary__base {
+.fm-summary__base {
   font-family: var(--mono);
   font-size: 1.35rem;
   font-weight: 700;
   color: var(--fg);
 }
 
-.fee-summary__top {
+.fm-summary__top {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -822,63 +817,20 @@ body::after {
   margin-bottom: 0.55rem;
 }
 
-.fee-summary__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-bottom: 0.35rem;
-}
-
-.fee-summary__pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 500;
-  font-family: var(--mono);
-  font-variant-numeric: tabular-nums;
-  color: var(--muted);
-  background: rgba(0, 0, 0, 0.22);
-  border: 1px solid var(--border);
-}
-
-.fee-summary__gas {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--muted);
-  font-family: var(--mono);
-}
-
-.fm2-summary__base {
-  font-family: var(--mono);
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: var(--fg);
-}
-
-.fm2-summary__top {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-  margin-bottom: 0.55rem;
-}
-
-.fm2-summary__kpis {
+.fm-summary__kpis {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
   gap: 0.55rem;
   margin-top: 0.45rem;
 }
 
-.fm2-summary__kpi {
+.fm-summary__kpi {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
 }
 
-.fm2-summary__kpi-label {
+.fm-summary__kpi-label {
   font-size: 0.68rem;
   font-weight: 600;
   letter-spacing: var(--tracking-wide);
@@ -886,34 +838,34 @@ body::after {
   color: var(--muted);
 }
 
-.fm2-summary__kpi-val {
+.fm-summary__kpi-val {
   font-family: var(--mono);
   font-size: 0.82rem;
   font-variant-numeric: tabular-nums;
   color: var(--fg);
 }
 
-.fm2-mechanics {
+.fm-mechanics {
   margin: 0.5rem 0 0.75rem;
   padding: 0.75rem 0.85rem;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  border-left: 3px solid var(--accent-feemarket2);
+  border-left: 3px solid var(--accent-feemarket);
 }
 
-.fm2-mechanics__steps {
+.fm-mechanics__steps {
   margin: 0 0 0.65rem 1.1rem;
   font-size: var(--text-sm);
   color: var(--fg);
   line-height: 1.5;
 }
 
-.fm2-mechanics__steps li + li {
+.fm-mechanics__steps li + li {
   margin-top: 0.35rem;
 }
 
-.fm2-mechanics__formula {
+.fm-mechanics__formula {
   margin: 0;
   padding: 0.55rem 0.65rem;
   font-family: var(--mono);
@@ -925,16 +877,16 @@ body::after {
   white-space: pre-wrap;
 }
 
-.fm2-mechanics__mode {
+.fm-mechanics__mode {
   margin: 0.55rem 0 0;
   font-size: var(--text-sm);
   color: var(--muted);
 }
 
-.eco-domain--feemarket2,
-.eco-domain--feemarket2-consensus,
-.eco-domain--feemarket2-node {
-  border-left-color: var(--accent-feemarket2);
+.eco-domain--feemarket,
+.eco-domain--feemarket-consensus,
+.eco-domain--feemarket-node {
+  border-left-color: var(--accent-feemarket);
 }
 
 .gov-summary__cards {
@@ -1161,7 +1113,6 @@ body::after {
 .dash-section--rewards { --section-accent: var(--accent-rewards); }
 .dash-section--distribution { --section-accent: var(--accent-distribution); }
 .dash-section--feemarket { --section-accent: var(--accent-feemarket); }
-.dash-section--feemarket2 { --section-accent: var(--accent-feemarket2); }
 .dash-section--governance { --section-accent: var(--accent-governance); }
 .dash-section--evm { --section-accent: var(--accent-evm); }
 

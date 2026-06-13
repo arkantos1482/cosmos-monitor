@@ -3,98 +3,132 @@ package panel
 import (
 	"fmt"
 	"html"
+	"strconv"
+	"strings"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/feemarket"
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
 func writeFeemarketSummary(w Writer, d model.Report, mode SummaryMode) {
-	c := feemarket.LoadContext(d)
-	transfer := feemarket.TransferCost(c.BaseFeeRaw, c.Denom)
+	s := feemarket.LoadState(d)
+	summaryWrapStart(w, mode, "feemarket")
+	writeFeemarketSummaryBody(w, s, d)
+	summaryWrapEnd(w, mode)
+}
+
+func writeFeemarketSummaryBody(w Writer, s feemarket.State, d model.Report) {
 	baseFee := d.BaseFee
 	if baseFee == "" {
 		baseFee = "—"
 	}
-	verdict := map[string]string{
-		"busy": "BUSY", "quiet": "QUIET", "balanced": "BALANCED", "unknown": "UNKNOWN",
-	}[c.Verdict]
-	gasLine := formatGasAmount(c.GasUsed, d.ParentBlockResultsOK) + " used · " +
-		formatGasAmount(c.Wanted, d.ParentBlockResultsOK) + " W"
+	w.WriteHTML(`<div class="fm-summary">`)
+	w.WriteHTML(`<div class="fm-summary__top">`)
+	w.WriteHTML(fmt.Sprintf(`<span class="fm-summary__base">%s</span>`, html.EscapeString(baseFee)))
+	w.WriteHTML(fmt.Sprintf(`<span class="badge %s">%s</span>`, s.Adj.BadgeClass(), html.EscapeString(s.Adj.Label())))
+	w.WriteHTML(`</div>`)
+	if s.UtilPct > 0 {
+		writeMiniGauge(w, "block demand vs target", s.UtilPct)
+	}
+	w.WriteHTML(`<div class="fm-summary__kpis">`)
+	writeFmSummaryKPI(w, "mode", s.Mode)
+	if s.GasWanted > 0 {
+		writeFmSummaryKPI(w, "block gas (W)", formatUint(s.GasWanted))
+	}
+	if s.GasTarget > 0 {
+		writeFmSummaryKPI(w, "gas target", formatUint(s.GasTarget))
+	}
+	transfer := feemarket.TransferCost(s.BaseFeeRaw, s.Denom)
+	if transfer != "—" {
+		writeFmSummaryKPI(w, "21k transfer", transfer)
+	}
+	w.WriteHTML(`</div></div>`)
+}
 
-	summaryWrapStart(w, mode, "feemarket")
-	w.WriteHTML(`<div class="fee-summary">`)
-	w.WriteHTML(`<div class="fee-summary__top">`)
-	badgeCls := c.Badge.Class
-	if badgeCls == "" {
-		badgeCls = "stable"
+func writeFmSummaryKPI(w Writer, label, value string) {
+	if value == "" {
+		return
 	}
-	w.WriteHTML(fmt.Sprintf(`<span class="fee-badge fee-badge--%s">%s</span>`,
-		html.EscapeString(badgeCls), html.EscapeString(c.Badge.Label)))
-	w.WriteHTML(fmt.Sprintf(`<span class="fee-summary__base">%s</span>`, html.EscapeString(baseFee)))
-	w.WriteHTML(`</div>`)
-	w.WriteHTML(`<div class="fee-summary__meta">`)
-	w.WriteHTML(fmt.Sprintf(`<span class="fee-summary__pill">%s</span>`, html.EscapeString(verdict)))
-	if c.UtilPct != "" {
-		w.WriteHTML(fmt.Sprintf(`<span class="fee-summary__pill">%s of target</span>`, html.EscapeString(c.UtilPct)))
-	}
-	w.WriteHTML(fmt.Sprintf(`<span class="fee-summary__pill">transfer %s</span>`, html.EscapeString(transfer)))
-	w.WriteHTML(`</div>`)
-	w.WriteHTML(fmt.Sprintf(`<p class="fee-summary__gas">%s</p>`, html.EscapeString(gasLine)))
-	w.WriteHTML(`</div>`)
-	summaryWrapEnd(w, mode)
+	w.WriteHTML(fmt.Sprintf(
+		`<div class="fm-summary__kpi"><span class="fm-summary__kpi-label">%s</span>`+
+			`<span class="fm-summary__kpi-val">%s</span></div>`,
+		html.EscapeString(label), html.EscapeString(value)))
 }
 
 func writeFeemarket(w Writer, d model.Report) {
-	c := feemarket.LoadContext(d)
+	s := feemarket.LoadState(d)
+
 	w.Section("3. FEE MARKET")
-	writeEmbeddedSectionIntro(w, "Live EIP-1559 base fee and block demand, block-lifecycle fee math (L1–L3), chain parameters, and this node's local mempool policy from app.toml.")
+	writeEmbeddedSectionIntro(w, "x/feemarket module state: EIP-1559 base fee, block gas demand, on-chain parameters, and this node's local fee policy.")
 	writeFeemarketSummary(w, d, SummaryEmbedded)
-	writeFeemarketFeeAcceptance(w, d)
-	writeFeemarketPage(w, d)
-	w.Hint(feemarketSourcesHint(c))
+
+	w.Subsection("Live state")
+	w.Hint("`base_fee` → REST GET /cosmos/evm/feemarket/v1/base_fee; `block_gas` (W) → …/block_gas; parent `gas_used` → CometBFT GET /block_results.")
+	w.Row("block height", d.BlockHeight)
+	w.Row("base fee", orDash(d.BaseFee))
+	if s.GasWanted > 0 {
+		bar := ""
+		if s.UtilPct > 0 {
+			bar = fmt.Sprintf(`<div class="kpi-bar"><div class="kpi-bar__fill" style="width:%d%%"></div></div>`, s.UtilPct)
+		}
+		w.RowHTML("block gas (W)", formatUint(s.GasWanted)+" gas", bar)
+	}
+	if s.GasUsed > 0 {
+		w.Row("parent gas used", formatUint(s.GasUsed)+" gas")
+	}
+	if s.GasTarget > 0 {
+		w.Row("gas target", formatUint(s.GasTarget)+" gas  _(max_gas ÷ elasticity)_")
+	}
+	if s.GasLimit > 0 {
+		w.Row("block gas limit", formatUint(s.GasLimit)+" gas")
+	}
+	if s.LastBlockFees != "" {
+		w.Row("parent block fees", s.LastBlockFees+"  _(gas_used × base_fee)_")
+	}
+	if s.HasProjection {
+		w.Row("projected next base fee", fmProjectedFee(s)+"  _(CalcGasBaseFee from module)_")
+	}
+
+	w.Subsection("EIP-1559 mechanics")
+	w.WriteHTML(fmMechanicsHTML(s))
+
+	w.Subsection("Module & policy")
+	w.WriteHTML(feemarketDomainCardsHTML(s, d))
+
+	w.Hint(feemarketSourcesHint())
 	w.BlankLine()
 }
 
-func writeFeemarketFeeAcceptance(w Writer, d model.Report) {
-	c := feemarket.LoadContext(d)
-	if c.NodeMinGasPrices == "" && c.NodeEVMMinTip == "" && c.NodeMempoolPriceLimit == "" &&
-		c.NodeMaxTxGasWanted == "" && c.NodeAppTomlPath == "" {
-		return
+func fmMechanicsHTML(s feemarket.State) string {
+	var b strings.Builder
+	b.WriteString(`<div class="fm-mechanics">`)
+	b.WriteString(`<ol class="fm-mechanics__steps">`)
+	b.WriteString(`<li><strong>EndBlock</strong> — store block gas wanted: ` +
+		`W = max(gas_used, gas_wanted × min_gas_multiplier). Emits <code>block_gas</code> event.</li>`)
+	b.WriteString(`<li><strong>BeginBlock</strong> — read parent W, compute gas target = max_gas ÷ elasticity_multiplier, ` +
+		`then adjust base fee with <code>CalcGasBaseFee</code> (same formula as go-ethereum EIP-1559).</li>`)
+	b.WriteString(`<li><strong>CheckTx / ante</strong> — txs must meet base fee (EVM) and node <code>minimum-gas-prices</code> (Cosmos).</li>`)
+	b.WriteString(`</ol>`)
+	b.WriteString(`<pre class="fm-mechanics__formula">`)
+	b.WriteString(html.EscapeString(
+		"if gas_used > target:  base_fee += max(base_fee × Δ / target / denom, 1 apmt)\n" +
+			"if gas_used < target:  base_fee -= base_fee × Δ / target / denom  (floor = min_gas_price)\n" +
+			"if gas_used == target: base_fee unchanged"))
+	b.WriteString(`</pre>`)
+	if s.Mode != "" {
+		b.WriteString(fmt.Sprintf(`<p class="fm-mechanics__mode">Current mode: <strong>%s</strong></p>`,
+			html.EscapeString(s.Mode)))
 	}
-	w.Subsection("Local policy (app.toml)")
-	w.Hint("`minimum-gas-prices`, `evm.min-tip`, `evm.mempool.price-limit`, `evm.max-tx-gas-wanted` → local app.toml (APPTOML_PATH or ~/.evmd/config/app.toml). This node's local policy — network-wide fee params are below.")
-	for _, row := range feeAcceptanceRows(c) {
-		w.Row(row[0], row[1])
-	}
+	b.WriteString(`</div>`)
+	return b.String()
 }
 
-func feeAcceptanceRows(c feemarket.Context) [][]string {
-	rows := [][]string{
-		{"minimum-gas-prices", orDash(c.NodeMinGasPrices)},
-		{"evm.min-tip", orDash(c.NodeEVMMinTip)},
-		{"evm.mempool.price-limit", orDash(c.NodeMempoolPriceLimit)},
-		{"evm.max-tx-gas-wanted", orDash(c.NodeMaxTxGasWanted)},
-	}
-	if c.NodeAppTomlPath != "" {
-		rows = append(rows, []string{"config path", c.NodeAppTomlPath})
-	}
-	return rows
+func feemarketSourcesHint() string {
+	return "`base_fee`, `params`, `block_gas` → REST GET /cosmos/evm/feemarket/v1/*; " +
+		"`gas_used` → CometBFT GET /block_results; `max_gas` → CometBFT GET /status (consensus params); " +
+		"node policy → local app.toml (minimum-gas-prices, mempool, evm.min-tip)."
 }
 
-func feemarketSourcesHint(c feemarket.Context) string {
-	appToml := "local app.toml (APPTOML_PATH or ~/.evmd/config/app.toml)"
-	return fmt.Sprintf(
-		"`head height` → CometBFT GET /status; "+
-			"`max_gas`, `max_bytes` → CometBFT GET /consensus_params; "+
-			"`gas_used`, `W` → CometBFT GET /block_results?height=%s; "+
-			"`base_fee` (BeginBlock) → CometBFT GET /block_results?height=%s; "+
-			"`block interval` → CometBFT GET /block; "+
-			"`base_fee` → REST GET /cosmos/evm/feemarket/v1/base_fee; "+
-			"`W` (fallback) → REST GET /cosmos/evm/feemarket/v1/block_gas; "+
-			"`no_base_fee`, `elasticity`, `min_gas_*`, … → REST GET /cosmos/evm/feemarket/v1/params; "+
-			"`evm_denom` → REST GET /cosmos/evm/vm/v1/params; "+
-			"`london_block` → REST GET /cosmos/evm/vm/v1/config; "+
-			"local policy (app.toml) → %s (subsection above).",
-		c.ParentBlock, c.CurrentBlock, appToml,
-	)
+func formatUint(n uint64) string {
+	return strconv.FormatUint(n, 10)
 }

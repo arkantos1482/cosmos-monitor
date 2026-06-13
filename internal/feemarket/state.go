@@ -1,4 +1,4 @@
-package feemarket2
+package feemarket
 
 import (
 	"fmt"

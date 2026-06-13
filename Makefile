@@ -74,10 +74,10 @@ remote-start: ## atomic remote pmtop — start in tmux on node4
 remote-start-dev: ## atomic remote pmtop — start with -show-sources on node4
 	$(MAKE) remote-start REMOTE_PMTOP_FLAGS=-show-sources
 
-remote-verify: ## atomic remote pmtop — curl node4 :7777 fee-L1
+remote-verify: ## atomic remote pmtop — curl node4 :7777 fee market summary
 	@$(SSH_NODE4) \
-		'curl -sf http://localhost:7777/s/feemarket | grep -q "fee-L1" && echo "OK: fee-L1 present" \
-		 || (echo "FAIL: fee-L1 not found" && exit 1)'
+		'curl -sf http://localhost:7777/s/feemarket | grep -q "fm-summary" && echo "OK: fee market summary present" \
+		 || (echo "FAIL: fee market summary not found" && exit 1)'
 
 remote-run: ## atomic remote pmtop — foreground on node4 :7777
 	$(SSH_NODE4_TTY) '$(REMOTE_PMTOP)'

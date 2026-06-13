@@ -3,8 +3,27 @@ package panel
 import (
 	"fmt"
 	"html"
+	"strconv"
 	"strings"
 )
+
+func orDash(s string) string {
+	if strings.TrimSpace(s) == "" {
+		return "—"
+	}
+	return s
+}
+
+func boolStr(v bool) string {
+	if v {
+		return "true"
+	}
+	return "false"
+}
+
+func formatParamInt(n int64) string {
+	return strconv.FormatInt(n, 10)
+}
 
 func orEcoDash(s string) string {
 	if s == "" || s == "—" {
