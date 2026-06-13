@@ -189,29 +189,50 @@ func sourceRequestBody(e model.SourceExchange) string {
 	return ""
 }
 
-func renderSourceExchangeLog(exchanges []model.SourceExchange) string {
-	const (
-		padLabel   = 36
-		padStatus  = 6
-		padLatency = 7
-	)
+func exchangeEndpointParts(e model.SourceExchange) (verb, path string) {
+	switch e.Kind {
+	case "jsonrpc":
+		if method := jsonRPCMethod(e.Request); method != "" {
+			return "POST", method
+		}
+		return "POST", "JSON-RPC"
+	case "file":
+		return "READ", e.URL
+	case "fs":
+		return "statfs", e.URL
+	case "docker":
+		return "docker " + e.Method, shortenURL(e.URL)
+	default:
+		return e.Method, shortenURL(e.URL)
+	}
+}
+
+func renderSourceExchangeTable(exchanges []model.SourceExchange) string {
 	var b strings.Builder
-	b.WriteString("  endpoint                          status  latency\n")
-	b.WriteString("  ─────────────────────────────────────────────────\n")
+	b.WriteString(`<table class="dash-sources__table"><thead><tr>`)
+	b.WriteString(`<th class="dash-sources__mark-hdr" aria-hidden="true"></th>`)
+	b.WriteString(`<th>endpoint</th><th>status</th><th>latency</th>`)
+	b.WriteString(`</tr></thead><tbody>`)
 	for _, e := range exchanges {
+		verb, path := exchangeEndpointParts(e)
 		status := exchangeStatusLabel(e.OK)
 		mark := "·"
+		rowClass := ""
 		if !e.OK {
 			mark = "✗"
+			rowClass = ` class="dash-sources__row--fail"`
 		}
-		line := fmt.Sprintf("  %s  %-*s  %-*s  %-*s",
-			mark, padLabel, exchangeLabel(e), padStatus, status, padLatency, e.Latency)
-		if !e.OK && e.Error != "" {
-			line += "  " + truncateSourceJSON(e.Error)
+		fmt.Fprintf(&b, `<tr%s><td class="dash-sources__mark">%s</td><td class="dash-sources__endpoint"><div class="dash-sources__endpoint-inner">`, rowClass, mark)
+		fmt.Fprintf(&b, `<span class="dash-sources__verb">%s</span>`, htmlEscape(verb))
+		if path != "" {
+			fmt.Fprintf(&b, `<span class="dash-sources__path">%s</span>`, htmlEscape(path))
 		}
-		b.WriteString(line + "\n")
+		b.WriteString(`</div></td>`)
+		fmt.Fprintf(&b, `<td class="dash-sources__status">%s</td>`, htmlEscape(status))
+		fmt.Fprintf(&b, `<td class="dash-sources__latency">%s</td></tr>`, htmlEscape(e.Latency))
 	}
-	return strings.TrimRight(b.String(), "\n")
+	b.WriteString(`</tbody></table>`)
+	return b.String()
 }
 
 func sourceExchangesHTML(exchanges []model.SourceExchange) string {
@@ -220,9 +241,7 @@ func sourceExchangesHTML(exchanges []model.SourceExchange) string {
 	}
 	var b strings.Builder
 	b.WriteString(`<div class="dash-sources__log">`)
-	b.WriteString(`<pre class="code-block terminal-panel dash-sources__summary-log"><code>`)
-	b.WriteString(htmlEscape(renderSourceExchangeLog(exchanges)))
-	b.WriteString(`</code></pre>`)
+	b.WriteString(renderSourceExchangeTable(exchanges))
 	for _, e := range exchanges {
 		b.WriteString(formatSourceExchangeHTML(e))
 	}

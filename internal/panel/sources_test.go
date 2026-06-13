@@ -29,14 +29,34 @@ func sampleExchanges() []model.SourceExchange {
 func TestSourceExchangesHTML(t *testing.T) {
 	html := sourceExchangesHTML(sampleExchanges())
 	for _, want := range []string{
-		`dash-sources__summary-log`,
+		`dash-sources__table`,
+		`dash-sources__verb">GET`,
+		`dash-sources__path">/status`,
 		`dash-sources__exchange`,
 		`dash-sources__tag">req`,
 		`dash-sources__tag">res`,
 		`json-block`,
 		`json-key`,
-		`GET /status`,
 		`distribution/v1beta1/params`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("missing %q in:\n%s", want, html)
+		}
+	}
+}
+
+func TestSourceExchangeTableWrapsLongPath(t *testing.T) {
+	long := "/cosmos/distribution/v1beta1/validators/cosmosvaloper15hr4x4rfj0y82puk74xegugn5s5clphzcfej3e/outstanding_rewards"
+	html := renderSourceExchangeTable([]model.SourceExchange{{
+		Kind: "http", Method: "GET",
+		URL: "http://localhost:1317" + long,
+		OK:  true, Latency: "2ms",
+	}})
+	for _, want := range []string{
+		`dash-sources__verb">GET`,
+		`dash-sources__path">` + long,
+		`dash-sources__status">ok`,
+		`dash-sources__latency">2ms`,
 	} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("missing %q in:\n%s", want, html)
