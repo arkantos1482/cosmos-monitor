@@ -397,10 +397,22 @@ func (d *docWriter) SourceLog(exchanges []model.SourceExchange) {
 		return
 	}
 	if !d.inSection {
-		d.writeSourcesBlock(sourceExchangesHTML(exchanges))
+		d.emitSources("", exchanges)
 		return
 	}
 	d.sectionExchanges = append(d.sectionExchanges, exchanges...)
+}
+
+func (d *docWriter) emitSources(slug string, exchanges []model.SourceExchange) {
+	if len(exchanges) == 0 {
+		return
+	}
+	prev := d.sectionSlug
+	if slug != "" {
+		d.sectionSlug = slug
+	}
+	d.writeSourcesBlock(sourceExchangesHTML(exchanges))
+	d.sectionSlug = prev
 }
 
 func (d *docWriter) writeHintCallout(text string) {

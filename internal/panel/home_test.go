@@ -215,6 +215,9 @@ func TestOverviewDataSourcesProvenance(t *testing.T) {
 	if !strings.Contains(out, `/status`) || !strings.Contains(out, `distribution/v1beta1/params`) {
 		t.Fatal("overview data sources should include all traced endpoints")
 	}
+	if !strings.Contains(out, `id="dash-sources-overview"`) {
+		t.Fatal("overview data sources need stable id for hx-preserve across refresh")
+	}
 	governanceIdx := strings.Index(out, `dash-overview__group--governance`)
 	sourcesIdx := strings.Index(out, `class="dash-sources"`)
 	if governanceIdx < 0 || sourcesIdx < 0 || sourcesIdx < governanceIdx {

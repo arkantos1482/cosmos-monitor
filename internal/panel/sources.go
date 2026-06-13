@@ -16,7 +16,24 @@ func writeSectionSources(w Writer, v View, d model.Report) {
 	if len(exchanges) == 0 {
 		return
 	}
+	if dw, ok := w.(*docWriter); ok {
+		if dw.inSection {
+			dw.SourceLog(exchanges)
+			return
+		}
+		dw.emitSources(sourcesSlugForView(v), exchanges)
+		return
+	}
 	w.SourceLog(exchanges)
+}
+
+func sourcesSlugForView(v View) string {
+	switch v {
+	case ViewHome:
+		return "overview"
+	default:
+		return string(v)
+	}
 }
 
 func exchangesForView(v View, all []model.SourceExchange) []model.SourceExchange {
