@@ -35,6 +35,23 @@ func TestLoadStateNoBaseFee(t *testing.T) {
 	}
 }
 
+func TestLoadStateUnlimitedMaxGasNoPanic(t *testing.T) {
+	s := LoadState(model.Report{
+		BlockHeight:              "100",
+		BaseFeeRaw:               "1125000000",
+		BlockGasLimit:            ^uint64(0),
+		Elasticity:               2,
+		BaseFeeChangeDenominator: 8,
+		EVMDenom:                 "apmt",
+	})
+	if !s.UnlimitedBlockGas {
+		t.Fatal("expected unlimited block gas")
+	}
+	if s.HasProjection {
+		t.Fatal("unlimited max_gas should not project base fee")
+	}
+}
+
 func TestTransferCost(t *testing.T) {
 	got := TransferCost("1000", "apmt")
 	if got == "" || got == "—" {

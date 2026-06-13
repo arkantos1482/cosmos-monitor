@@ -31,3 +31,11 @@ func TestCalcGasBaseFeeStable(t *testing.T) {
 		t.Fatalf("stable: got %s want %s", got, parent)
 	}
 }
+
+func TestCalcGasBaseFeeNilMinGasPrice(t *testing.T) {
+	parent := sdkmath.LegacyNewDec(1_000_000_000)
+	got := CalcGasBaseFee(40_000_000, 50_000_000, 8, parent, MinUnitGas, sdkmath.LegacyDec{})
+	if got.IsNil() {
+		t.Fatal("expected valid decrease result")
+	}
+}

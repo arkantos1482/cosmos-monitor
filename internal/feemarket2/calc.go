@@ -28,5 +28,8 @@ func CalcGasBaseFee(gasUsed, gasTarget, baseFeeChangeDenom uint64, baseFee, minU
 		delta := sdkmath.LegacyMaxDec(num, minUnitGas)
 		return baseFee.Add(delta)
 	}
+	if minGasPrice.IsNil() {
+		minGasPrice = sdkmath.LegacyZeroDec()
+	}
 	return sdkmath.LegacyMaxDec(baseFee.Sub(num), minGasPrice)
 }

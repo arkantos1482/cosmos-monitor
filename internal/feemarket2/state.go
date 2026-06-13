@@ -56,10 +56,12 @@ type State struct {
 	Denom        string
 	BaseFee      string
 	BaseFeeRaw   string
-	MinGasPrice  string
-	MinGasMult   string
+	MinGasPrice    string
+	MinGasPriceRaw string
+	MinGasMult     string
 
-	NoBaseFee    bool
+	NoBaseFee         bool
+	UnlimitedBlockGas bool
 	EnableHeight int64
 	EIP1559On    bool
 	Mode         string
@@ -92,9 +94,11 @@ func LoadState(d model.Report) State {
 		Denom:           pickDenom(d),
 		BaseFee:         d.BaseFee,
 		BaseFeeRaw:      d.BaseFeeRaw,
-		MinGasPrice:     d.MinGasPrice,
-		MinGasMult:      d.MinGasMultiplier,
-		NoBaseFee:       d.NoBaseFee,
+		MinGasPrice:       d.MinGasPrice,
+		MinGasPriceRaw:    d.MinGasPriceRaw,
+		MinGasMult:        d.MinGasMultiplier,
+		NoBaseFee:         d.NoBaseFee,
+		UnlimitedBlockGas: d.BlockGasLimit == ^uint64(0),
 		EnableHeight:    d.EnableHeight,
 		Elasticity:      d.Elasticity,
 		ChangeDenom:     d.BaseFeeChangeDenominator,
@@ -114,7 +118,7 @@ func LoadState(d model.Report) State {
 	if s.Elasticity > 0 && s.GasLimit > 0 {
 		s.GasTarget = s.GasLimit / uint64(s.Elasticity)
 	}
-	if s.GasTarget > 0 && s.GasWanted > 0 {
+	if !s.UnlimitedBlockGas && s.GasTarget > 0 && s.GasWanted > 0 {
 		s.UtilPct = int(s.GasWanted * 100 / s.GasTarget)
 		if s.UtilPct > 100 {
 			s.UtilPct = 100
@@ -143,7 +147,7 @@ func projectAdjustment(s State) (Adjustment, string, bool) {
 	if s.Height < s.EnableHeight {
 		return AdjPending, "", false
 	}
-	if s.GasTarget == 0 || s.ChangeDenom == 0 {
+	if s.UnlimitedBlockGas || s.GasTarget == 0 || s.ChangeDenom == 0 {
 		return AdjStable, "", false
 	}
 	parent, ok := parseDec(s.BaseFeeRaw)
@@ -157,7 +161,10 @@ func projectAdjustment(s State) (Adjustment, string, bool) {
 	if gas == 0 {
 		gas = s.GasUsed
 	}
-	minPrice, _ := parseDec(s.MinGasPrice)
+	minPrice := sdkmath.LegacyZeroDec()
+	if mp, ok := parseDec(s.MinGasPriceRaw); ok {
+		minPrice = mp
+	}
 	next := CalcGasBaseFee(gas, s.GasTarget, uint64(s.ChangeDenom), parent, MinUnitGas, minPrice)
 	if next.Equal(parent) {
 		return AdjStable, next.String(), true
