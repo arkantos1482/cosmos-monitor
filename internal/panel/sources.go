@@ -45,10 +45,9 @@ func viewExchangeMatchers(v View) []func(model.SourceExchange) bool {
 		}
 	case ViewNode:
 		return []func(model.SourceExchange) bool{
-			urlContains("/status", "/net_info", "/block", "/validators", "/num_unconfirmed", "/consensus_params"),
+			urlContains("/status", "/net_info", "/block", "/validators", "/num_unconfirmed"),
 			urlContains("/cosmos/staking/v1beta1/validators"),
-			urlContains("/cosmos/staking/v1beta1/validators/"),
-			urlContains("/cosmos/bank/v1beta1/balances/"),
+			urlContains("/cosmos/slashing/v1beta1/signing_infos"),
 		}
 	case ViewStaking:
 		return []func(model.SourceExchange) bool{

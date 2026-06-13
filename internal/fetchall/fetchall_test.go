@@ -57,16 +57,27 @@ func TestLoadForCacheExpires(t *testing.T) {
 	}
 }
 
-func TestChainOptsForGovernanceSkipsEconomics(t *testing.T) {
-	o := chainOptsFor(panel.ViewGovernance)
-	if !o.SkipValidatorRewards || !o.SkipEconomics || o.SkipGovernance || !o.IncludeModuleBalances {
-		t.Fatalf("unexpected opts: %+v", o)
+func TestChainRecipeForGovernanceSkipsEconomics(t *testing.T) {
+	r := chainRecipeFor(panel.ViewGovernance)
+	if r.ValidatorRewards || r.MintData || r.FeemarketLive || r.Governance == false || !r.ModuleBalances {
+		t.Fatalf("unexpected recipe: %+v", r)
 	}
 }
 
-func TestChainOptsForNodeFetchesValidatorRewards(t *testing.T) {
-	o := chainOptsFor(panel.ViewNode)
-	if o.SkipValidatorRewards || !o.SkipEconomics || !o.SkipGovernance {
-		t.Fatalf("unexpected opts: %+v", o)
+func TestChainRecipeForNodeSkipsUnusedFetches(t *testing.T) {
+	r := chainRecipeFor(panel.ViewNode)
+	if r.ValidatorRewards || r.MintData || r.Governance || r.ConsensusParams ||
+		r.LocalStaking || r.ValidatorScope != fetch.ValidatorsBonded {
+		t.Fatalf("unexpected recipe: %+v", r)
+	}
+	if !r.CometExtended || !r.StakingPool || !r.SigningInfos {
+		t.Fatalf("node recipe missing required fetches: %+v", r)
+	}
+}
+
+func TestChainRecipeForDistributionFetchesValidatorRewards(t *testing.T) {
+	r := chainRecipeFor(panel.ViewDistribution)
+	if !r.ValidatorRewards || r.Governance || !r.ModuleBalances || !r.CommunityPool {
+		t.Fatalf("unexpected recipe: %+v", r)
 	}
 }

@@ -63,7 +63,9 @@ func LoadFor(view panel.View, rpc, rest, evm, container string) Snapshots {
 	fetch.BeginTrace()
 	viewSnap := fetchForView(view, rpc, rest, evm, container)
 	barSnap, barOK := fetchStatusBar(rpc, rest, evm, container)
-	viewSnap.AppToml = fetch.FetchAppTomlGasConfig()
+	if needsAppToml(view) {
+		viewSnap.AppToml = fetch.FetchAppTomlGasConfig()
+	}
 	exchanges := fetch.EndTrace()
 	viewSnap.Exchanges = exchanges
 	snap := mergeStatusOverlay(viewSnap, barSnap, barOK)
@@ -130,8 +132,8 @@ func fetchForView(view panel.View, rpc, rest, evm, container string) Snapshots {
 		return Snapshots{EVM: evSnap, Chain: fetch.ChainSnapshot{Params: p}}
 	}
 
-	chainOpts := chainOptsFor(view)
-	needEVM := view == panel.ViewHome || view == panel.ViewNode
+	chainOpts := chainRecipeFor(view)
+	needEVM := view == panel.ViewHome
 	needSys := view == panel.ViewHome
 	needDocker := view == panel.ViewHome
 
@@ -144,7 +146,7 @@ func fetchForView(view panel.View, rpc, rest, evm, container string) Snapshots {
 		wg     sync.WaitGroup
 	)
 	wg.Add(2)
-	go func() { defer wg.Done(); chain = fetch.FetchChain(rpc, rest, chainOpts) }()
+	go func() { defer wg.Done(); chain = fetch.FetchChainRecipe(rpc, rest, chainOpts) }()
 	go func() { defer wg.Done(); p = cachedParams(rest) }()
 	if needEVM {
 		wg.Add(1)
@@ -160,7 +162,9 @@ func fetchForView(view panel.View, rpc, rest, evm, container string) Snapshots {
 	}
 	wg.Wait()
 	chain.Params = p
-	enrichLocalStakingBalances(rest, &chain)
+	if needsLocalBalanceEnrichment(chainOpts) {
+		enrichLocalStakingBalances(rest, &chain)
+	}
 	return Snapshots{Chain: chain, EVM: evSnap, System: sys, Docker: docker}
 }
 
@@ -176,23 +180,5 @@ func enrichLocalStakingBalances(rest string, chain *fetch.ChainSnapshot) {
 		amt, d := fetch.FetchAddressBalance(rest, chain.LocalAccountAddr, denom)
 		chain.LocalAccountLiquidAmt = amt
 		chain.LocalAccountLiquidDenom = d
-	}
-}
-
-func chainOptsFor(view panel.View) fetch.ChainOpts {
-	switch view {
-	case panel.ViewNode:
-		return fetch.ChainOpts{
-			SkipGovernance: true,
-			SkipEconomics:  true,
-		}
-	case panel.ViewGovernance:
-		return fetch.ChainOpts{
-			SkipValidatorRewards:  true,
-			SkipEconomics:         true,
-			IncludeModuleBalances: true,
-		}
-	default:
-		return fetch.ChainOpts{}
 	}
 }
