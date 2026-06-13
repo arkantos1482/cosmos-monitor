@@ -24,7 +24,7 @@ func TestFullPageHTMXShell(t *testing.T) {
 		`id="data"`,
 		`hx-get="/s/rewards"`,
 		`hx-trigger="every 5s"`,
-		`hx-swap="innerHTML settle:0.15s"`,
+		`hx-swap="innerHTML settle:0.15s focus-scroll:false"`,
 		`hx-boost="true"`,
 		`htmx.org`,
 		`--accent-rewards`,
