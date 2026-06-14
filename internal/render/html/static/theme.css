@@ -1019,6 +1019,13 @@ body::after {
   margin-bottom: 0.55rem;
 }
 
+.evm-summary__probe-heroes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
 .evm-summary__hero-wrap {
   min-width: 0;
 }
@@ -1146,6 +1153,26 @@ body::after {
 .evm-probes-section {
   margin-top: 0.85rem;
   padding-top: 0.35rem;
+}
+
+.evm-probes__group-title {
+  margin: 0.85rem 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.evm-probes__group-title:first-child {
+  margin-top: 0;
+}
+
+.evm-probes__group-hint {
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--muted);
 }
 
 .eco-domain--rpc-reach,

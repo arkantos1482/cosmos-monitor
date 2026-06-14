@@ -12,11 +12,13 @@ func TestEVMRPCHealthCards(t *testing.T) {
 		EVMRPCOk: true, EVMSynced: true, EVMListening: true,
 		EVMBlock: "100", EVMBlockAge: "4.2s", EVMChainID: 290290,
 		EVMHTTPEndpoint: "http://localhost:8545", EVMClient: "evmd/v1",
+		EVMDenomName: "PMT", EVMDenomSymbol: "PMT",
 		PendingTx: 2, QueuedTx: 1, EVMPeerCount: 0,
 		RPCProbeOK: 10, RPCProbeTotal: 10,
 		RPCProbes: []model.RPCProbe{
 			{Method: "eth_blockNumber", OK: true, Latency: "12ms"},
 			{Method: "eth_chainId", OK: true, Latency: "8ms"},
+			{Method: "eth_chainId", Transport: "ws", OK: true, Latency: "9ms"},
 		},
 	}
 	out := BuildView(ViewEVM, d)
@@ -29,6 +31,12 @@ func TestEVMRPCHealthCards(t *testing.T) {
 		`eco-domain--rpc-net`,
 		`network name`,
 		`currency symbol`,
+		`HTTP probes`,
+		`WS probes`,
+		`evm-probes__group-title">HTTP`,
+		`evm-probes__group-title">WebSocket`,
+		`evm-summary__hero-label">HTTP probes`,
+		`evm-summary__hero-label">WS probes`,
 		`evm-summary__stack-line">2 pending`,
 		`evm-probes-section`,
 		`evm-probes__table`,
@@ -75,5 +83,27 @@ func TestEVMRPCProbeTableShowsFailure(t *testing.T) {
 	}
 	if !strings.Contains(out, "connection refused") {
 		t.Fatal("failed probe should show error in checks column")
+	}
+}
+
+func TestEVMWalletLabelsFromBankMetadata(t *testing.T) {
+	d := model.Report{
+		EVMDenomName: "Acme Chain", EVMDenomSymbol: "ACM",
+	}
+	if got := evmNetworkName(d); got != "Acme Chain" {
+		t.Fatalf("network name = %q, want Acme Chain", got)
+	}
+	if got := evmCurrencySymbol(d); got != "ACM" {
+		t.Fatalf("currency symbol = %q, want ACM", got)
+	}
+}
+
+func TestEVMWalletLabelsFallbackWithoutMetadata(t *testing.T) {
+	d := model.Report{Network: "pmt", EVMDenom: "apmt"}
+	if got := evmNetworkName(d); got != "PMT" {
+		t.Fatalf("network name fallback = %q, want PMT", got)
+	}
+	if got := evmCurrencySymbol(d); got != "PMT" {
+		t.Fatalf("currency symbol fallback = %q, want PMT", got)
 	}
 }

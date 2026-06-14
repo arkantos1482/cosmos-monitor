@@ -345,6 +345,8 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 	if p.EVMDenom != "" {
 		d.EVMDenom = p.EVMDenom
 	}
+	d.EVMDenomName = p.EVMDenomName
+	d.EVMDenomSymbol = p.EVMDenomSymbol
 	d.EVMClient = ev.ClientVersion
 	d.EVMRPCOk = ev.Err == nil
 	d.EVMListening = ev.NetListening

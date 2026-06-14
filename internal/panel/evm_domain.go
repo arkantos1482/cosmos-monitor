@@ -44,7 +44,13 @@ func evmReachabilityCardHTML(d model.Report) string {
 		listen = "listening"
 	}
 	ecoDomainRow(&b, "", "net_listening", listen, "socket accepting connections")
-	ecoDomainRow(&b, "", "probes", fmt.Sprintf("%d / %d ok", d.RPCProbeOK, d.RPCProbeTotal), "method health checks this refresh")
+	httpOK, httpTotal, wsOK, wsTotal := rpcProbeScores(d.RPCProbes)
+	if httpTotal > 0 {
+		ecoDomainRow(&b, "", "HTTP probes", fmt.Sprintf("%d / %d ok", httpOK, httpTotal), "POST JSON-RPC on :8545")
+	}
+	if wsTotal > 0 {
+		ecoDomainRow(&b, "", "WS probes", fmt.Sprintf("%d / %d ok", wsOK, wsTotal), "WebSocket JSON-RPC on :8546")
+	}
 	ecoDomainRow(&b, "", "enabled APIs", apis, "namespaces exposed by this node")
 
 	ecoDomainCardClose(&b)
@@ -60,13 +66,13 @@ func evmMetaMaskCardHTML(d model.Report) string {
 
 	var b strings.Builder
 	ecoDomainCardOpen(&b, "eco-domain--rpc-metamask", "Custom network", "MetaMask / wallet import")
-	ecoDomainRow(&b, "", "network name", evmNetworkName(d), "custom network label")
+	ecoDomainRow(&b, "", "network name", evmNetworkName(d), "bank denom metadata name")
 	ecoDomainRow(&b, "", "RPC URL", httpEP, "HTTP JSON-RPC endpoint")
 	ecoDomainRow(&b, "", "WebSocket", wsEP, "subscriptions and event filters")
 	if d.EVMChainID > 0 {
 		ecoDomainRow(&b, "", "chain ID", fmt.Sprintf("%d", d.EVMChainID), "eth_chainId")
 	}
-	ecoDomainRow(&b, "", "currency symbol", evmDisplaySymbol(d.EVMDenom), "evm_denom from vm params")
+	ecoDomainRow(&b, "", "currency symbol", evmCurrencySymbol(d), "bank denom metadata symbol")
 	ecoDomainCardClose(&b)
 	return b.String()
 }
@@ -138,31 +144,89 @@ func evmHTTPEndpoint(d model.Report) string {
 }
 
 func evmNetworkName(d model.Report) string {
-	name := strings.ToUpper(strings.TrimSpace(d.Network))
-	if name == "" {
-		return "PMT"
+	if name := strings.TrimSpace(d.EVMDenomName); name != "" {
+		return name
 	}
-	return name
+	if net := strings.TrimSpace(d.Network); net != "" {
+		return strings.ToUpper(net)
+	}
+	return "—"
 }
 
-func evmDisplaySymbol(denom string) string {
-	switch strings.ToLower(denom) {
-	case "apmt", "upmt":
-		return "PMT"
-	default:
-		if denom == "" {
-			return "PMT"
+func evmCurrencySymbol(d model.Report) string {
+	if sym := strings.TrimSpace(d.EVMDenomSymbol); sym != "" {
+		return sym
+	}
+	if denom := strings.TrimSpace(d.EVMDenom); denom != "" {
+		switch denom[0] {
+		case 'a', 'n', 'u', 'm':
+			return strings.ToUpper(denom[1:])
 		}
 		return strings.ToUpper(denom)
 	}
+	return "—"
+}
+
+func rpcProbeScores(probes []model.RPCProbe) (httpOK, httpTotal, wsOK, wsTotal int) {
+	for _, p := range probes {
+		if p.Transport == "ws" {
+			wsTotal++
+			if p.OK {
+				wsOK++
+			}
+			continue
+		}
+		httpTotal++
+		if p.OK {
+			httpOK++
+		}
+	}
+	return
+}
+
+func rpcProbesByTransport(probes []model.RPCProbe) (http, ws []model.RPCProbe) {
+	for _, p := range probes {
+		if p.Transport == "ws" {
+			ws = append(ws, p)
+		} else {
+			http = append(http, p)
+		}
+	}
+	return
+}
+
+func probeHeroClass(ok, total int, rpcDown bool) string {
+	cls := "evm-summary__hero-ok"
+	if rpcDown || total == 0 {
+		return cls + " evm-summary__hero-ok--bad"
+	}
+	if ok < total {
+		return cls + " evm-summary__hero-ok--warn"
+	}
+	return cls
 }
 
 func evmRPCProbeTableHTML(d model.Report) string {
-	probes := sortedRPCProbes(d.RPCProbes)
+	probes := d.RPCProbes
 	if len(probes) == 0 {
 		return `<p class="evm-probes__empty">No JSON-RPC probes recorded.</p>`
 	}
 
+	httpProbes, wsProbes := rpcProbesByTransport(probes)
+	var b strings.Builder
+	if len(httpProbes) > 0 {
+		b.WriteString(`<h4 class="evm-probes__group-title">HTTP <span class="evm-probes__group-hint">POST :8545</span></h4>`)
+		b.WriteString(evmRPCProbeTableBody(httpProbes))
+	}
+	if len(wsProbes) > 0 {
+		b.WriteString(`<h4 class="evm-probes__group-title">WebSocket <span class="evm-probes__group-hint">:8546</span></h4>`)
+		b.WriteString(evmRPCProbeTableBody(wsProbes))
+	}
+	return b.String()
+}
+
+func evmRPCProbeTableBody(probes []model.RPCProbe) string {
+	probes = sortedRPCProbes(probes)
 	var b strings.Builder
 	b.WriteString(`<table class="evm-probes__table"><thead><tr>`)
 	b.WriteString(`<th class="evm-probes__mark-hdr" aria-hidden="true"></th>`)

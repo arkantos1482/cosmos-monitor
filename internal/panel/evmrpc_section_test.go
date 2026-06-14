@@ -16,6 +16,7 @@ func TestBuildEVMRPCSection(t *testing.T) {
 		RPCProbeOK: 10, RPCProbeTotal: 10,
 		RPCProbes: []model.RPCProbe{
 			{Method: "eth_blockNumber", OK: true, Latency: "12ms"},
+			{Method: "eth_chainId", Transport: "ws", OK: true, Latency: "11ms"},
 		},
 		PendingTx: 2, QueuedTx: 1,
 	}
@@ -100,18 +101,22 @@ func TestEVMSummaryLayout(t *testing.T) {
 		RPCProbes: []model.RPCProbe{
 			{Method: "eth_blockNumber", OK: true, Latency: "10ms"},
 			{Method: "eth_chainId", OK: true, Latency: "14ms"},
+			{Method: "net_version", Transport: "ws", OK: true, Latency: "9ms"},
 		},
 		PendingTx: 2, QueuedTx: 1,
 	}
 	out := BuildView(ViewEVM, d)
 	for _, want := range []string{
 		`evm-summary__hero`,
+		`evm-summary__probe-heroes`,
+		`evm-summary__hero-label">HTTP probes`,
+		`evm-summary__hero-label">WS probes`,
 		`evm-summary__kpis`,
 		`evm-summary__kpi-label">block age`,
 		`evm-summary__stack-line">2 pending`,
 		`evm-summary__stack-line">1 queued`,
 		`probe pass rate`,
-		`12ms avg`,
+		`11ms avg`,
 		`evm-summary__badges`,
 		`badge--ok">RPC OK`,
 	} {

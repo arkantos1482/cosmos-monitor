@@ -150,6 +150,8 @@ type ChainParams struct {
 	Threshold                float64
 	VetoThreshold            float64
 	EVMDenom                 string
+	EVMDenomName             string // bank metadata name (MetaMask network label)
+	EVMDenomSymbol           string // bank metadata symbol (MetaMask currency symbol)
 	MinGasPrice              float64
 	Elasticity               int64
 	NoBaseFee                bool
@@ -438,6 +440,15 @@ type evmParamsResp struct {
 		ActiveStaticPrecompiles []string `json:"active_static_precompiles"`
 		HistoryServeWindow      int64    `json:"history_serve_window"`
 	} `json:"params"`
+}
+
+type bankDenomMetadataResp struct {
+	Metadata struct {
+		Name    string `json:"name"`
+		Symbol  string `json:"symbol"`
+		Display string `json:"display"`
+		Base    string `json:"base"`
+	} `json:"metadata"`
 }
 
 type erc20ParamsResp struct {
@@ -730,6 +741,13 @@ func FetchParams(rest string) ChainParams {
 		p.EVMDenom = ep.Params.EvmDenom
 		p.ActiveStaticPrecompiles = ep.Params.ActiveStaticPrecompiles
 		p.HistoryServeWindow = ep.Params.HistoryServeWindow
+		if p.EVMDenom != "" {
+			var meta bankDenomMetadataResp
+			if err := doJSON(rest+"/cosmos/bank/v1beta1/denoms_metadata/"+p.EVMDenom, &meta); err == nil {
+				p.EVMDenomName = meta.Metadata.Name
+				p.EVMDenomSymbol = meta.Metadata.Symbol
+			}
+		}
 	}
 
 	// EVM chain config for hardfork heights

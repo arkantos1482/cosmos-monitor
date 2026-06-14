@@ -52,26 +52,34 @@ func writeEVMSummary(w Writer, d model.Report, mode SummaryMode) {
 	blockAge, ageTone := evmBlockAgeKPI(d)
 	httpEP := evmHTTPEndpoint(d)
 
+	httpOK, httpTotal, wsOK, wsTotal := rpcProbeScores(d.RPCProbes)
+	probeOK := httpOK + wsOK
+	probeTotal := httpTotal + wsTotal
 	probePct := 0
-	if d.RPCProbeTotal > 0 {
-		probePct = d.RPCProbeOK * 100 / d.RPCProbeTotal
-	}
-	heroClass := "evm-summary__hero-ok"
-	switch {
-	case !d.EVMRPCOk:
-		heroClass += " evm-summary__hero-ok--bad"
-	case probePct < 100:
-		heroClass += " evm-summary__hero-ok--warn"
+	if probeTotal > 0 {
+		probePct = probeOK * 100 / probeTotal
 	}
 
 	summaryWrapStart(w, mode, "evm")
 	w.WriteHTML(`<div class="evm-summary">`)
 	w.WriteHTML(`<div class="evm-summary__top">`)
-	w.WriteHTML(`<div class="evm-summary__hero-wrap">`)
-	w.WriteHTML(fmt.Sprintf(
-		`<div class="evm-summary__hero"><span class="%s">%d</span><span class="evm-summary__hero-total">/%d</span></div>`,
-		heroClass, d.RPCProbeOK, d.RPCProbeTotal))
-	w.WriteHTML(`<p class="evm-summary__hero-label">probes passing</p>`)
+	w.WriteHTML(`<div class="evm-summary__probe-heroes">`)
+	if httpTotal > 0 {
+		w.WriteHTML(`<div class="evm-summary__hero-wrap">`)
+		w.WriteHTML(fmt.Sprintf(
+			`<div class="evm-summary__hero"><span class="%s">%d</span><span class="evm-summary__hero-total">/%d</span></div>`,
+			probeHeroClass(httpOK, httpTotal, !d.EVMRPCOk), httpOK, httpTotal))
+		w.WriteHTML(`<p class="evm-summary__hero-label">HTTP probes</p>`)
+		w.WriteHTML(`</div>`)
+	}
+	if wsTotal > 0 {
+		w.WriteHTML(`<div class="evm-summary__hero-wrap">`)
+		w.WriteHTML(fmt.Sprintf(
+			`<div class="evm-summary__hero"><span class="%s">%d</span><span class="evm-summary__hero-total">/%d</span></div>`,
+			probeHeroClass(wsOK, wsTotal, !d.EVMRPCOk), wsOK, wsTotal))
+		w.WriteHTML(`<p class="evm-summary__hero-label">WS probes</p>`)
+		w.WriteHTML(`</div>`)
+	}
 	w.WriteHTML(`</div>`)
 	writeSummaryBadges(w, "evm-summary__badges",
 		summaryBadge{"RPC " + overall, overallKind},
@@ -80,24 +88,41 @@ func writeEVMSummary(w Writer, d model.Report, mode SummaryMode) {
 	)
 	w.WriteHTML(`</div>`)
 
-	if d.RPCProbeTotal > 0 {
+	if probeTotal > 0 {
 		writeMiniGauge(w, "probe pass rate", probePct)
 	}
 
 	if len(d.RPCProbes) > 0 {
-		w.WriteHTML(`<div class="evm-summary__ns-row">`)
-		w.WriteHTML(`<span class="evm-summary__ns-label">API</span>`)
-		w.WriteHTML(`<div class="evm-summary__probes">`)
-		for _, ns := range evmProbeNamespaces(d.RPCProbes) {
-			ok := evmNamespaceOK(d.RPCProbes, ns)
-			cls := "evm-summary__probe--ok"
-			if !ok {
-				cls = "evm-summary__probe--fail"
+		httpProbes, wsProbes := rpcProbesByTransport(d.RPCProbes)
+		if len(httpProbes) > 0 {
+			w.WriteHTML(`<div class="evm-summary__ns-row">`)
+			w.WriteHTML(`<span class="evm-summary__ns-label">HTTP</span>`)
+			w.WriteHTML(`<div class="evm-summary__probes">`)
+			for _, ns := range evmProbeNamespaces(httpProbes) {
+				ok := evmNamespaceOK(httpProbes, ns)
+				cls := "evm-summary__probe--ok"
+				if !ok {
+					cls = "evm-summary__probe--fail"
+				}
+				w.WriteHTML(fmt.Sprintf(`<span class="evm-summary__probe %s" title="%s namespace">%s</span>`,
+					cls, html.EscapeString(ns), html.EscapeString(ns)))
 			}
-			w.WriteHTML(fmt.Sprintf(`<span class="evm-summary__probe %s" title="%s namespace">%s</span>`,
-				cls, html.EscapeString(ns), html.EscapeString(ns)))
+			w.WriteHTML(`</div></div>`)
 		}
-		w.WriteHTML(`</div></div>`)
+		if len(wsProbes) > 0 {
+			w.WriteHTML(`<div class="evm-summary__ns-row">`)
+			w.WriteHTML(`<span class="evm-summary__ns-label">WS</span>`)
+			w.WriteHTML(`<div class="evm-summary__probes">`)
+			for _, p := range sortedRPCProbes(wsProbes) {
+				cls := "evm-summary__probe--ok"
+				if !p.OK {
+					cls = "evm-summary__probe--fail"
+				}
+				w.WriteHTML(fmt.Sprintf(`<span class="evm-summary__probe %s" title="%s">%s</span>`,
+					cls, html.EscapeString(p.Method), html.EscapeString(p.Method)))
+			}
+			w.WriteHTML(`</div></div>`)
+		}
 	}
 
 	w.WriteHTML(`<div class="evm-summary__kpis">`)

@@ -127,6 +127,8 @@ type Report struct {
 	TxpoolGlobalQueue uint64
 	EVMChainID        uint64
 	EVMDenom          string
+	EVMDenomName      string // bank metadata name (wallet network label)
+	EVMDenomSymbol    string // bank metadata symbol (wallet currency symbol)
 	EVMClient         string
 	EVMRPCOk          bool
 	EVMListening      bool
