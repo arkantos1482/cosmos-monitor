@@ -17,7 +17,6 @@ func TestDistributionCardCommunityTax(t *testing.T) {
 		UnclaimedCommission: "0.000685 PMT",
 		ModuleAccounts: []model.ModuleAccountRow{
 			{Name: "distribution", Address: "cosmos1akkvh0ahmve830rj4mhkdnqs49kzw23c63nhdx", Balance: "0 PMT"},
-			{Name: "fee_collector", Balance: "0 PMT"},
 		},
 	}
 	html := distributionCardHTML(d)
@@ -31,7 +30,6 @@ func TestDistributionCardCommunityTax(t *testing.T) {
 		"for delegators",
 		"for operators",
 		"total unclaimed",
-		"fee_collector",
 		"escrow check",
 	} {
 		if !strings.Contains(html, want) {

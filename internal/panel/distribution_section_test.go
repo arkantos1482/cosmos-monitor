@@ -27,7 +27,6 @@ func TestWriteDistributionSection(t *testing.T) {
 		UnclaimedDelegator:  "0.006169 PMT",
 		UnclaimedCommission: "0.000685 PMT",
 		ModuleAccounts: []model.ModuleAccountRow{
-			{Name: "fee_collector", Balance: "0 PMT", Role: "fees"},
 			{Name: "distribution", Address: "cosmos1akkvh0ahmve830rj4mhkdnqs49kzw23c63nhdx", Balance: "0 PMT", Role: "escrow"},
 		},
 		Validators: []model.Validator{{
@@ -53,7 +52,6 @@ func TestWriteDistributionSection(t *testing.T) {
 		"community_tax",
 		"withdraw_addr_enabled",
 		"community pool",
-		"fee_collector",
 		"for delegators",
 		"for operators",
 		"total unclaimed",
@@ -143,7 +141,6 @@ func TestModuleAccountDisplayAddressInDistribution(t *testing.T) {
 	d := model.Report{
 		ModuleAccounts: []model.ModuleAccountRow{
 			{Name: "distribution", Address: bech, Balance: "0 PMT"},
-			{Name: "fee_collector", Address: bech, Balance: "0 PMT"},
 		},
 		CommunityTax: "2%",
 		CommunityPool: "0.5 PMT",

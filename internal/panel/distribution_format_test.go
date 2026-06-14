@@ -26,20 +26,20 @@ func TestLocalUnclaimedBreakdownHTML(t *testing.T) {
 	}
 }
 
-func TestDistributionEscrowReconcileGap(t *testing.T) {
+func TestDistributionEscrowReconcileMatchLiveChain(t *testing.T) {
 	d := model.Report{
-		UnclaimedDelegator:  "0.006854 PMT",
+		UnclaimedDelegator:  "0.006169 PMT",
 		UnclaimedCommission: "0.000685 PMT",
 		ModuleAccounts: []model.ModuleAccountRow{
 			{Name: "distribution", Balance: "0.006854 PMT"},
 		},
 	}
 	effect, warn := distributionEscrowReconcile(d)
-	if !warn {
-		t.Fatal("expected warn when bank matches delegator only but not total")
+	if warn {
+		t.Fatalf("expected no warn when bank matches total unclaimed, got %q", effect)
 	}
-	if !strings.Contains(effect, "0.000685 PMT") {
-		t.Fatalf("expected gap amount in effect, got %q", effect)
+	if !strings.Contains(effect, "matches") {
+		t.Fatalf("expected match message, got %q", effect)
 	}
 }
 

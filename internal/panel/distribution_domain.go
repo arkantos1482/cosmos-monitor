@@ -17,8 +17,6 @@ func distributionCardHTML(d model.Report) string {
 	writeDistributionUnclaimedRows(&b, d)
 
 	ecoDomainDividerDist(&b, "Coin balances")
-	writeModuleAccountRow(&b, d, "fee_collector",
-		"transit — block fees and minted rewards land here, then move out in BeginBlock")
 	writeModuleAccountRow(&b, d, "distribution",
 		"escrow — holds unclaimed delegator and operator rewards until withdrawn")
 	writeDistributionEscrowReconcileRow(&b, d)
@@ -93,41 +91,7 @@ func writeDistributionUnclaimedRows(b *strings.Builder, d model.Report) {
 }
 
 func distributionUnclaimedTotal(d model.Report) string {
-	del := d.UnclaimedDelegator
-	comm := d.UnclaimedCommission
-	if del != "" && comm != "" {
-		return economicsUnclaimedTotal(d)
-	}
-	if del != "" {
-		return del
-	}
-	return comm
-}
-
-func distributionFeeCollectorStatus(d model.Report) string {
-	check := economicsFeeCollectorCheck(d)
-	if check == "cleared" {
-		return "cleared"
-	}
-	if check == "not cleared?" {
-		return "pending"
-	}
-	bal := FeeCollectorBalance(d)
-	if bal == "" {
-		return "—"
-	}
-	return bal
-}
-
-func distributionFeeCollectorTone(d model.Report) string {
-	switch economicsFeeCollectorCheck(d) {
-	case "cleared":
-		return "ok"
-	case "not cleared?":
-		return "warn"
-	default:
-		return ""
-	}
+	return economicsUnclaimedTotal(d)
 }
 
 func distributionDomainCardsHTML(d model.Report) string {

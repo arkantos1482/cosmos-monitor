@@ -136,6 +136,8 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 	d.JailedCount = jailedCount
 	d.BondedCount = bondedCount
 
+	unclaimed := computeUnclaimedTotals(vals, chain.ModuleBalances)
+
 	for _, v := range vals {
 		isLocal := localVal != nil && v.OperatorAddr == localVal.OperatorAddr
 		p2p := v.P2PDial
@@ -158,12 +160,12 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 			Jailed:           v.Jailed,
 			Tombstoned:       v.Tombstoned,
 			IsLocal:          isLocal,
-			Outstanding:      v.OutstandingRewards,
+			Outstanding:      validatorDelegatorOutstanding(v, unclaimed.Model),
 			CommissionEarned: v.CommissionEarned,
 		})
 	}
 
-	d.Local = buildLocalValidator(chain, localVal, maxMissed)
+	d.Local = buildLocalValidator(chain, localVal, maxMissed, unclaimed.Model)
 
 	denom := p.BondDenom
 	if denom == "" {
@@ -230,32 +232,16 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 	}
 	d.PMTPoolAddress = p.PMTRewardsPoolAddress
 
-	var totalOutF, totalCommF float64
-	var outDenom string
-	for _, v := range chain.Validators {
-		if v.OutstandingRewardsAmt != "" {
-			f, dd := fetch.NormalizeCoin(v.OutstandingRewardsAmt, v.OutstandingRewardsDenom)
-			totalOutF += f
-			outDenom = dd
-		}
-		if v.CommissionEarnedAmt != "" {
-			f, dd := fetch.NormalizeCoin(v.CommissionEarnedAmt, v.CommissionEarnedDenom)
-			totalCommF += f
-			if outDenom == "" {
-				outDenom = dd
-			}
-		}
-	}
-	if outDenom != "" {
-		if totalOutF > 0 || totalCommF > 0 {
-			d.TotalOutstanding = fetch.FormatAmountUnit(totalOutF+totalCommF, outDenom) +
+	if unclaimed.Denom != "" {
+		if unclaimed.TotalF > 0 {
+			d.TotalOutstanding = fetch.FormatAmountUnit(unclaimed.TotalF, unclaimed.Denom) +
 				fmt.Sprintf("  across %d validators", len(chain.Validators))
 		}
-		if totalOutF > 0 {
-			d.UnclaimedDelegator = fetch.FormatAmountUnit(totalOutF, outDenom)
+		if unclaimed.DelegatorF > 0 {
+			d.UnclaimedDelegator = fetch.FormatAmountUnit(unclaimed.DelegatorF, unclaimed.Denom)
 		}
-		if totalCommF > 0 {
-			d.UnclaimedCommission = fetch.FormatAmountUnit(totalCommF, outDenom)
+		if unclaimed.CommissionF > 0 {
+			d.UnclaimedCommission = fetch.FormatAmountUnit(unclaimed.CommissionF, unclaimed.Denom)
 		}
 	}
 
@@ -454,7 +440,7 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 	return d
 }
 
-func buildLocalValidator(chain fetch.ChainSnapshot, v *fetch.ValidatorInfo, maxMissed int64) model.LocalValidator {
+func buildLocalValidator(chain fetch.ChainSnapshot, v *fetch.ValidatorInfo, maxMissed int64, rewardModel outstandingRewardsModel) model.LocalValidator {
 	lv := model.LocalValidator{
 		Moniker:         chain.Moniker,
 		NodeID:          chain.NodeID,
@@ -508,7 +494,7 @@ func buildLocalValidator(chain fetch.ChainSnapshot, v *fetch.ValidatorInfo, maxM
 	lv.MissedHigh = maxMissed > 0 && v.MissedBlocks > maxMissed
 	lv.ProposerPriority = v.ProposerPriority
 	lv.IsNextProposer = v.Moniker == chain.NextProposerMoniker
-	lv.Outstanding = v.OutstandingRewards
+	lv.Outstanding = validatorDelegatorOutstanding(*v, rewardModel)
 	lv.CommissionEarned = v.CommissionEarned
 	lv.DelegatorCount = len(lv.Delegations)
 	if lv.AccountAddr != "" {
