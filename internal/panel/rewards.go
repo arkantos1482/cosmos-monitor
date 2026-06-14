@@ -76,44 +76,27 @@ func writeRewardsSummaryKPI(w Writer, label, value, tone string) {
 
 func writeRewardsLocal(w Writer, d model.Report) {
 	lv := d.Local
+	if weight := localRewardsStakingWeight(lv); weight != "" {
+		w.Row("staking weight", weight)
+	}
 	if op, del, _, ok := localValidatorPerBlockRewards(d); ok {
-		suffix := localRewardsVPSuffix(lv)
+		note := ""
 		if pmtConfiguredNotEmitting(d) {
-			suffix += "  _(PMT pool empty — inflation/fees only)_"
+			note = "  _(PMT pool empty — inflation/fees only)_"
 		}
-		w.Row("per-block commission", op+suffix)
+		w.Row("per-block commission", op+note)
 		w.Row("per-block delegators", del)
 		return
 	}
-
 	w.Row("per-block emission", rewardsLocalEmissionStatus(d, lv))
-	if line := localRewardsVPCommission(lv); line != "" {
-		w.Row("staking weight", line)
-	}
 }
 
-func localRewardsVPSuffix(lv model.LocalValidator) string {
-	if lv.VPPercent <= 0 {
-		return ""
-	}
-	if lv.Commission > 0 {
-		return fmt.Sprintf("  (%.2f%% VP · %.1f%% commission)", lv.VPPercent, lv.Commission)
-	}
-	return fmt.Sprintf("  (%.2f%% VP)", lv.VPPercent)
-}
-
-func localRewardsVPCommission(lv model.LocalValidator) string {
-	if lv.VPPercent > 0 && lv.Commission > 0 {
-		return fmt.Sprintf("%.2f%% voting power · %.1f%% commission", lv.VPPercent, lv.Commission)
-	}
-	if lv.VotingPower != "" && lv.Commission > 0 {
-		return fmt.Sprintf("%s stake · %.1f%% commission", lv.VotingPower, lv.Commission)
+func localRewardsStakingWeight(lv model.LocalValidator) string {
+	if lv.VPPercent > 0 {
+		return fmt.Sprintf("%.2f%%", lv.VPPercent)
 	}
 	if lv.VotingPower != "" {
-		return lv.VotingPower + " staked"
-	}
-	if lv.VPPercent > 0 {
-		return fmt.Sprintf("%.2f%% voting power", lv.VPPercent)
+		return lv.VotingPower
 	}
 	return ""
 }
@@ -129,7 +112,7 @@ func rewardsLocalEmissionStatus(d model.Report, lv model.LocalValidator) string 
 		return fmt.Sprintf("—  _(inflation active at %.2f%%; per-block estimate unavailable)_", d.Inflation)
 	}
 	if lv.VPPercent <= 0 && lv.VotingPower == "" {
-		return "—  _(voting power unknown — cannot estimate share)_"
+		return "—  _(staking weight unknown — cannot estimate share)_"
 	}
 	if rewardsEmissionPerBlock(d) == "—" {
 		return "—  _(no active block emission)_"

@@ -155,6 +155,12 @@ func TestRewardsLocalValidatorNeverEmpty(t *testing.T) {
 	if !strings.Contains(chunk, "staking weight") {
 		t.Fatalf("This validator subsection should show staking weight:\n%s", chunk)
 	}
+	if strings.Contains(chunk, "commission") && strings.Contains(chunk, "staking weight") {
+		t.Fatal("staking weight should not mention commission")
+	}
+	if !strings.Contains(chunk, "25.00%") {
+		t.Fatalf("staking weight should show percent only:\n%s", chunk)
+	}
 	if !strings.Contains(chunk, "PMT pool empty") {
 		t.Fatalf("This validator subsection should explain empty pool:\n%s", chunk)
 	}
