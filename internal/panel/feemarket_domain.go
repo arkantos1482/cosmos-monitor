@@ -25,7 +25,7 @@ func fmModuleCardHTML(s feemarket.State, d model.Report) string {
 	ecoDomainRow(&b, "", "base_fee_change_denominator", formatParamInt(s.ChangeDenom), "max per-block delta as 1/N of base fee")
 	ecoDomainRow(&b, "", "elasticity_multiplier", formatParamInt(s.Elasticity), "gas target = block limit ÷ this")
 	ecoDomainRow(&b, "", "min_gas_price", orEcoDash(s.MinGasPrice), "floor when base fee decreases")
-	ecoDomainRow(&b, "", "min_gas_multiplier", orEcoDash(s.MinGasMult), "EndBlock: W ≥ gas_used and W ≥ wanted×multiplier")
+	ecoDomainRow(&b, "", "min_gas_multiplier", orEcoDash(s.MinGasMult), "W ≥ gas_used and W ≥ gas_wanted × multiplier")
 	ecoDomainCardClose(&b)
 	return b.String()
 }

@@ -29,15 +29,19 @@ func TestWriteFeemarketSection(t *testing.T) {
 		`dash-section--feemarket`,
 		`class="fm-summary"`,
 		`fm-mechanics`,
+		`fm-mechanics__vars`,
 		`eco-domain--feemarket`,
 		`projected next base fee`,
 		`gas used`,
 		`gas wanted`,
-		`W (stored)`,
+		`floor for W`,
+		`min_gas_multiplier for W`,
 		`demand vs target`,
 		`Live state`,
 		`EIP-1559 mechanics`,
-		`fm-mechanics__cosmos`,
+		`formula input`,
+		`55000000 gas`,
+		`60000000 gas`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("missing %q in output", want)

@@ -915,6 +915,52 @@ body::after {
   vertical-align: baseline;
 }
 
+.fm-mechanics__vars-title {
+  margin: 0.65rem 0 0.35rem;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.fm-mechanics__vars {
+  margin: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.fm-mechanics__var {
+  display: grid;
+  grid-template-columns: 9rem 1fr;
+  gap: 0.5rem;
+  align-items: baseline;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+
+.fm-mechanics__var dt {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--accent-feemarket);
+}
+
+.fm-mechanics__var dd {
+  margin: 0;
+  color: var(--fg);
+}
+
+.fm-mechanics__var-val {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+
+.fm-mechanics__var-hint {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
 .fm-sentinel__raw {
   display: block;
   margin-top: 0.15rem;

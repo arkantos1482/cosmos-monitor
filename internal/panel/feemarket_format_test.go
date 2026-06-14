@@ -52,3 +52,36 @@ func TestFmGasTargetHTMLFinite(t *testing.T) {
 		t.Fatalf("got %q", out)
 	}
 }
+
+func TestFmMechanicsVarsHTML(t *testing.T) {
+	s := feemarket.LoadState(model.Report{
+		BaseFee:                  "1.125 apmt",
+		BaseFeeRaw:               "1125000000",
+		BlockGasLimit:            100_000_000,
+		Elasticity:               2,
+		BaseFeeChangeDenominator: 8,
+		MinGasMultiplier:         "0.5",
+		MinGasPrice:              "0 apmt",
+		ParentBlockGasUsed:       55_000_000,
+		ParentBlockTxGasWanted:   120_000_000,
+		ParentBlockGasWanted:     60_000_000,
+		ParentBlockResultsOK:     true,
+	})
+	out := fmMechanicsVarsHTML(s)
+	for _, want := range []string{
+		`55000000 gas`,
+		`120000000 gas`,
+		`60000000 gas`,
+		`formula input`,
+		`50000000 gas`,
+		`1.125 apmt`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("missing %q in %q", want, out)
+		}
+	}
+	// W = max(55M, 120M × 0.5) = max(55M, 60M) = 60M
+	if s.GasWanted != 60_000_000 {
+		t.Fatalf("GasWanted=%d want 60M", s.GasWanted)
+	}
+}
