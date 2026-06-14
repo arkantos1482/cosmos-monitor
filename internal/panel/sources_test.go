@@ -111,6 +111,49 @@ func TestExchangesForViewEVM(t *testing.T) {
 	}
 }
 
+func TestEVMSourcesIncludeAllRPCProbes(t *testing.T) {
+	d := model.Report{
+		EVMHTTPEndpoint: "http://localhost:8545",
+		EVMWSEndpoint:   "ws://localhost:8546",
+		RPCProbes: []model.RPCProbe{
+			{Method: "eth_blockNumber", OK: true, Latency: "3ms",
+				Request: `{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}`,
+				Response: `{"jsonrpc":"2.0","id":1,"result":"0x10"}`},
+			{Method: "eth_syncing", OK: true, Latency: "4ms",
+				Request: `{"jsonrpc":"2.0","method":"eth_syncing","params":[],"id":1}`,
+				Response: `{"jsonrpc":"2.0","id":1,"result":false}`},
+			{Method: "net_version", Transport: "ws", OK: true, Latency: "5ms",
+				Request: `{"jsonrpc":"2.0","method":"net_version","params":[],"id":1}`,
+				Response: `{"jsonrpc":"2.0","id":1,"result":"290290"}`},
+		},
+		Exchanges: []model.SourceExchange{
+			{
+				Kind: "http", Method: "GET",
+				URL:      "http://localhost:1317/cosmos/evm/vm/v1/params",
+				Request:  "(none)",
+				Response: `{"params":{}}`,
+				OK:       true, Latency: "2ms",
+			},
+		},
+	}
+	got := sourcesForView(ViewEVM, d)
+	if len(got) != 4 {
+		t.Fatalf("EVM sources want 4 entries (1 REST + 3 probes), got %d", len(got))
+	}
+	for _, want := range []string{"eth_blockNumber", "eth_syncing", "net_version", "/cosmos/evm/vm/v1/params"} {
+		found := false
+		for _, e := range got {
+			if strings.Contains(e.URL, want) || strings.Contains(e.Request, want) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("EVM sources missing %q", want)
+		}
+	}
+}
+
 func TestSourceLogDeferredToSectionBottom(t *testing.T) {
 	var b strings.Builder
 	w := newWriter(&b, Options{ShowSources: true})

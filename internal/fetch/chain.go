@@ -686,6 +686,28 @@ func applyValidatorP2P(v *ValidatorInfo, localMoniker, localNodeID, localListen 
 	}
 }
 
+// FetchEVMWalletParams loads VM denom settings and bank metadata for the EVM panel.
+func FetchEVMWalletParams(rest string) ChainParams {
+	p := ChainParams{}
+	var ep evmParamsResp
+	if err := doJSON(rest+"/cosmos/evm/vm/v1/params", &ep); err == nil {
+		p.EVMDenom = ep.Params.EvmDenom
+		fetchEVMDenomMetadata(rest, &p)
+	}
+	return p
+}
+
+func fetchEVMDenomMetadata(rest string, p *ChainParams) {
+	if p.EVMDenom == "" {
+		return
+	}
+	var meta bankDenomMetadataResp
+	if err := doJSON(rest+"/cosmos/bank/v1beta1/denoms_metadata/"+p.EVMDenom, &meta); err == nil {
+		p.EVMDenomName = meta.Metadata.Name
+		p.EVMDenomSymbol = meta.Metadata.Symbol
+	}
+}
+
 // FetchParams fetches chain params (called once on launch).
 func FetchParams(rest string) ChainParams {
 	p := ChainParams{}
@@ -741,13 +763,7 @@ func FetchParams(rest string) ChainParams {
 		p.EVMDenom = ep.Params.EvmDenom
 		p.ActiveStaticPrecompiles = ep.Params.ActiveStaticPrecompiles
 		p.HistoryServeWindow = ep.Params.HistoryServeWindow
-		if p.EVMDenom != "" {
-			var meta bankDenomMetadataResp
-			if err := doJSON(rest+"/cosmos/bank/v1beta1/denoms_metadata/"+p.EVMDenom, &meta); err == nil {
-				p.EVMDenomName = meta.Metadata.Name
-				p.EVMDenomSymbol = meta.Metadata.Symbol
-			}
-		}
+		fetchEVMDenomMetadata(rest, &p)
 	}
 
 	// EVM chain config for hardfork heights

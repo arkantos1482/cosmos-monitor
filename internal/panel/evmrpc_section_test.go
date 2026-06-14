@@ -1,6 +1,7 @@
 package panel
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -39,21 +40,44 @@ func TestBuildEVMRPCSection(t *testing.T) {
 }
 
 func TestEVMDataSourcesProvenance(t *testing.T) {
+	httpMethods := []string{
+		"eth_blockNumber", "eth_chainId", "eth_syncing", "txpool_status",
+		"net_peerCount", "net_listening", "web3_clientVersion", "eth_getBlockByNumber",
+	}
+	wsMethods := []string{"eth_chainId", "net_version"}
+	var probes []model.RPCProbe
+	for _, method := range httpMethods {
+		probes = append(probes, model.RPCProbe{
+			Method: method, OK: true, Latency: "3ms",
+			Request:  fmt.Sprintf(`{"jsonrpc":"2.0","method":"%s","params":[],"id":1}`, method),
+			Response: `{"jsonrpc":"2.0","id":1,"result":"0x1"}`,
+		})
+	}
+	for _, method := range wsMethods {
+		probes = append(probes, model.RPCProbe{
+			Method: method, Transport: "ws", OK: true, Latency: "3ms",
+			Request:  fmt.Sprintf(`{"jsonrpc":"2.0","method":"%s","params":[],"id":1}`, method),
+			Response: `{"jsonrpc":"2.0","id":1,"result":"0x1"}`,
+		})
+	}
 	d := model.Report{
 		EVMRPCOk: true, EVMSynced: true, EVMBlock: "100", EVMChainID: 290290,
+		EVMHTTPEndpoint: "http://localhost:8545",
+		EVMWSEndpoint:   "ws://localhost:8546",
+		RPCProbes:       probes,
 		Exchanges: []model.SourceExchange{
-			{
-				Kind: "jsonrpc", Method: "POST",
-				URL:      "http://localhost:8545",
-				Request:  `{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}`,
-				Response: `{"jsonrpc":"2.0","id":1,"result":"0x10"}`,
-				OK:       true, Latency: "3ms",
-			},
 			{
 				Kind: "http", Method: "GET",
 				URL:      "http://localhost:1317/cosmos/evm/vm/v1/params",
 				Request:  "(none)",
 				Response: `{"params":{}}`,
+				OK:       true, Latency: "2ms",
+			},
+			{
+				Kind: "http", Method: "GET",
+				URL:      "http://localhost:1317/cosmos/bank/v1beta1/denoms_metadata/apmt",
+				Request:  "(none)",
+				Response: `{"metadata":{"name":"PMT","symbol":"PMT"}}`,
 				OK:       true, Latency: "2ms",
 			},
 		},
@@ -65,11 +89,18 @@ func TestEVMDataSourcesProvenance(t *testing.T) {
 		`dash-sources__exchange`,
 		`dash-sources__tag">req`,
 		`dash-sources__tag">res`,
-		`POST eth_blockNumber`,
 		`/cosmos/evm/vm/v1/params`,
+		`/cosmos/bank/v1beta1/denoms_metadata/apmt`,
+		`WS net_version`,
+		`WS eth_chainId`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("EVM data sources missing %q", want)
+		}
+	}
+	for _, method := range httpMethods {
+		if !strings.Contains(out, "POST "+method) {
+			t.Fatalf("EVM data sources missing probe %q", method)
 		}
 	}
 	if strings.Contains(out, `/cosmos/evm/feemarket/`) {

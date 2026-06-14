@@ -130,7 +130,7 @@ func fetchForView(view panel.View, rpc, rest, evm, container string) Snapshots {
 		var wg sync.WaitGroup
 		wg.Add(2)
 		go func() { defer wg.Done(); evSnap = fetch.FetchEVM(evm) }()
-		go func() { defer wg.Done(); p = cachedParams(rest) }()
+		go func() { defer wg.Done(); p = fetch.FetchEVMWalletParams(rest) }()
 		wg.Wait()
 		return Snapshots{EVM: evSnap, Chain: fetch.ChainSnapshot{Params: p}}
 	}

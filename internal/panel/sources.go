@@ -12,7 +12,7 @@ const maxSourceJSONBytes = 12_000
 
 // writeSectionSources renders the collapsible raw request/response log for a section.
 func writeSectionSources(w Writer, v View, d model.Report) {
-	exchanges := exchangesForView(v, d.Exchanges)
+	exchanges := sourcesForView(v, d)
 	if len(exchanges) == 0 {
 		return
 	}
@@ -36,6 +36,14 @@ func sourcesSlugForView(v View) string {
 	}
 }
 
+func sourcesForView(v View, d model.Report) []model.SourceExchange {
+	exchanges := exchangesForView(v, d.Exchanges)
+	if v == ViewEVM {
+		exchanges = mergeEVMRPCProbes(exchanges, d)
+	}
+	return exchanges
+}
+
 func exchangesForView(v View, all []model.SourceExchange) []model.SourceExchange {
 	if v == ViewHome {
 		return all
@@ -54,6 +62,79 @@ func exchangesForView(v View, all []model.SourceExchange) []model.SourceExchange
 		}
 	}
 	return out
+}
+
+// mergeEVMRPCProbes ensures every JSON-RPC method probe shown in the EVM section
+// has a matching raw req/res entry in Data sources (probes are authoritative).
+func mergeEVMRPCProbes(exchanges []model.SourceExchange, d model.Report) []model.SourceExchange {
+	if len(d.RPCProbes) == 0 {
+		return exchanges
+	}
+	seen := map[string]bool{}
+	for _, e := range exchanges {
+		if key := exchangeProbeKey(e); key != "" {
+			seen[key] = true
+		}
+	}
+	httpEP := strings.TrimSpace(d.EVMHTTPEndpoint)
+	if httpEP == "" {
+		httpEP = "http://localhost:8545"
+	}
+	wsEP := strings.TrimSpace(d.EVMWSEndpoint)
+	for _, p := range d.RPCProbes {
+		key := rpcProbeKey(p)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		exchanges = append(exchanges, rpcProbeToExchange(p, httpEP, wsEP))
+	}
+	return exchanges
+}
+
+func exchangeProbeKey(e model.SourceExchange) string {
+	if e.Kind != "jsonrpc" {
+		return ""
+	}
+	transport := "http"
+	if e.Method == "WS" {
+		transport = "ws"
+	}
+	method := jsonRPCMethod(e.Request)
+	if method == "" {
+		return ""
+	}
+	return transport + "|" + method
+}
+
+func rpcProbeKey(p model.RPCProbe) string {
+	transport := p.Transport
+	if transport == "" {
+		transport = "http"
+	}
+	return transport + "|" + p.Method
+}
+
+func rpcProbeToExchange(p model.RPCProbe, httpEP, wsEP string) model.SourceExchange {
+	method := "POST"
+	url := httpEP
+	if p.Transport == "ws" {
+		method = "WS"
+		url = wsEP
+		if url == "" {
+			url = "ws://localhost:8546"
+		}
+	}
+	return model.SourceExchange{
+		Kind:     "jsonrpc",
+		Method:   method,
+		URL:      url,
+		Request:  p.Request,
+		Response: p.Response,
+		OK:       p.OK,
+		Error:    p.Error,
+		Latency:  p.Latency,
+	}
 }
 
 func viewExchangeMatchers(v View) []func(model.SourceExchange) bool {

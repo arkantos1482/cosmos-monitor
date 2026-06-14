@@ -44,10 +44,13 @@ func fetchStatusBar(view panel.View, rpc, rest, evm, container string) (Snapshot
 		p      fetch.ChainParams
 		wg     sync.WaitGroup
 	)
-	wg.Add(3)
+	wg.Add(2)
 	go func() { defer wg.Done(); chain = fetch.FetchChainStatus(rpc, rest) }()
 	go func() { defer wg.Done(); docker = fetch.FetchDockerRunning(container) }()
-	go func() { defer wg.Done(); p = cachedParams(rest) }()
+	if view != panel.ViewEVM {
+		wg.Add(1)
+		go func() { defer wg.Done(); p = cachedParams(rest) }()
+	}
 	if !skipEVMPeer {
 		wg.Add(1)
 		go func() { defer wg.Done(); evSnap = fetch.FetchEVMPeerCount(evm) }()
