@@ -7,28 +7,63 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-func TestEVMDomainCards(t *testing.T) {
+func TestEVMRPCHealthCards(t *testing.T) {
 	d := model.Report{
-		EVMRPCOk: true, EVMSynced: true, EVMBlock: "100", EVMChainID: 290290,
-		EVMDenom: "apmt", Precompiles: []string{"0x01", "0x09"},
-		HistoryWindow: "8192", HardforkLondon: "0", HardforkShanghai: "100",
-		ERC20Enabled: true, TokenPairs: []model.TokenPair{{Enabled: true}},
-		Local: model.LocalValidator{EVMAddr: "0xLOCAL"},
-		RPCProbeOK: 1, RPCProbeTotal: 1,
-		RPCProbes: []model.RPCProbe{{Method: "eth_blockNumber", OK: true, Latency: "1ms"}},
+		EVMRPCOk: true, EVMSynced: true, EVMListening: true,
+		EVMBlock: "100", EVMBlockAge: "4.2s", EVMChainID: 290290,
+		EVMHTTPEndpoint: "http://localhost:8545", EVMClient: "evmd/v1",
+		PendingTx: 2, QueuedTx: 1, EVMPeerCount: 0,
+		RPCProbeOK: 8, RPCProbeTotal: 8,
+		RPCProbes: []model.RPCProbe{
+			{Method: "eth_blockNumber", OK: true, Latency: "12ms"},
+			{Method: "eth_chainId", OK: true, Latency: "8ms"},
+		},
 	}
 	out := BuildView(ViewEVM, d)
 	for _, want := range []string{
+		`eco-domain--rpc-reach`,
+		`eco-domain--rpc-head`,
+		`eco-domain--rpc-txpool`,
+		`eco-domain--rpc-net`,
+		"net_listening",
+		"eth_blockNumber",
+		"txpool_status",
+		"web3_clientVersion",
+		`evm-probes__table`,
+		`eth_chainId`,
+		`class="dash-subheading">Method probes</h3>`,
+		`class="dash-subheading">Wallet endpoints</h3>`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("EVM RPC health view missing %q", want)
+		}
+	}
+	for _, absent := range []string{
 		`eco-domain--vm`,
 		`eco-domain--erc20`,
 		"precompiles",
-		"history window",
-		"shanghai_block",
 		"enable_erc20",
-		"0xLOCAL",
+		"shanghai_block",
 	} {
-		if !strings.Contains(out, want) {
-			t.Fatalf("EVM view missing %q", want)
+		if strings.Contains(out, absent) {
+			t.Fatalf("EVM view should not include module card %q", absent)
 		}
+	}
+}
+
+func TestEVMRPCProbeTableShowsFailure(t *testing.T) {
+	d := model.Report{
+		EVMRPCOk: true, RPCProbeOK: 1, RPCProbeTotal: 2,
+		RPCProbes: []model.RPCProbe{
+			{Method: "eth_blockNumber", OK: true, Latency: "5ms"},
+			{Method: "eth_syncing", OK: false, Latency: "40ms", Error: "connection refused"},
+		},
+	}
+	out := evmRPCProbeTableHTML(d)
+	if !strings.Contains(out, `dash-sources__row--fail`) {
+		t.Fatal("failed probe should highlight row")
+	}
+	if !strings.Contains(out, "connection refused") {
+		t.Fatal("failed probe should show error in checks column")
 	}
 }

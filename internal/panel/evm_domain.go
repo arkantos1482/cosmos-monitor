@@ -2,82 +2,219 @@ package panel
 
 import (
 	"fmt"
+	"html"
+	"sort"
 	"strings"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-func evmDomainCardsHTML(d model.Report) string {
-	return ecoDomainsWrap(evmVMCardHTML(d), evmERC20CardHTML(d))
+func evmRPCHealthCardsHTML(d model.Report) string {
+	return ecoDomainsWrap(
+		evmReachabilityCardHTML(d),
+		evmChainHeadCardHTML(d),
+		evmTxpoolCardHTML(d),
+		evmNetCardHTML(d),
+	)
 }
 
-func evmVMCardHTML(d model.Report) string {
+func evmReachabilityCardHTML(d model.Report) string {
 	var b strings.Builder
-	ecoDomainCardOpen(&b, "eco-domain--vm", "EVM", "x/vm")
+	status := "DOWN"
+	badge := "bad"
+	if d.EVMRPCOk {
+		status = "UP"
+		badge = "ok"
+		if d.RPCProbeOK < d.RPCProbeTotal {
+			status = "DEGRADED"
+			badge = "warn"
+		}
+	}
+	fmt.Fprintf(&b, `<div class="eco-domain eco-domain--rpc-reach">`)
+	ecoDomainCardTitle(&b, "Reachability", "JSON-RPC transport", badge, status)
+	b.WriteString(`<div class="eco-domain__rows">`)
 
+	listen := "not listening"
+	if d.EVMListening {
+		listen = "listening"
+	}
+	ecoDomainRow(&b, "", "HTTP endpoint", orEcoDash(d.EVMHTTPEndpoint), "POST target for probes")
+	ecoDomainRow(&b, "", "net_listening", listen, "socket accepting connections")
+	ecoDomainRow(&b, "", "probes", fmt.Sprintf("%d / %d ok", d.RPCProbeOK, d.RPCProbeTotal), "method health checks this refresh")
+
+	ecoDomainCardClose(&b)
+	return b.String()
+}
+
+func evmChainHeadCardHTML(d model.Report) string {
+	var b strings.Builder
 	syncLabel := "synced"
+	badge, badgeClass := "ok", "ok"
 	if !d.EVMSynced {
 		syncLabel = "syncing"
+		badge, badgeClass = "SYNC", "warn"
 	}
-	ecoDomainRow(&b, "", "block height", orEcoDash(d.EVMBlock), "latest eth_blockNumber")
-	ecoDomainRow(&b, "", "sync", syncLabel, "eth_syncing status")
-	if d.EVMChainID > 0 {
-		ecoDomainRow(&b, "", "chain ID", fmt.Sprintf("%d", d.EVMChainID), "MetaMask network ID")
+	if d.EVMBlockAgeErr {
+		badge, badgeClass = "STALE", "bad"
+	} else if d.EVMBlockAgeWarn {
+		badge, badgeClass = "SLOW", "warn"
 	}
-	if d.Local.EVMAddr != "" {
-		val := ecoBalanceAddrHTML("", d.Local.EVMAddr)
-		ecoDomainRowHTML(&b, "", "validator EVM addr", val, "local validator account on EVM")
-	}
+	fmt.Fprintf(&b, `<div class="eco-domain eco-domain--rpc-head">`)
+	ecoDomainCardTitle(&b, "Chain head", "eth_* block probes", badgeClass, badge)
+	b.WriteString(`<div class="eco-domain__rows">`)
 
-	ecoDomainDivider(&b)
-	if d.EVMDenom != "" {
-		ecoDomainRow(&b, "", "evm_denom", d.EVMDenom, "native EVM coin denom")
+	ecoDomainRow(&b, "", "eth_blockNumber", orEcoDash(d.EVMBlock), "latest block height")
+	if d.EVMBlockAge != "" {
+		age := d.EVMBlockAge
+		if d.EVMBlockAgeErr {
+			age += " (stalled)"
+		} else if d.EVMBlockAgeWarn {
+			age += " (slow)"
+		}
+		ecoDomainRow(&b, "", "block age", age, "eth_getBlockByNumber timestamp")
 	}
-	if len(d.Precompiles) > 0 {
-		ecoDomainRow(&b, "", "precompiles", strings.Join(d.Precompiles, ", "), "enabled native precompile addresses")
-	}
-	if d.HistoryWindow != "" {
-		ecoDomainRow(&b, "", "history window", d.HistoryWindow, "blocks of state history retained")
-	}
-	writeHardforkRows(&b, d)
+	ecoDomainRow(&b, "", "eth_syncing", syncLabel, "false when caught up")
 
 	ecoDomainCardClose(&b)
 	return b.String()
 }
 
-func writeHardforkRows(b *strings.Builder, d model.Report) {
-	for _, hf := range []struct{ name, height string }{
-		{"london", d.HardforkLondon},
-		{"shanghai", d.HardforkShanghai},
-		{"cancun", d.HardforkCancun},
-	} {
-		if hf.height == "" {
+func evmTxpoolCardHTML(d model.Report) string {
+	var b strings.Builder
+	ecoDomainCardOpen(&b, "eco-domain--rpc-txpool", "Txpool", "txpool_* probes")
+
+	pending := formatTxpoolCount(d.PendingTx, d.TxpoolGlobalSlots)
+	queued := formatTxpoolCount(d.QueuedTx, d.TxpoolGlobalQueue)
+	ecoDomainRow(&b, "", "pending", pending, "txpool_status.pending")
+	ecoDomainRow(&b, "", "queued", queued, "txpool_status.queued")
+
+	ecoDomainCardClose(&b)
+	return b.String()
+}
+
+func evmNetCardHTML(d model.Report) string {
+	var b strings.Builder
+	ecoDomainCardOpen(&b, "eco-domain--rpc-net", "Network", "net_* / web3_* probes")
+
+	if d.EVMChainID > 0 {
+		ecoDomainRow(&b, "", "eth_chainId", fmt.Sprintf("%d", d.EVMChainID), "wallet network ID")
+	}
+	if d.EVMClient != "" {
+		ecoDomainRow(&b, "", "web3_clientVersion", d.EVMClient, "EVM client build")
+	}
+	ecoDomainRow(&b, "", "net_peerCount", fmt.Sprintf("%d", d.EVMPeerCount), "execution-layer peers (often 0 on validators)")
+
+	ecoDomainCardClose(&b)
+	return b.String()
+}
+
+func evmRPCProbeTableHTML(d model.Report) string {
+	probes := sortedRPCProbes(d.RPCProbes)
+	if len(probes) == 0 {
+		return `<p class="evm-probes__empty">No JSON-RPC probes recorded.</p>`
+	}
+
+	var b strings.Builder
+	b.WriteString(`<table class="dash-sources__table evm-probes__table"><thead><tr>`)
+	b.WriteString(`<th class="dash-sources__mark-hdr" aria-hidden="true"></th>`)
+	b.WriteString(`<th>method</th><th>checks</th><th>status</th><th>latency</th>`)
+	b.WriteString(`</tr></thead><tbody>`)
+	for _, p := range probes {
+		mark := "·"
+		rowClass := ""
+		status := "ok"
+		if !p.OK {
+			mark = "✗"
+			rowClass = ` class="dash-sources__row--fail"`
+			status = "FAIL"
+		}
+		checks := rpcProbeHint(p.Method)
+		if !p.OK && p.Error != "" {
+			checks = p.Error
+		}
+		fmt.Fprintf(&b, `<tr%s><td class="dash-sources__mark">%s</td>`, rowClass, mark)
+		fmt.Fprintf(&b, `<td class="dash-sources__endpoint"><div class="dash-sources__endpoint-inner">`)
+		fmt.Fprintf(&b, `<span class="dash-sources__verb">%s</span>`, html.EscapeString(probeNamespace(p.Method)))
+		fmt.Fprintf(&b, `<span class="dash-sources__path">%s</span>`, html.EscapeString(p.Method))
+		b.WriteString(`</div></td>`)
+		fmt.Fprintf(&b, `<td class="evm-probes__checks">%s</td>`, html.EscapeString(checks))
+		fmt.Fprintf(&b, `<td class="dash-sources__status">%s</td>`, html.EscapeString(status))
+		fmt.Fprintf(&b, `<td class="dash-sources__latency">%s</td></tr>`, html.EscapeString(p.Latency))
+	}
+	b.WriteString(`</tbody></table>`)
+	return b.String()
+}
+
+func rpcProbeHint(method string) string {
+	switch method {
+	case "eth_blockNumber":
+		return "latest block height"
+	case "eth_chainId":
+		return "network ID for wallets"
+	case "eth_syncing":
+		return "sync status (false = caught up)"
+	case "eth_getBlockByNumber":
+		return "latest block header + timestamp"
+	case "txpool_status":
+		return "mempool pending / queued counts"
+	case "net_peerCount":
+		return "execution-layer peer count"
+	case "net_listening":
+		return "RPC socket accepting connections"
+	case "web3_clientVersion":
+		return "client identity string"
+	default:
+		return "JSON-RPC probe"
+	}
+}
+
+func probeNamespace(method string) string {
+	if i := strings.IndexByte(method, '_'); i > 0 {
+		return method[:i]
+	}
+	return "other"
+}
+
+func sortedRPCProbes(probes []model.RPCProbe) []model.RPCProbe {
+	out := append([]model.RPCProbe(nil), probes...)
+	sort.SliceStable(out, func(i, j int) bool {
+		pi, pj := out[i], out[j]
+		ni, nj := probeNamespace(pi.Method), probeNamespace(pj.Method)
+		if pi.OK != pj.OK {
+			return !pi.OK
+		}
+		if ni != nj {
+			return ni < nj
+		}
+		return pi.Method < pj.Method
+	})
+	return out
+}
+
+func evmProbeNamespaces(probes []model.RPCProbe) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, p := range sortedRPCProbes(probes) {
+		ns := probeNamespace(p.Method)
+		if seen[ns] {
 			continue
 		}
-		label := hf.height
-		if hf.height == "0" {
-			label = "0 (genesis)"
-		}
-		ecoDomainRow(b, "", hf.name+"_block", label, "EVM hardfork activation height")
+		seen[ns] = true
+		out = append(out, ns)
 	}
+	return out
 }
 
-func evmERC20CardHTML(d model.Report) string {
-	var b strings.Builder
-	ecoDomainCardOpen(&b, "eco-domain--erc20", "ERC20", "x/erc20")
-
-	enabled := 0
-	for _, tp := range d.TokenPairs {
-		if tp.Enabled {
-			enabled++
+func evmNamespaceOK(probes []model.RPCProbe, ns string) bool {
+	found := false
+	for _, p := range probes {
+		if probeNamespace(p.Method) != ns {
+			continue
+		}
+		found = true
+		if !p.OK {
+			return false
 		}
 	}
-	ecoDomainRow(&b, "", "token pairs", fmt.Sprintf("%d", len(d.TokenPairs)), "see Governance for full list")
-	ecoDomainRow(&b, "", "enabled pairs", fmt.Sprintf("%d", enabled), "pairs accepting conversions")
-
-	ecoDomainDivider(&b)
-	ecoDomainRow(&b, "", "enable_erc20", boolStr(d.ERC20Enabled), "module-wide ERC20 conversion toggle")
-
-	ecoDomainCardClose(&b)
-	return b.String()
+	return found
 }

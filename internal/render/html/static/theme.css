@@ -1066,6 +1066,30 @@ body::after {
   font-size: 0.78rem;
 }
 
+.evm-probes__table {
+  margin-bottom: 0.5rem;
+}
+
+.evm-probes__checks {
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.evm-probes__empty {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.eco-domain--rpc-reach,
+.eco-domain--rpc-head,
+.eco-domain--rpc-txpool,
+.eco-domain--rpc-net {
+  border-left: 2px solid var(--accent);
+}
+
 .mono {
   font-family: var(--mono);
 }

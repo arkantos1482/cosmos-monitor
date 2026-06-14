@@ -106,8 +106,8 @@ func TestExchangesForViewEVM(t *testing.T) {
 		},
 	}...)
 	got := exchangesForView(ViewEVM, all)
-	if len(got) != 2 {
-		t.Fatalf("EVM view should match jsonrpc + evm REST, got %d", len(got))
+	if len(got) != 1 {
+		t.Fatalf("EVM view should match jsonrpc only, got %d", len(got))
 	}
 }
 

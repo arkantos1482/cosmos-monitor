@@ -29,8 +29,11 @@ func TestBuildEVMRPCSection(t *testing.T) {
 	if !strings.Contains(out, `evm-summary__probe`) {
 		t.Fatal("EVM summary should include probe dots")
 	}
-	if strings.Contains(out, `class="dash-subheading">Probe health</h3>`) {
-		t.Fatal("probe details should not render inline; use data sources footer")
+	if !strings.Contains(out, `class="dash-subheading">Method probes</h3>`) {
+		t.Fatal("EVM section should render inline method probe table")
+	}
+	if strings.Contains(out, "`x/vm`") {
+		t.Fatal("EVM section intro should not reference x/vm module")
 	}
 }
 
@@ -62,16 +65,18 @@ func TestEVMDataSourcesProvenance(t *testing.T) {
 		`dash-sources__tag">req`,
 		`dash-sources__tag">res`,
 		`POST eth_blockNumber`,
-		`/cosmos/evm/vm/v1/params`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("EVM data sources missing %q", want)
 		}
 	}
-	liveIdx := strings.Index(out, `class="dash-subheading">Live (JSON-RPC)</h3>`)
+	if strings.Contains(out, `/cosmos/evm/vm/v1/params`) {
+		t.Fatal("EVM data sources should only include JSON-RPC traces")
+	}
+	probesIdx := strings.Index(out, `class="dash-subheading">Method probes</h3>`)
 	sourcesIdx := strings.Index(out, `class="dash-sources"`)
-	if liveIdx < 0 || sourcesIdx < 0 || sourcesIdx < liveIdx {
-		t.Fatal("data sources should render after section content")
+	if probesIdx < 0 || sourcesIdx < 0 || sourcesIdx < probesIdx {
+		t.Fatal("data sources should render after probe table")
 	}
 	outDefault := BuildView(ViewEVM, d)
 	if strings.Contains(outDefault, `class="dash-sources"`) {
