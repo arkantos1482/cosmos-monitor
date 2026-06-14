@@ -17,26 +17,31 @@ func TestInfraContent(t *testing.T) {
 		NodeImage: "ghcr.io/blockstars-tech/pmt-blockchain:latest",
 		NodeCPU: "12.3%", NodeMemUsed: "2.1 GiB", NodeMemTotal: "4 GiB", NodeMemPct: 52,
 		Restarts: 2, NodeUptime: "3d 4h", NodeStartedAt: "2026-06-10 12:00:00 UTC",
+		SwapUsed: "128 MiB", SwapTotal: "2 GiB",
 	}
 	out := BuildView(ViewInfra, d)
 
 	for _, want := range []string{
-		`class="dash-layer__title">Host</h3>`,
-		`class="dash-layer__title">evmd-node</h3>`,
+		`class="dash-subheading">Host resources</h3>`,
+		`class="dash-subheading">Container</h3>`,
+		`class="infra-meter"`,
+		`eco-domain--infra`,
 		`chain data`,
 		`/home/ubuntu/.evmd`,
 		`4 CPUs`,
 		`pmt-blockchain:latest`,
-		`started`,
+		`started at`,
 		`52%`,
 		`136 GiB free`,
+		`class="infra-summary__hero"`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("infra view missing %q", want)
 		}
 	}
 	for _, gone := range []string{
-		`<h3 class="dash-subheading">OS</h3>`,
+		`class="dash-layer__title">Host</h3>`,
+		`class="dash-layer__title">evmd-node</h3>`,
 		`Host vs container`,
 		`infra-compare`,
 	} {
@@ -54,9 +59,29 @@ func TestInfraSummaryUsesChainDataGauge(t *testing.T) {
 		DataPath:    "/data/.evmd",
 		DataDiskPct: 55,
 		Load1:       0.4,
+		NumCPU:      2,
 	}
 	out := BuildView(ViewInfra, d)
 	if !strings.Contains(out, `>chain data<`) {
 		t.Fatal("summary should label disk gauge as chain data when DATA_PATH is set")
+	}
+}
+
+func TestInfraMeterTone(t *testing.T) {
+	if infraMeterTone(50) != "" {
+		t.Fatal("expected no tone below 75%")
+	}
+	if infraMeterTone(80) != "warn" {
+		t.Fatal("expected warn at 80%")
+	}
+	if infraMeterTone(95) != "bad" {
+		t.Fatal("expected bad at 95%")
+	}
+}
+
+func TestInfraImageShort(t *testing.T) {
+	got := infraImageShort("ghcr.io/blockstars-tech/pmt-blockchain:latest")
+	if got != "pmt-blockchain:latest" {
+		t.Fatalf("got %q", got)
 	}
 }

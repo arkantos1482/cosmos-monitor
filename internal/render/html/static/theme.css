@@ -956,31 +956,138 @@ body::after {
 .infra-summary {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.65rem;
 }
 
-.infra-summary__top {
+.infra-summary__hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+}
+
+.infra-summary__identity {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.45rem;
+  min-width: 0;
 }
 
-.infra-summary__hint {
+.infra-summary__image {
   font-family: var(--mono);
   font-size: 0.72rem;
   color: var(--muted);
+  padding: 0.15rem 0.4rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
 }
 
 .infra-summary__gauges {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
   gap: 0.5rem;
 }
 
-.infra-summary__row {
-  margin: 0.15rem 0;
+.infra-summary__foot {
+  margin: 0;
   font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.infra-meters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.35rem;
+}
+
+.infra-meter {
+  padding: 0.65rem 0.75rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+
+.infra-meter__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.infra-meter__label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: lowercase;
+}
+
+.infra-meter__pct {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+}
+
+.infra-meter__track {
+  height: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.infra-meter__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent-infra), var(--accent-2));
+  transition: width 0.35s ease;
+}
+
+.infra-meter__fill--warn {
+  background: linear-gradient(90deg, var(--warn), #fbbf24);
+}
+
+.infra-meter__fill--bad {
+  background: linear-gradient(90deg, var(--bad), #fb7185);
+}
+
+.infra-meter__detail {
+  margin: 0.4rem 0 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.infra-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.65rem 0.75rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+
+.infra-stat__label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: lowercase;
+}
+
+.infra-stat__value {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--fg);
+}
+
+.eco-domain--infra {
+  border-left: 2px solid var(--accent-infra);
 }
 
 @media (max-width: 520px) {
