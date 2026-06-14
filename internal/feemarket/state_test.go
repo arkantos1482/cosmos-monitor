@@ -1,6 +1,7 @@
 package feemarket
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
@@ -56,5 +57,16 @@ func TestTransferCost(t *testing.T) {
 	got := TransferCost("1000", "apmt")
 	if got == "" || got == "—" {
 		t.Fatalf("transfer cost: %q", got)
+	}
+}
+
+func TestTransferCostTinyBaseFee(t *testing.T) {
+	// 7 apmt base fee → 7e-18 PMT; 21k gas → 1.47e-13 PMT
+	got := TransferCost("0.000000000000000007", "apmt")
+	if got == "" || got == "—" || got == "0" || got == "0 PMT" {
+		t.Fatalf("transfer cost: %q", got)
+	}
+	if !strings.Contains(got, "1.47e-13") {
+		t.Fatalf("transfer cost = %q, want 1.47e-13 PMT", got)
 	}
 }

@@ -184,12 +184,11 @@ func TransferCost(baseFeeRaw, denom string) string {
 	if raw == "" || raw == "0" {
 		return "—"
 	}
-	fee, err := strconv.ParseFloat(raw, 64)
-	if err != nil || fee <= 0 {
+	base, ok := parseDec(raw)
+	if !ok || base.IsNil() || base.IsZero() {
 		return "—"
 	}
-	total := fee * 21000
-	return fetch.FormatCoin(fmt.Sprintf("%.0f", total), denom)
+	return fetch.FormatFeeDec(base.MulInt64(21000), denom)
 }
 
 func pickDenom(d model.Report) string {

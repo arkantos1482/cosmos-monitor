@@ -39,7 +39,10 @@ func TestWriteFeemarketSection(t *testing.T) {
 		`demand vs target`,
 		`Live state`,
 		`EIP-1559 mechanics`,
-		`formula input`,
+		`|W−target|`,
+		`min_fee_step`,
+		`block_gas_limit`,
+		`elasticity_multiplier`,
 		`55000000 gas`,
 		`60000000 gas`,
 	} {

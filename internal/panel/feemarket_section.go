@@ -103,7 +103,7 @@ func fmMechanicsHTML(s feemarket.State) string {
 			"if W == target: base_fee unchanged"))
 	b.WriteString(`</pre>`)
 	if vars := fmMechanicsVarsHTML(s); vars != "" {
-		b.WriteString(`<p class="fm-mechanics__vars-title">Live values (parent block)</p>`)
+		b.WriteString(`<p class="fm-mechanics__vars-title">Live values</p>`)
 		b.WriteString(vars)
 	}
 	if s.Mode != "" {

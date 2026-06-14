@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/feemarket"
+	"github.com/arkantos1482/cosmos-monitor/internal/fetch"
 )
 
 // fmGasLimitHTML renders consensus max_gas: (-1) ∞ with raw MaxUint64 in small gray text.
@@ -47,47 +48,29 @@ func fmDemandVsTargetHTML(s feemarket.State) string {
 }
 
 func fmMechanicsVarsHTML(s feemarket.State) string {
-	var rows []struct{ name, value, hint string }
-	if s.GasUsed > 0 || s.TxGasWanted > 0 || s.GasWanted > 0 {
-		rows = append(rows, struct{ name, value, hint string }{
-			"gas_used", fmGasAmount(s.GasUsed), "parent block execution (Σ tx gas_used)",
-		})
-		rows = append(rows, struct{ name, value, hint string }{
-			"gas_wanted", fmGasAmount(s.TxGasWanted), "parent block mempool limits (Σ tx gas_wanted)",
-		})
-		if s.MinGasMult != "" {
-			rows = append(rows, struct{ name, value, hint string }{
-				"min_gas_multiplier", html.EscapeString(s.MinGasMult), "scales gas_wanted before max()",
-			})
-		}
-		if s.GasWanted > 0 {
-			rows = append(rows, struct{ name, value, hint string }{
-				"W", fmGasAmount(s.GasWanted), "max(gas_used, gas_wanted × min_gas_multiplier) — formula input",
-			})
-		}
-	}
-	if s.GasTarget > 0 {
-		rows = append(rows, struct{ name, value, hint string }{
-			"target", fmGasTargetHTML(s), "block gas limit ÷ elasticity_multiplier",
-		})
-	}
-	if s.BaseFee != "" {
-		rows = append(rows, struct{ name, value, hint string }{
-			"base_fee", html.EscapeString(s.BaseFee), "parent block base fee",
-		})
-	}
-	if s.ChangeDenom > 0 {
-		rows = append(rows, struct{ name, value, hint string }{
-			"denom", strconv.FormatInt(s.ChangeDenom, 10), "base_fee_change_denominator",
-		})
-	}
-	if s.MinGasPrice != "" {
-		rows = append(rows, struct{ name, value, hint string }{
-			"min_gas_price", html.EscapeString(s.MinGasPrice), "floor when base fee decreases",
-		})
-	}
-	if len(rows) == 0 {
+	if !s.EIP1559On && s.BaseFee == "" && s.GasTarget == 0 {
 		return ""
+	}
+	var rows []fmMechVar
+	// W = max(gas_used, gas_wanted × min_gas_multiplier)
+	rows = append(rows, fmMechVar{"gas_used", fmGasAmount(s.GasUsed), "parent block execution (Σ tx gas_used)"})
+	rows = append(rows, fmMechVar{"gas_wanted", fmGasAmount(s.TxGasWanted), "parent block mempool limits (Σ tx gas_wanted)"})
+	rows = append(rows, fmMechVar{"min_gas_multiplier", fmMechScalar(s.MinGasMult), "scales gas_wanted before max()"})
+	rows = append(rows, fmMechVar{"W", fmGasAmount(s.GasWanted), "max(gas_used, gas_wanted × min_gas_multiplier)"})
+	// target = block_gas_limit ÷ elasticity_multiplier
+	rows = append(rows, fmMechVar{"block_gas_limit", fmGasLimitHTML(s), "consensus block max_gas"})
+	rows = append(rows, fmMechVar{"elasticity_multiplier", fmMechInt(s.Elasticity), "target = block_gas_limit ÷ this"})
+	rows = append(rows, fmMechVar{"target", fmGasTargetOrDash(s), "gas target for EIP-1559 adjustment"})
+	// base_fee ± base_fee × |W−target| / target / denom
+	rows = append(rows, fmMechVar{"|W−target|", fmMechanicsDelta(s), "absolute demand gap used in the formula"})
+	rows = append(rows, fmMechVar{"base_fee", fmMechText(s.BaseFee), "parent block base fee"})
+	rows = append(rows, fmMechVar{"denom", fmMechInt(s.ChangeDenom), "base_fee_change_denominator"})
+	if s.Denom != "" {
+		rows = append(rows, fmMechVar{"min_fee_step", html.EscapeString(fetch.FormatFeeAmount("1", s.Denom)), "minimum base-fee increase per block (1 apmt)"})
+	}
+	rows = append(rows, fmMechVar{"min_gas_price", fmMechText(s.MinGasPrice), "floor when base fee decreases"})
+	if s.HasProjection && s.ProjectedRaw != "" {
+		rows = append(rows, fmMechVar{"projected_base_fee", html.EscapeString(fetch.FormatFeeAmount(s.ProjectedRaw, s.Denom)), "computed next-block base fee"})
 	}
 	var b strings.Builder
 	b.WriteString(`<dl class="fm-mechanics__vars">`)
@@ -102,6 +85,53 @@ func fmMechanicsVarsHTML(s feemarket.State) string {
 	}
 	b.WriteString(`</dl>`)
 	return b.String()
+}
+
+type fmMechVar struct {
+	name, value, hint string
+}
+
+func fmMechanicsDelta(s feemarket.State) string {
+	if s.GasWanted == 0 || s.GasTarget == 0 {
+		return "—"
+	}
+	var d uint64
+	if s.GasWanted > s.GasTarget {
+		d = s.GasWanted - s.GasTarget
+	} else {
+		d = s.GasTarget - s.GasWanted
+	}
+	return fmGasAmount(d)
+}
+
+func fmGasTargetOrDash(s feemarket.State) string {
+	if s.GasTarget == 0 {
+		return "—"
+	}
+	return fmGasTargetHTML(s)
+}
+
+func fmMechScalar(v string) string {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return "—"
+	}
+	return html.EscapeString(v)
+}
+
+func fmMechText(v string) string {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return "—"
+	}
+	return html.EscapeString(v)
+}
+
+func fmMechInt(v int64) string {
+	if v <= 0 {
+		return "—"
+	}
+	return html.EscapeString(strconv.FormatInt(v, 10))
 }
 
 func fmGasAmount(n uint64) string {
