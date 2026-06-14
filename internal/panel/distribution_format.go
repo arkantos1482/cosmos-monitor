@@ -10,38 +10,106 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-func localUnclaimedBreakdownHTML(lv model.LocalValidator) string {
-	del := strings.TrimSpace(lv.Outstanding)
-	comm := strings.TrimSpace(lv.CommissionEarned)
-	if del == "" && comm == "" {
+type unclaimedStack struct {
+	Total            string
+	Outstanding      string
+	Commission       string
+	OutstandingLabel string
+	CommissionLabel  string
+	OutstandingClaim string
+	CommissionClaim  string
+}
+
+func unclaimedStackFromLocal(lv model.LocalValidator) unclaimedStack {
+	return unclaimedStack{
+		Total:            localUnclaimedTotal(lv),
+		Outstanding:      lv.Outstanding,
+		Commission:       lv.CommissionEarned,
+		OutstandingLabel: "delegator share",
+		CommissionLabel:  "your commission",
+	}
+}
+
+func unclaimedStackFromLocalDetailed(lv model.LocalValidator) unclaimedStack {
+	s := unclaimedStackFromLocal(lv)
+	s.OutstandingClaim = "MsgWithdrawDelegatorReward"
+	s.CommissionClaim = "MsgWithdrawValidatorCommission"
+	return s
+}
+
+func unclaimedStackFromNetwork(d model.Report) unclaimedStack {
+	return unclaimedStack{
+		Total:            distributionUnclaimedTotal(d),
+		Outstanding:      d.UnclaimedDelegator,
+		Commission:       d.UnclaimedCommission,
+		OutstandingLabel: "delegator share",
+		CommissionLabel:  "operator commission",
+	}
+}
+
+func (s unclaimedStack) empty() bool {
+	return strings.TrimSpace(s.Total) == "" &&
+		strings.TrimSpace(s.Outstanding) == "" &&
+		strings.TrimSpace(s.Commission) == ""
+}
+
+func unclaimedStackHTML(s unclaimedStack) string {
+	if s.empty() {
 		return ""
 	}
-	total := localUnclaimedTotal(lv)
+	total := strings.TrimSpace(s.Total)
+	if total == "" {
+		total = sumUnclaimedAmounts(s.Outstanding, s.Commission, model.Report{})
+	}
+	out := strings.TrimSpace(s.Outstanding)
+	comm := strings.TrimSpace(s.Commission)
+	outLabel := strings.TrimSpace(s.OutstandingLabel)
+	if outLabel == "" {
+		outLabel = "delegator share"
+	}
+	commLabel := strings.TrimSpace(s.CommissionLabel)
+	if commLabel == "" {
+		commLabel = "commission"
+	}
+
 	var b strings.Builder
-	b.WriteString(`<div class="unclaimed-breakdown unclaimed-breakdown--horizontal">`)
-	if total != "" {
-		b.WriteString(unclaimedBreakdownCard("total", total, "not yet withdrawn", true))
-	}
-	if del != "" {
-		b.WriteString(unclaimedBreakdownCard("delegator share", del, "MsgWithdrawDelegatorReward", false))
-	}
-	if comm != "" {
-		b.WriteString(unclaimedBreakdownCard("your commission", comm, "MsgWithdrawValidatorCommission", false))
+	b.WriteString(`<div class="unclaimed-stack">`)
+	fmt.Fprintf(&b,
+		`<div class="unclaimed-stack__head"><span class="unclaimed-stack__head-label">unclaimed total</span>`+
+			`<span class="unclaimed-stack__head-val">%s</span></div>`,
+		html.EscapeString(total))
+
+	if out != "" || comm != "" {
+		b.WriteString(`<div class="unclaimed-stack__equation">`)
+		if out != "" {
+			b.WriteString(unclaimedStackPart(outLabel, out, s.OutstandingClaim))
+		}
+		if out != "" && comm != "" {
+			b.WriteString(`<span class="unclaimed-stack__op" aria-hidden="true">+</span>`)
+		}
+		if comm != "" {
+			b.WriteString(unclaimedStackPart(commLabel, comm, s.CommissionClaim))
+		}
+		b.WriteString(`</div>`)
 	}
 	b.WriteString(`</div>`)
 	return b.String()
 }
 
-func unclaimedBreakdownCard(label, amount, hint string, hero bool) string {
-	cls := "unclaimed-breakdown__card"
-	if hero {
-		cls += " unclaimed-breakdown__card--hero"
+func unclaimedStackPart(label, amount, claim string) string {
+	var b strings.Builder
+	b.WriteString(`<div class="unclaimed-stack__part">`)
+	fmt.Fprintf(&b, `<span class="unclaimed-stack__part-label">%s</span>`, html.EscapeString(label))
+	fmt.Fprintf(&b, `<span class="unclaimed-stack__part-val">%s</span>`, html.EscapeString(amount))
+	if claim != "" {
+		fmt.Fprintf(&b, `<span class="unclaimed-stack__part-hint">%s</span>`, html.EscapeString(claim))
 	}
-	return fmt.Sprintf(
-		`<div class="%s"><span class="unclaimed-breakdown__card-label">%s</span>`+
-			`<span class="unclaimed-breakdown__card-val">%s</span>`+
-			`<span class="unclaimed-breakdown__card-hint">%s</span></div>`,
-		cls, html.EscapeString(label), html.EscapeString(amount), html.EscapeString(hint))
+	b.WriteString(`</div>`)
+	return b.String()
+}
+
+func localUnclaimedBreakdownHTML(lv model.LocalValidator) string {
+	return unclaimedStackHTML(unclaimedStackFromLocalDetailed(lv))
 }
 
 func validatorUnclaimedTotal(v model.Validator) string {

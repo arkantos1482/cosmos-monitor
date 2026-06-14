@@ -95,7 +95,7 @@ func TestBuildOverviewStack(t *testing.T) {
 	if !strings.Contains(out[rewardsCard:distCard], `rewards-summary`) {
 		t.Fatal("rewards overview card should show rewards summary KPIs")
 	}
-	if !strings.Contains(out[distCard:], `dist-summary__kpi-label">unclaimed total`) {
+	if !strings.Contains(out[distCard:], `unclaimed-stack__head-label">unclaimed total`) {
 		t.Fatal("distribution overview card should include unclaimed total summary")
 	}
 }
@@ -126,7 +126,7 @@ func TestOverviewReusesSectionSummaries(t *testing.T) {
 			`slashing-summary__kpi-label">jailed`,
 		}},
 		{ViewDistribution, []string{
-			`dist-summary__kpi-label">unclaimed total`,
+			`unclaimed-stack__head-label">unclaimed total`,
 		}},
 	} {
 		section := BuildView(tc.section, d)
