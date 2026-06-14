@@ -17,8 +17,51 @@ func writeStakingSummary(w Writer, d model.Report, mode SummaryMode) {
 }
 
 func writeStakingSummaryBody(w Writer, d model.Report, lv model.LocalValidator) {
+	badges := localBadges(d)
+	localHas := stakingLocalScopeHasContent(lv, badges)
+	networkHas := stakingNetworkScopeHasContent(d)
+
 	w.WriteHTML(`<div class="staking-summary">`)
-	if badges := localBadges(d); len(badges) > 0 {
+	switch {
+	case localHas && networkHas:
+		w.WriteHTML(`<div class="staking-summary__columns">`)
+		writeStakingSummaryScope(w, "This validator", func() { writeStakingLocalScope(w, lv, badges) })
+		writeStakingSummaryScope(w, "Network", func() { writeStakingNetworkScope(w, d) })
+		w.WriteHTML(`</div>`)
+	case localHas:
+		writeStakingSummaryScope(w, "This validator", func() { writeStakingLocalScope(w, lv, badges) })
+	case networkHas:
+		writeStakingSummaryScope(w, "Network", func() { writeStakingNetworkScope(w, d) })
+	}
+	w.WriteHTML(`</div>`)
+}
+
+func stakingLocalScopeHasContent(lv model.LocalValidator, badges []summaryBadge) bool {
+	if len(badges) > 0 {
+		return true
+	}
+	if lv.IsValidator {
+		return true
+	}
+	return lv.SigningStatus != ""
+}
+
+func stakingNetworkScopeHasContent(d model.Report) bool {
+	if d.BondedCount > 0 || d.BondedPct > 0 || d.BondedAmt != "" || len(d.Validators) > 0 {
+		return true
+	}
+	return stakingUnhealthyCount(d) > 0
+}
+
+func writeStakingSummaryScope(w Writer, title string, body func()) {
+	w.WriteHTML(`<div class="staking-summary__scope">`)
+	w.WriteHTML(fmt.Sprintf(`<div class="staking-summary__scope-label">%s</div>`, html.EscapeString(title)))
+	body()
+	w.WriteHTML(`</div>`)
+}
+
+func writeStakingLocalScope(w Writer, lv model.LocalValidator, badges []summaryBadge) {
+	if len(badges) > 0 {
 		writeSummaryBadges(w, "staking-summary__badges", badges...)
 	}
 	if lv.IsValidator {
@@ -35,7 +78,10 @@ func writeStakingSummaryBody(w Writer, d model.Report, lv model.LocalValidator) 
 			`<p class="staking-summary__role">%s</p>`,
 			html.EscapeString(lv.SigningStatus)))
 	}
-	w.WriteHTML(`<div class="staking-summary__kpis staking-summary__kpis--network">`)
+}
+
+func writeStakingNetworkScope(w Writer, d model.Report) {
+	w.WriteHTML(`<div class="staking-summary__kpis">`)
 	if d.BondedCount > 0 {
 		writeStakingSummaryKPI(w, "active set", fmt.Sprintf("%d", d.BondedCount), "")
 	}
@@ -50,7 +96,6 @@ func writeStakingSummaryBody(w Writer, d model.Report, lv model.LocalValidator) 
 	}
 	w.WriteHTML(`</div>`)
 	writeStakingValidatorChips(w, d)
-	w.WriteHTML(`</div>`)
 }
 
 func stakingUnhealthyCount(d model.Report) int {
@@ -61,7 +106,7 @@ func writeStakingValidatorChips(w Writer, d model.Report) {
 	if len(d.Validators) == 0 {
 		return
 	}
-	w.WriteHTML(`<p class="staking-summary__heading">Validator set</p>`)
+	w.WriteHTML(`<p class="staking-summary__subheading">Validator set</p>`)
 	w.WriteHTML(`<div class="staking-summary__chips">`)
 	for _, v := range d.Validators {
 		cls := stakingChipClass(v)

@@ -47,7 +47,9 @@ func TestStakingSectionLocalAndNetwork(t *testing.T) {
 		`<code>cosmosvaloper1abc</code>`,
 		`class="data-table__row--local" title="this node"`,
 		`staking-summary__kpi`,
-		`staking-summary__kpis--network`,
+		`staking-summary__columns`,
+		`staking-summary__scope-label">This validator`,
+		`staking-summary__scope-label">Network`,
 		`data-table--delegations`,
 		`<th>delegator</th>`,
 		`<th class="data-table__num">delegated</th>`,
@@ -128,7 +130,7 @@ func TestStakingSectionNoDuplicateFields(t *testing.T) {
 	if summaryEnd < 0 {
 		t.Fatal("expected staking body")
 	}
-	for _, want := range []string{"staking-summary__chip", "staking-summary__heading"} {
+	for _, want := range []string{"staking-summary__chip", "staking-summary__subheading"} {
 		if !strings.Contains(chunk[:summaryEnd], want) {
 			t.Fatalf("staking summary missing %q", want)
 		}
