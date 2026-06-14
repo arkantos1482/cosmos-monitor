@@ -7,7 +7,7 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-func TestEVMRPCSectionLayout(t *testing.T) {
+func TestEVMRPCHealthCards(t *testing.T) {
 	d := model.Report{
 		EVMRPCOk: true, EVMSynced: true, EVMListening: true,
 		EVMBlock: "100", EVMBlockAge: "4.2s", EVMChainID: 290290,
@@ -21,30 +21,31 @@ func TestEVMRPCSectionLayout(t *testing.T) {
 	}
 	out := BuildView(ViewEVM, d)
 	for _, want := range []string{
+		`eco-domain--rpc-reach`,
+		`eco-domain--rpc-head`,
+		`eco-domain--rpc-txpool`,
+		`eco-domain--rpc-net`,
+		`eco-domain--rpc-wallet`,
+		`evm-wallet-section`,
+		`evm-summary__stack-line">2 pending`,
 		`evm-probes-section`,
 		`evm-probes__table`,
-		`evm-summary__stack-line">2 pending`,
-		`evm-summary__stack-line">1 queued`,
-		`evm-summary__kpi-label">client`,
-		`evm-summary__kpi-label">evm peers`,
 		`class="dash-subheading">Method probes</h3>`,
-		`class="dash-subheading">Wallet endpoints</h3>`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("EVM RPC view missing %q", want)
 		}
 	}
+	walletIdx := strings.Index(out, `evm-wallet-section`)
 	probesIdx := strings.Index(out, `class="dash-subheading">Method probes</h3>`)
-	summaryIdx := strings.Index(out, `class="dash-section__summary-card"`)
-	if probesIdx < 0 || summaryIdx < 0 || probesIdx < summaryIdx {
-		t.Fatal("method probes should follow summary card")
+	if walletIdx < 0 || probesIdx < 0 || walletIdx > probesIdx {
+		t.Fatal("wallet section should appear before method probes")
 	}
 	for _, absent := range []string{
-		`eco-domain--rpc-reach`,
-		`eco-domain--rpc-head`,
+		`class="dash-subheading">Wallet endpoints</h3>`,
+		`MetaMask custom network`,
 		`eco-domain--vm`,
 		`eco-domain--erc20`,
-		`MetaMask custom network`,
 	} {
 		if strings.Contains(out, absent) {
 			t.Fatalf("EVM view should not include %q", absent)

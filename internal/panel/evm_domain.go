@@ -7,7 +7,129 @@ import (
 	"strings"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
+	"github.com/arkantos1482/cosmos-monitor/internal/report"
 )
+
+func evmRPCHealthCardsHTML(d model.Report) string {
+	return ecoDomainsWrap(
+		evmReachabilityCardHTML(d),
+		evmChainHeadCardHTML(d),
+		evmTxpoolCardHTML(d),
+		evmNetCardHTML(d),
+	)
+}
+
+func evmReachabilityCardHTML(d model.Report) string {
+	var b strings.Builder
+	status := "DOWN"
+	badge := "bad"
+	if d.EVMRPCOk {
+		status = "UP"
+		badge = "ok"
+		if d.RPCProbeOK < d.RPCProbeTotal {
+			status = "DEGRADED"
+			badge = "warn"
+		}
+	}
+	fmt.Fprintf(&b, `<div class="eco-domain eco-domain--rpc-reach">`)
+	ecoDomainCardTitle(&b, "Reachability", "JSON-RPC transport", badge, status)
+	b.WriteString(`<div class="eco-domain__rows">`)
+
+	listen := "not listening"
+	if d.EVMListening {
+		listen = "listening"
+	}
+	ecoDomainRow(&b, "", "HTTP endpoint", orEcoDash(d.EVMHTTPEndpoint), "POST target for probes")
+	ecoDomainRow(&b, "", "net_listening", listen, "socket accepting connections")
+	ecoDomainRow(&b, "", "probes", fmt.Sprintf("%d / %d ok", d.RPCProbeOK, d.RPCProbeTotal), "method health checks this refresh")
+
+	ecoDomainCardClose(&b)
+	return b.String()
+}
+
+func evmChainHeadCardHTML(d model.Report) string {
+	var b strings.Builder
+	syncLabel := "synced"
+	badge, badgeClass := "ok", "ok"
+	if !d.EVMSynced {
+		syncLabel = "syncing"
+		badge, badgeClass = "SYNC", "warn"
+	}
+	if d.EVMBlockAgeErr {
+		badge, badgeClass = "STALE", "bad"
+	} else if d.EVMBlockAgeWarn {
+		badge, badgeClass = "SLOW", "warn"
+	}
+	fmt.Fprintf(&b, `<div class="eco-domain eco-domain--rpc-head">`)
+	ecoDomainCardTitle(&b, "Chain head", "eth_* block probes", badgeClass, badge)
+	b.WriteString(`<div class="eco-domain__rows">`)
+
+	ecoDomainRow(&b, "", "eth_blockNumber", orEcoDash(d.EVMBlock), "latest block height")
+	if d.EVMBlockAge != "" {
+		age := d.EVMBlockAge
+		if d.EVMBlockAgeErr {
+			age += " (stalled)"
+		} else if d.EVMBlockAgeWarn {
+			age += " (slow)"
+		}
+		ecoDomainRow(&b, "", "block age", age, "eth_getBlockByNumber timestamp")
+	}
+	ecoDomainRow(&b, "", "eth_syncing", syncLabel, "false when caught up")
+
+	ecoDomainCardClose(&b)
+	return b.String()
+}
+
+func evmTxpoolCardHTML(d model.Report) string {
+	var b strings.Builder
+	ecoDomainCardOpen(&b, "eco-domain--rpc-txpool", "Txpool", "txpool_* probes")
+
+	pending := formatTxpoolCount(d.PendingTx, d.TxpoolGlobalSlots)
+	queued := formatTxpoolCount(d.QueuedTx, d.TxpoolGlobalQueue)
+	ecoDomainRow(&b, "", "pending", pending, "txpool_status.pending")
+	ecoDomainRow(&b, "", "queued", queued, "txpool_status.queued")
+
+	ecoDomainCardClose(&b)
+	return b.String()
+}
+
+func evmNetCardHTML(d model.Report) string {
+	var b strings.Builder
+	ecoDomainCardOpen(&b, "eco-domain--rpc-net", "Network", "net_* / web3_* probes")
+
+	if d.EVMChainID > 0 {
+		ecoDomainRow(&b, "", "eth_chainId", fmt.Sprintf("%d", d.EVMChainID), "wallet network ID")
+	}
+	if d.EVMClient != "" {
+		ecoDomainRow(&b, "", "web3_clientVersion", d.EVMClient, "EVM client build")
+	}
+	ecoDomainRow(&b, "", "net_peerCount", fmt.Sprintf("%d", d.EVMPeerCount), "execution-layer peers (often 0 on validators)")
+
+	ecoDomainCardClose(&b)
+	return b.String()
+}
+
+func evmWalletCardHTML(d model.Report) string {
+	wsEP := d.EVMWSEndpoint
+	if wsEP == "" {
+		httpEP := d.EVMHTTPEndpoint
+		if httpEP == "" {
+			httpEP = "http://localhost:8545"
+		}
+		wsEP = report.EVMWSEndpoint(httpEP)
+	}
+	apis := d.JSONRPCAPIs
+	if apis == "" {
+		apis = report.DefaultJSONRPCAPIs
+	}
+
+	var b strings.Builder
+	ecoDomainCardOpen(&b, "eco-domain--rpc-wallet", "Wallet", "dApp / MetaMask")
+	ecoDomainRow(&b, "", "WebSocket", wsEP, "subscriptions and event filters")
+	ecoDomainRow(&b, "", "enabled APIs", apis, "namespaces exposed by this node")
+	ecoDomainCardClose(&b)
+	return b.String()
+}
 
 func evmRPCProbeTableHTML(d model.Report) string {
 	probes := sortedRPCProbes(d.RPCProbes)

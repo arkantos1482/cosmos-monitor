@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
-	"github.com/arkantos1482/cosmos-monitor/internal/report"
 )
 
 func writeEVMSection(w Writer, d model.Report) {
@@ -126,10 +125,6 @@ func writeEVMSummary(w Writer, d model.Report, mode SummaryMode) {
 	if avg := evmAvgProbeLatency(d.RPCProbes); avg != "" {
 		writeEvmSummaryKPI(w, "probe latency", avg, "")
 	}
-	if d.EVMClient != "" {
-		writeEvmSummaryKPI(w, "client", report.Truncate(d.EVMClient, 36), "")
-	}
-	writeEvmSummaryKPI(w, "evm peers", fmt.Sprintf("%d", d.EVMPeerCount), "")
 	w.WriteHTML(`</div>`)
 
 	w.WriteHTML(fmt.Sprintf(
@@ -207,28 +202,14 @@ func parseProbeLatencyMS(s string) (float64, bool) {
 }
 
 func writeEVMRPCSection(w Writer, d model.Report) {
-	w.WriteHTML(`<div class="evm-probes-section">`)
-	w.Subsection("Method probes")
-	w.WriteHTML(evmRPCProbeTableHTML(d))
-	w.WriteHTML(`</div>`)
+	w.WriteHTML(evmRPCHealthCardsHTML(d))
 
-	w.Subsection("Wallet endpoints")
+	w.WriteHTML(`<div class="evm-wallet-section">`)
+	w.WriteHTML(evmWalletCardHTML(d))
 	httpEP := d.EVMHTTPEndpoint
 	if httpEP == "" {
 		httpEP = "http://localhost:8545"
 	}
-	wsEP := d.EVMWSEndpoint
-	if wsEP == "" {
-		wsEP = report.EVMWSEndpoint(httpEP)
-	}
-	apis := d.JSONRPCAPIs
-	if apis == "" {
-		apis = report.DefaultJSONRPCAPIs
-	}
-	w.Row("HTTP JSON-RPC", "`"+httpEP+"`")
-	w.Row("WebSocket", "`"+wsEP+"`")
-	w.Row("enabled APIs", "`"+apis+"`")
-
 	symbol := evmDisplaySymbol(d.EVMDenom)
 	networkName := strings.ToUpper(d.Network)
 	if networkName == "" {
@@ -237,6 +218,12 @@ func writeEVMRPCSection(w Writer, d model.Report) {
 	wallet := fmt.Sprintf("Network name: %s\nRPC URL: %s\nChain ID: %d\nCurrency symbol: %s",
 		networkName, httpEP, d.EVMChainID, symbol)
 	w.Pre(wallet)
+	w.WriteHTML(`</div>`)
+
+	w.WriteHTML(`<div class="evm-probes-section">`)
+	w.Subsection("Method probes")
+	w.WriteHTML(evmRPCProbeTableHTML(d))
+	w.WriteHTML(`</div>`)
 }
 
 func formatTxpoolCount(n, limit uint64) string {
