@@ -28,18 +28,6 @@ func evmRPCOverallStatus(d model.Report) string {
 	return "OK"
 }
 
-func evmDisplaySymbol(denom string) string {
-	switch strings.ToLower(denom) {
-	case "apmt", "upmt":
-		return "PMT"
-	default:
-		if denom == "" {
-			return "PMT"
-		}
-		return strings.ToUpper(denom)
-	}
-}
-
 func writeEVMSummary(w Writer, d model.Report, mode SummaryMode) {
 	overall := evmRPCOverallStatus(d)
 	overallKind := "ok"
@@ -62,10 +50,7 @@ func writeEVMSummary(w Writer, d model.Report, mode SummaryMode) {
 		listenKind = "warn"
 	}
 	blockAge, ageTone := evmBlockAgeKPI(d)
-	httpEP := d.EVMHTTPEndpoint
-	if httpEP == "" {
-		httpEP = "http://localhost:8545"
-	}
+	httpEP := evmHTTPEndpoint(d)
 
 	probePct := 0
 	if d.RPCProbeTotal > 0 {
@@ -203,22 +188,6 @@ func parseProbeLatencyMS(s string) (float64, bool) {
 
 func writeEVMRPCSection(w Writer, d model.Report) {
 	w.WriteHTML(evmRPCHealthCardsHTML(d))
-
-	w.WriteHTML(`<div class="evm-wallet-section">`)
-	w.WriteHTML(evmWalletCardHTML(d))
-	httpEP := d.EVMHTTPEndpoint
-	if httpEP == "" {
-		httpEP = "http://localhost:8545"
-	}
-	symbol := evmDisplaySymbol(d.EVMDenom)
-	networkName := strings.ToUpper(d.Network)
-	if networkName == "" {
-		networkName = "PMT"
-	}
-	wallet := fmt.Sprintf("Network name: %s\nRPC URL: %s\nChain ID: %d\nCurrency symbol: %s",
-		networkName, httpEP, d.EVMChainID, symbol)
-	w.Pre(wallet)
-	w.WriteHTML(`</div>`)
 
 	w.WriteHTML(`<div class="evm-probes-section">`)
 	w.Subsection("Method probes")

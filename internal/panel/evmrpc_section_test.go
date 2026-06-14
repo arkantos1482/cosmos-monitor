@@ -65,13 +65,14 @@ func TestEVMDataSourcesProvenance(t *testing.T) {
 		`dash-sources__tag">req`,
 		`dash-sources__tag">res`,
 		`POST eth_blockNumber`,
+		`/cosmos/evm/vm/v1/params`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("EVM data sources missing %q", want)
 		}
 	}
-	if strings.Contains(out, `/cosmos/evm/vm/v1/params`) {
-		t.Fatal("EVM data sources should only include JSON-RPC traces")
+	if strings.Contains(out, `/cosmos/evm/feemarket/`) {
+		t.Fatal("EVM data sources should not include unrelated REST traces")
 	}
 	probesIdx := strings.Index(out, `class="dash-subheading">Method probes</h3>`)
 	sourcesIdx := strings.Index(out, `class="dash-sources"`)

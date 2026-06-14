@@ -98,6 +98,7 @@ func viewExchangeMatchers(v View) []func(model.SourceExchange) bool {
 	case ViewEVM:
 		return []func(model.SourceExchange) bool{
 			kindMatch("jsonrpc"),
+			urlContains("/cosmos/evm/vm/v1/params"),
 		}
 	default:
 		return nil

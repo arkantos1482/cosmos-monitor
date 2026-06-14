@@ -25,8 +25,10 @@ func TestEVMRPCHealthCards(t *testing.T) {
 		`eco-domain--rpc-head`,
 		`eco-domain--rpc-txpool`,
 		`eco-domain--rpc-net`,
-		`eco-domain--rpc-wallet`,
-		`evm-wallet-section`,
+		`wallet endpoints`,
+		`eco-domain__divider">MetaMask custom network`,
+		`network name`,
+		`currency symbol`,
 		`evm-summary__stack-line">2 pending`,
 		`evm-probes-section`,
 		`evm-probes__table`,
@@ -36,14 +38,16 @@ func TestEVMRPCHealthCards(t *testing.T) {
 			t.Fatalf("EVM RPC view missing %q", want)
 		}
 	}
-	walletIdx := strings.Index(out, `evm-wallet-section`)
 	probesIdx := strings.Index(out, `class="dash-subheading">Method probes</h3>`)
-	if walletIdx < 0 || probesIdx < 0 || walletIdx > probesIdx {
-		t.Fatal("wallet section should appear before method probes")
+	reachIdx := strings.Index(out, `eco-domain--rpc-reach`)
+	if reachIdx < 0 || probesIdx < 0 || reachIdx > probesIdx {
+		t.Fatal("reachability card should appear before method probes")
 	}
 	for _, absent := range []string{
 		`class="dash-subheading">Wallet endpoints</h3>`,
-		`MetaMask custom network`,
+		`eco-domain--rpc-wallet`,
+		`evm-wallet-section`,
+		`Network name: PMT`,
 		`eco-domain--vm`,
 		`eco-domain--erc20`,
 	} {

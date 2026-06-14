@@ -1144,19 +1144,10 @@ body::after {
   padding-top: 0.35rem;
 }
 
-.evm-wallet-section {
-  margin-top: 0.65rem;
-}
-
-.evm-wallet-section pre {
-  margin-top: 0.55rem;
-}
-
 .eco-domain--rpc-reach,
 .eco-domain--rpc-head,
 .eco-domain--rpc-txpool,
-.eco-domain--rpc-net,
-.eco-domain--rpc-wallet {
+.eco-domain--rpc-net {
   border-left: 2px solid var(--accent);
 }
 

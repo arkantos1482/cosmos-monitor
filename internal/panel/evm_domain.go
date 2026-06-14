@@ -32,16 +32,35 @@ func evmReachabilityCardHTML(d model.Report) string {
 		}
 	}
 	fmt.Fprintf(&b, `<div class="eco-domain eco-domain--rpc-reach">`)
-	ecoDomainCardTitle(&b, "Reachability", "JSON-RPC transport", badge, status)
+	ecoDomainCardTitle(&b, "Reachability", "JSON-RPC & wallet endpoints", badge, status)
 	b.WriteString(`<div class="eco-domain__rows">`)
 
+	httpEP := evmHTTPEndpoint(d)
+	wsEP := d.EVMWSEndpoint
+	if wsEP == "" {
+		wsEP = report.EVMWSEndpoint(httpEP)
+	}
+	apis := d.JSONRPCAPIs
+	if apis == "" {
+		apis = report.DefaultJSONRPCAPIs
+	}
 	listen := "not listening"
 	if d.EVMListening {
 		listen = "listening"
 	}
-	ecoDomainRow(&b, "", "HTTP endpoint", orEcoDash(d.EVMHTTPEndpoint), "POST target for probes")
+	ecoDomainRow(&b, "", "HTTP endpoint", orEcoDash(httpEP), "POST target for probes")
+	ecoDomainRow(&b, "", "WebSocket", wsEP, "subscriptions and event filters")
 	ecoDomainRow(&b, "", "net_listening", listen, "socket accepting connections")
 	ecoDomainRow(&b, "", "probes", fmt.Sprintf("%d / %d ok", d.RPCProbeOK, d.RPCProbeTotal), "method health checks this refresh")
+	ecoDomainRow(&b, "", "enabled APIs", apis, "namespaces exposed by this node")
+
+	fmt.Fprintf(&b, `<div class="eco-domain__divider">MetaMask custom network</div>`)
+	ecoDomainRow(&b, "", "network name", evmNetworkName(d), "custom network label")
+	ecoDomainRow(&b, "", "RPC URL", httpEP, "same as HTTP endpoint above")
+	if d.EVMChainID > 0 {
+		ecoDomainRow(&b, "", "chain ID", fmt.Sprintf("%d", d.EVMChainID), "eth_chainId")
+	}
+	ecoDomainRow(&b, "", "currency symbol", evmDisplaySymbol(d.EVMDenom), "evm_denom from vm params")
 
 	ecoDomainCardClose(&b)
 	return b.String()
@@ -97,9 +116,6 @@ func evmNetCardHTML(d model.Report) string {
 	var b strings.Builder
 	ecoDomainCardOpen(&b, "eco-domain--rpc-net", "Network", "net_* / web3_* probes")
 
-	if d.EVMChainID > 0 {
-		ecoDomainRow(&b, "", "eth_chainId", fmt.Sprintf("%d", d.EVMChainID), "wallet network ID")
-	}
 	if d.EVMClient != "" {
 		ecoDomainRow(&b, "", "web3_clientVersion", d.EVMClient, "EVM client build")
 	}
@@ -109,26 +125,31 @@ func evmNetCardHTML(d model.Report) string {
 	return b.String()
 }
 
-func evmWalletCardHTML(d model.Report) string {
-	wsEP := d.EVMWSEndpoint
-	if wsEP == "" {
-		httpEP := d.EVMHTTPEndpoint
-		if httpEP == "" {
-			httpEP = "http://localhost:8545"
-		}
-		wsEP = report.EVMWSEndpoint(httpEP)
+func evmHTTPEndpoint(d model.Report) string {
+	if ep := strings.TrimSpace(d.EVMHTTPEndpoint); ep != "" {
+		return ep
 	}
-	apis := d.JSONRPCAPIs
-	if apis == "" {
-		apis = report.DefaultJSONRPCAPIs
-	}
+	return "http://localhost:8545"
+}
 
-	var b strings.Builder
-	ecoDomainCardOpen(&b, "eco-domain--rpc-wallet", "Wallet", "dApp / MetaMask")
-	ecoDomainRow(&b, "", "WebSocket", wsEP, "subscriptions and event filters")
-	ecoDomainRow(&b, "", "enabled APIs", apis, "namespaces exposed by this node")
-	ecoDomainCardClose(&b)
-	return b.String()
+func evmNetworkName(d model.Report) string {
+	name := strings.ToUpper(strings.TrimSpace(d.Network))
+	if name == "" {
+		return "PMT"
+	}
+	return name
+}
+
+func evmDisplaySymbol(denom string) string {
+	switch strings.ToLower(denom) {
+	case "apmt", "upmt":
+		return "PMT"
+	default:
+		if denom == "" {
+			return "PMT"
+		}
+		return strings.ToUpper(denom)
+	}
 }
 
 func evmRPCProbeTableHTML(d model.Report) string {
