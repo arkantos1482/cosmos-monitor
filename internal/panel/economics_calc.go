@@ -28,7 +28,7 @@ func splitOutstandingSuffix(s string) (amount, suffix string) {
 }
 
 func economicsPMTPerBlock(d model.Report) (perBlock float64, unit string, ok bool) {
-	if !d.PMTEnabled || d.PMTRate == "" {
+	if !d.PMTEnabled || d.PMTPoolEmpty || d.PMTRate == "" {
 		return 0, "", false
 	}
 	s := strings.TrimSuffix(strings.TrimSpace(d.PMTRate), "/block")

@@ -173,8 +173,11 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 	}
 	d.BondDenom = denom
 	bondedF, _ := fetch.NormalizeCoin(chain.BondedTokens, denom)
-	totalF, _ := fetch.NormalizeCoin(chain.TotalSupply, chain.TotalSupplyDenom)
-	if totalF > 0 {
+	notBondedF, _ := fetch.NormalizeCoin(chain.NotBondedTokens, denom)
+	if poolTotal := bondedF + notBondedF; poolTotal > 0 {
+		// Same ratio x/mint uses for inflation adjustment (not bank total supply).
+		d.BondedPct = bondedF / poolTotal * 100
+	} else if totalF, _ := fetch.NormalizeCoin(chain.TotalSupply, chain.TotalSupplyDenom); totalF > 0 {
 		d.BondedPct = bondedF / totalF * 100
 	}
 	d.TotalSupply = fetch.FormatCoin(chain.TotalSupply, chain.TotalSupplyDenom)

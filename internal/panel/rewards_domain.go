@@ -57,10 +57,13 @@ func rewardsEmissionAmounts(d model.Report) (total float64, unit string, parts i
 
 func rewardsSummaryPMT(d model.Report) (label, value, tone string) {
 	if !d.PMTEnabled {
-		return "PMT emission", "disabled", ""
+		return "PMT emission", "disabled", "bad"
 	}
 	if d.PMTPoolEmpty {
-		return "PMT emission", "pool empty", "warn"
+		if d.PMTRate != "" {
+			return "PMT emission", "not emitting · " + d.PMTRate + " configured", "warn"
+		}
+		return "PMT emission", "not emitting (pool empty)", "warn"
 	}
 	if d.PMTRate != "" {
 		return "PMT emission", d.PMTRate, "ok"
@@ -77,6 +80,48 @@ func rewardsSummaryInflation(d model.Report) (label, value, tone string) {
 		val += " · " + d.InflationPerBlock
 	}
 	return "inflation", val, "ok"
+}
+
+func pmtConfiguredNotEmitting(d model.Report) bool {
+	return d.PMTEnabled && d.PMTPoolEmpty && d.PMTRate != ""
+}
+
+func rewardsSummaryBadges(d model.Report) []summaryBadge {
+	var b []summaryBadge
+	switch {
+	case !d.PMTEnabled:
+		b = append(b, summaryBadge{"PMT disabled", "bad"})
+	case d.PMTPoolEmpty:
+		b = append(b, summaryBadge{"PMT not emitting", "warn"})
+	default:
+		b = append(b, summaryBadge{"PMT emitting", "ok"})
+	}
+	if d.Inflation > 0 {
+		b = append(b, summaryBadge{"inflation active", "ok"})
+	}
+	return b
+}
+
+func rewardsEmissionSummaryLabel(d model.Report) string {
+	pmtOn := d.PMTEnabled && !d.PMTPoolEmpty && d.PMTRate != ""
+	inflOn := d.Inflation > 0 && d.InflationPerBlock != ""
+	if pmtOn && inflOn {
+		return "active emission"
+	}
+	if inflOn {
+		return "active emission (inflation)"
+	}
+	if pmtOn {
+		return "active emission (PMT)"
+	}
+	return "active emission"
+}
+
+func rewardsEmissionSummaryTone(d model.Report) string {
+	if pmtConfiguredNotEmitting(d) {
+		return "warn"
+	}
+	return "ok"
 }
 
 func rewardsDomainCardsHTML(d model.Report) string {
@@ -191,7 +236,7 @@ func mintInflationDomainCard(d model.Report) string {
 	ecoDomainRow(&b, "", "goal_bonded", fmt.Sprintf("%.0f%%", d.GoalBonded),
 		"target bonded ratio — mint raises/lowers inflation when stake drifts")
 	ecoDomainRow(&b, "", "bonded now", fmt.Sprintf("%.2f%%", d.BondedPct),
-		mintBondedVsGoalEffect(d))
+		mintBondedVsGoalEffect(d)+"; staking pool ratio (bonded ÷ bonded+not_bonded)")
 	if d.BlocksPerYear != "" {
 		ecoDomainRow(&b, "", "blocks_per_year", d.BlocksPerYear,
 			"denominator for per-block inflation and PMT annual estimates")

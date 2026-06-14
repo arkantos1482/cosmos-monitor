@@ -10,33 +10,23 @@ import (
 )
 
 func writeNodeSummary(w Writer, d model.Report, mode SummaryMode) {
-	lv := d.Local
 	syncStr := "synced"
 	syncKind := "ok"
 	if !d.Synced {
 		syncStr = "catching up"
 		syncKind = "warn"
 	}
-	proposer := "no"
-	if lv.IsNextProposer {
-		proposer = "yes — next block"
-	}
 
 	summaryWrapStart(w, mode, "node")
 	w.WriteHTML(`<div class="node-summary">`)
 	w.WriteHTML(`<div class="node-summary__header">`)
 	w.WriteHTML(fmt.Sprintf(`<span class="node-summary__moniker">%s</span>`, html.EscapeString(d.Moniker)))
-	writeSummaryBadges(w, "node-summary__badges", summaryBadge{syncStr, syncKind})
+	badges := []summaryBadge{{syncStr, syncKind}}
+	badges = append(badges, localBadges(d)...)
+	writeSummaryBadges(w, "node-summary__badges", badges...)
 	w.WriteHTML(`</div>`)
 	w.WriteHTML(`<div class="node-summary__grid">`)
-	for _, row := range []struct{ label, val string }{
-		{"height", d.BlockHeight + " · " + d.TimeSinceBlock},
-		{"next proposer", proposer},
-		{"peers", fmt.Sprintf("%d cosmos", d.PeerCount)},
-	} {
-		if row.val == "" || row.val == " · " {
-			continue
-		}
+	for _, row := range nodeSummaryRows(d) {
 		w.WriteHTML(fmt.Sprintf(
 			`<div class="node-summary__cell"><span class="node-summary__label">%s</span>`+
 				`<span class="node-summary__val">%s</span></div>`,
@@ -50,6 +40,28 @@ func writeNodeSummary(w Writer, d model.Report, mode SummaryMode) {
 	summaryWrapEnd(w, mode)
 }
 
+func nodeSummaryRows(d model.Report) []struct{ label, val string } {
+	blockVal := d.BlockHeight
+	if d.TimeSinceBlock != "" {
+		if blockVal != "" {
+			blockVal += " · " + d.TimeSinceBlock
+		} else {
+			blockVal = d.TimeSinceBlock
+		}
+	}
+	rows := []struct{ label, val string }{
+		{"block", blockVal},
+		{"mempool", fmt.Sprintf("%d pending", d.MempoolTxs)},
+	}
+	if d.BlockInterval != "" {
+		rows = append(rows, struct{ label, val string }{"interval", d.BlockInterval})
+	}
+	if d.HasNodeStatus || d.PeerCount > 0 {
+		rows = append(rows, struct{ label, val string }{"peers", fmt.Sprintf("%d P2P", d.PeerCount)})
+	}
+	return rows
+}
+
 func writeNode(w Writer, d model.Report) {
 	lv := d.Local
 	syncStr := "synced"
@@ -58,7 +70,7 @@ func writeNode(w Writer, d model.Report) {
 	}
 
 	w.Section("2. VALIDATOR")
-	writeEmbeddedSectionIntro(w, "This node's CometBFT sync, block timing, mempool, and proposer turn, plus the full validator-set P2P dial table.")
+	writeEmbeddedSectionIntro(w, "Live CometBFT sync, block timing, mempool, and P2P peers for this node, plus the full validator-set dial table.")
 	writeNodeSummary(w, d, SummaryEmbedded)
 
 	writeNodeCometBFT(w, d, lv, syncStr)

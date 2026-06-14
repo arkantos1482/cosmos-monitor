@@ -36,6 +36,9 @@ func writeRewardsSummary(w Writer, d model.Report, mode SummaryMode) {
 
 func writeRewardsSummaryBody(w Writer, d model.Report) {
 	w.WriteHTML(`<div class="rewards-summary">`)
+	if badges := rewardsSummaryBadges(d); len(badges) > 0 {
+		writeSummaryBadges(w, "rewards-summary__badges", badges...)
+	}
 	w.WriteHTML(`<div class="rewards-summary__kpis">`)
 
 	label, val, tone := rewardsSummaryPMT(d)
@@ -45,7 +48,7 @@ func writeRewardsSummaryBody(w Writer, d model.Report) {
 	writeRewardsSummaryKPI(w, label, val, tone)
 
 	if emit := rewardsEmissionPerBlock(d); emit != "—" {
-		writeRewardsSummaryKPI(w, "combined emission", emit, "ok")
+		writeRewardsSummaryKPI(w, rewardsEmissionSummaryLabel(d), emit, rewardsEmissionSummaryTone(d))
 	}
 	if d.PMTEnabled && !d.PMTPoolEmpty && d.PMTBalance != "" {
 		writeRewardsSummaryKPI(w, "reward pool", d.PMTBalance, "")
@@ -74,9 +77,13 @@ func writeRewardsSummaryKPI(w Writer, label, value, tone string) {
 func writeRewardsLocal(w Writer, d model.Report) {
 	lv := d.Local
 	if op, del, _, ok := localValidatorPerBlockRewards(d); ok {
-		w.Row("per-block commission", op+fmt.Sprintf("  (%.2f%% VP · %.1f%% commission)", lv.VPPercent, lv.Commission))
+		suffix := fmt.Sprintf("  (%.2f%% VP · %.1f%% commission)", lv.VPPercent, lv.Commission)
+		if pmtConfiguredNotEmitting(d) {
+			suffix += "  _(PMT pool empty — inflation/fees only)_"
+		}
+		w.Row("per-block commission", op+suffix)
 		w.Row("per-block delegators", del)
-	} else if emit := rewardsEmissionPerBlock(d); emit != "—" {
+	} else if rewardsEmissionPerBlock(d) != "—" {
 		w.Row("per-block emission", "—  _(no VP or no active emission)_")
 	}
 }

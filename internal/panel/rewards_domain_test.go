@@ -100,6 +100,13 @@ func TestRewardsPMTPoolEmptyWarn(t *testing.T) {
 		PMTRate:           "0.1 PMT/block",
 		Inflation:         3.5,
 		InflationPerBlock: "0.01 PMT/block",
+		CommunityTaxPct:   2,
+		BondedCount:       4,
+		Local: model.LocalValidator{
+			IsValidator: true,
+			VPPercent:   25,
+			Commission:  10,
+		},
 	}
 	out := BuildView(ViewRewards, d)
 	if !strings.Contains(out, `eco-domain--pmtrewards eco-domain--ineffective`) {
@@ -107,6 +114,18 @@ func TestRewardsPMTPoolEmptyWarn(t *testing.T) {
 	}
 	if !strings.Contains(out, `eco-domain__status badge badge--warn">pool empty`) {
 		t.Fatal("expected pool empty status badge")
+	}
+	if !strings.Contains(out, `PMT not emitting`) {
+		t.Fatal("expected PMT not emitting badge in summary")
+	}
+	if !strings.Contains(out, `not emitting · 0.1 PMT/block configured`) {
+		t.Fatal("expected configured-but-inactive PMT summary text")
+	}
+	if strings.Contains(out, `0.025 PMT/block`) || strings.Contains(out, `0.0225 PMT/block`) {
+		t.Fatal("per-block estimates should exclude empty-pool PMT rewards")
+	}
+	if got := rewardsEmissionPerBlock(d); strings.Contains(got, "0.11") {
+		t.Fatalf("combined emission should exclude PMT when pool empty, got %q", got)
 	}
 }
 
