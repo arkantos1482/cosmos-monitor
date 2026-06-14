@@ -77,13 +77,62 @@ func writeRewardsSummaryKPI(w Writer, label, value, tone string) {
 func writeRewardsLocal(w Writer, d model.Report) {
 	lv := d.Local
 	if op, del, _, ok := localValidatorPerBlockRewards(d); ok {
-		suffix := fmt.Sprintf("  (%.2f%% VP · %.1f%% commission)", lv.VPPercent, lv.Commission)
+		suffix := localRewardsVPSuffix(lv)
 		if pmtConfiguredNotEmitting(d) {
 			suffix += "  _(PMT pool empty — inflation/fees only)_"
 		}
 		w.Row("per-block commission", op+suffix)
 		w.Row("per-block delegators", del)
-	} else if rewardsEmissionPerBlock(d) != "—" {
-		w.Row("per-block emission", "—  _(no VP or no active emission)_")
+		return
 	}
+
+	w.Row("per-block emission", rewardsLocalEmissionStatus(d, lv))
+	if line := localRewardsVPCommission(lv); line != "" {
+		w.Row("staking weight", line)
+	}
+}
+
+func localRewardsVPSuffix(lv model.LocalValidator) string {
+	if lv.VPPercent <= 0 {
+		return ""
+	}
+	if lv.Commission > 0 {
+		return fmt.Sprintf("  (%.2f%% VP · %.1f%% commission)", lv.VPPercent, lv.Commission)
+	}
+	return fmt.Sprintf("  (%.2f%% VP)", lv.VPPercent)
+}
+
+func localRewardsVPCommission(lv model.LocalValidator) string {
+	if lv.VPPercent > 0 && lv.Commission > 0 {
+		return fmt.Sprintf("%.2f%% voting power · %.1f%% commission", lv.VPPercent, lv.Commission)
+	}
+	if lv.VotingPower != "" && lv.Commission > 0 {
+		return fmt.Sprintf("%s stake · %.1f%% commission", lv.VotingPower, lv.Commission)
+	}
+	if lv.VotingPower != "" {
+		return lv.VotingPower + " staked"
+	}
+	if lv.VPPercent > 0 {
+		return fmt.Sprintf("%.2f%% voting power", lv.VPPercent)
+	}
+	return ""
+}
+
+func rewardsLocalEmissionStatus(d model.Report, lv model.LocalValidator) string {
+	if pmtConfiguredNotEmitting(d) {
+		if d.Inflation > 0 {
+			return "—  _(PMT pool empty — " + d.PMTRate + " configured, not paid; inflation may still accrue)_"
+		}
+		return "—  _(PMT pool empty — " + d.PMTRate + " configured, not paid)_"
+	}
+	if d.Inflation > 0 && d.InflationPerBlock == "" {
+		return fmt.Sprintf("—  _(inflation active at %.2f%%; per-block estimate unavailable)_", d.Inflation)
+	}
+	if lv.VPPercent <= 0 && lv.VotingPower == "" {
+		return "—  _(voting power unknown — cannot estimate share)_"
+	}
+	if rewardsEmissionPerBlock(d) == "—" {
+		return "—  _(no active block emission)_"
+	}
+	return "—  _(cannot estimate validator share)_"
 }

@@ -129,6 +129,37 @@ func TestRewardsPMTPoolEmptyWarn(t *testing.T) {
 	}
 }
 
+func TestRewardsLocalValidatorNeverEmpty(t *testing.T) {
+	d := model.Report{
+		PMTEnabled:   true,
+		PMTPoolEmpty: true,
+		PMTRate:      "0.1 PMT/block",
+		Inflation:    3.5,
+		Local: model.LocalValidator{
+			IsValidator: true,
+			VPPercent:   25,
+			Commission:  10,
+			VotingPower: "1.00M PMT",
+		},
+	}
+	out := BuildView(ViewRewards, d)
+	localStart := strings.Index(out, `class="dash-subheading">This validator</h3>`)
+	networkStart := strings.Index(out, `class="dash-subheading">Network-wide</h3>`)
+	if localStart < 0 || networkStart < 0 || localStart >= networkStart {
+		t.Fatal("expected This validator before Network-wide")
+	}
+	chunk := out[localStart:networkStart]
+	if !strings.Contains(chunk, "per-block emission") {
+		t.Fatalf("This validator subsection should explain inactive emission:\n%s", chunk)
+	}
+	if !strings.Contains(chunk, "staking weight") {
+		t.Fatalf("This validator subsection should show staking weight:\n%s", chunk)
+	}
+	if !strings.Contains(chunk, "PMT pool empty") {
+		t.Fatalf("This validator subsection should explain empty pool:\n%s", chunk)
+	}
+}
+
 func TestInflationCardInactiveWhenZero(t *testing.T) {
 	d := model.Report{Inflation: 0}
 	card := mintInflationDomainCard(d)
