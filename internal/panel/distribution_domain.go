@@ -9,12 +9,9 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/report"
 )
 
-func distributionCardHTML(d model.Report) string {
+func distributionParamsCardHTML(d model.Report) string {
 	var b strings.Builder
 	ecoDomainCardOpen(&b, "eco-domain--distribution", "Distribution", "x/distribution")
-
-	ecoDomainDividerDist(&b, "Unclaimed rewards")
-	writeDistributionUnclaimedRows(&b, d)
 
 	ecoDomainDividerDist(&b, "Community treasury")
 	poolCls := ""
@@ -30,11 +27,7 @@ func distributionCardHTML(d model.Report) string {
 	ecoDomainRow(&b, taxCls, "community_tax", orEcoDash(d.CommunityTax),
 		"fraction of block rewards diverted to community pool before validator split")
 
-	ecoDomainDividerDist(&b, "Distribution escrow")
-	writeModuleAccountRow(&b, d, "distribution",
-		"bank balance — holds all unclaimed delegator and operator rewards until withdrawn")
-	writeDistributionEscrowReconcileRow(&b, d)
-
+	ecoDomainDividerDist(&b, "Withdraw policy")
 	withdrawEffect := "delegators may set a custom withdraw address"
 	if !d.WithdrawAddrEnabled {
 		withdrawEffect = "withdrawals go to delegator account address"
@@ -42,60 +35,47 @@ func distributionCardHTML(d model.Report) string {
 	ecoDomainRow(&b, "", "withdraw_addr_enabled", boolStr(d.WithdrawAddrEnabled), withdrawEffect)
 
 	ecoDomainCardClose(&b)
-	return b.String()
+	return ecoDomainsWrap(b.String())
 }
 
-func writeDistributionEscrowReconcileRow(b *strings.Builder, d model.Report) {
+func distributionEscrowBlockHTML(d model.Report) string {
+	bal := moduleAccountBalance(d, "distribution")
+	addr := moduleAccountDisplayAddress(d, "distribution")
 	effect, warn := distributionEscrowReconcile(d)
-	if effect == "" {
-		return
+	if bal == "" && addr == "" && effect == "" {
+		return ""
 	}
-	cls := ""
-	if warn {
-		cls = ` class="eco-domain__row--warn"`
+
+	var b strings.Builder
+	b.WriteString(`<div class="dist-escrow">`)
+	b.WriteString(`<div class="dist-escrow__label">distribution escrow</div>`)
+	if bal != "" || addr != "" {
+		fmt.Fprintf(&b, `<div class="dist-escrow__acct">%s</div>`, ecoBalanceAddrHTML(orEcoDash(bal), addr))
 	}
-	state := distributionUnclaimedTotal(d)
-	bank := distributionModuleBalance(d)
-	val := orEcoDash(bank)
-	if state != "" && bank != "" && state != bank {
-		val = fmt.Sprintf("%s → state tracks %s", bank, state)
+	if effect != "" {
+		cls := "dist-escrow__note"
+		if warn {
+			cls += " dist-escrow__note--warn"
+		}
+		state := distributionUnclaimedTotal(d)
+		bank := distributionModuleBalance(d)
+		if state != "" && bank != "" && state != bank {
+			fmt.Fprintf(&b, `<div class="%s">%s — bank %s, state tracks %s</div>`,
+				cls, html.EscapeString(effect), html.EscapeString(bank), html.EscapeString(state))
+		} else {
+			fmt.Fprintf(&b, `<div class="%s">%s</div>`, cls, html.EscapeString(effect))
+		}
 	}
-	ecoDomainRow(b, cls, "escrow check", val, effect)
+	b.WriteString(`</div>`)
+	return b.String()
 }
 
 func ecoDomainDividerDist(b *strings.Builder, title string) {
 	fmt.Fprintf(b, `<div class="eco-domain__divider">%s</div>`, html.EscapeString(title))
 }
 
-func writeDistributionUnclaimedRows(b *strings.Builder, d model.Report) {
-	del := d.UnclaimedDelegator
-	comm := d.UnclaimedCommission
-	total := distributionUnclaimedTotal(d)
-	if del == "" && comm == "" {
-		ecoDomainRow(b, ` class="eco-domain__row--inactive"`, "total unclaimed", "—",
-			"no rewards waiting to be withdrawn network-wide")
-		return
-	}
-	if total != "" {
-		ecoDomainRow(b, "", "total unclaimed", total,
-			"delegator share + operator commission — all escrowed until someone claims")
-	}
-	if del != "" {
-		ecoDomainRow(b, "", "for delegators", del,
-			"sum of per-validator delegator shares — MsgWithdrawDelegatorReward")
-	}
-	if comm != "" {
-		ecoDomainRow(b, "", "for operators", comm,
-			"sum of validator commission balances — MsgWithdrawValidatorCommission")
-	}
-}
-
 func distributionUnclaimedTotal(d model.Report) string {
 	return economicsUnclaimedTotal(d)
-}
-
-func distributionDomainCardsHTML(d model.Report) string {
-	return ecoDomainsWrap(distributionCardHTML(d))
 }
 
 func writeDistributionValidatorTable(w Writer, d model.Report) {

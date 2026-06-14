@@ -609,12 +609,45 @@ body::after {
   line-height: 1.25;
 }
 
-.dist-local-unclaimed {
+.dist-section-unclaimed {
   margin: 0.25rem 0 0.5rem;
 }
 
-.dist-local-unclaimed .unclaimed-stack__head-val {
+.dist-section-unclaimed .unclaimed-stack__head-val {
   font-size: 1.05rem;
+}
+
+.dist-escrow {
+  margin: 0.35rem 0 0.65rem;
+  padding: 0.5rem 0.65rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.dist-escrow__label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: lowercase;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+}
+
+.dist-escrow__acct {
+  min-width: 0;
+}
+
+.dist-escrow__note {
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.dist-escrow__note--warn {
+  color: var(--warn);
+  font-style: normal;
+  font-weight: 500;
 }
 
 .rewards-summary__kpis {

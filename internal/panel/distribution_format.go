@@ -47,6 +47,17 @@ func unclaimedStackFromNetwork(d model.Report) unclaimedStack {
 	}
 }
 
+func unclaimedStackFromNetworkDetailed(d model.Report) unclaimedStack {
+	s := unclaimedStackFromNetwork(d)
+	s.OutstandingClaim = "MsgWithdrawDelegatorReward"
+	s.CommissionClaim = "MsgWithdrawValidatorCommission"
+	return s
+}
+
+func networkUnclaimedBreakdownHTML(d model.Report) string {
+	return unclaimedStackHTML(unclaimedStackFromNetworkDetailed(d))
+}
+
 func (s unclaimedStack) empty() bool {
 	return strings.TrimSpace(s.Total) == "" &&
 		strings.TrimSpace(s.Outstanding) == "" &&

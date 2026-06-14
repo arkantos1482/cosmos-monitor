@@ -19,9 +19,12 @@ func writeDistribution(w Writer, d model.Report) {
 		writeDistributionLocal(w, d.Local)
 	}
 
-	w.Subsection("Network-wide")
-	w.WriteHTML(distributionDomainCardsHTML(d))
+	w.Subsection("Unclaimed rewards")
+	writeDistributionNetworkUnclaimed(w, d)
 	writeDistributionValidatorTable(w, d)
+
+	w.Subsection("Treasury & params")
+	w.WriteHTML(distributionParamsCardHTML(d))
 
 	writeSectionSources(w, ViewDistribution, d)
 	w.BlankLine()
@@ -58,11 +61,22 @@ func writeDistributionSummaryScope(w Writer, title string, stack unclaimedStack)
 
 func writeDistributionLocal(w Writer, lv model.LocalValidator) {
 	if markup := localUnclaimedBreakdownHTML(lv); markup != "" {
-		w.WriteHTML(`<div class="dist-local-unclaimed">` + markup + `</div>`)
+		w.WriteHTML(`<div class="dist-section-unclaimed">` + markup + `</div>`)
 	} else {
 		w.Row("unclaimed rewards", "—")
 	}
 	if lv.Commission > 0 {
 		w.Row("commission rate", fmt.Sprintf("%.1f%% of rewards before delegator split", lv.Commission))
+	}
+}
+
+func writeDistributionNetworkUnclaimed(w Writer, d model.Report) {
+	if markup := networkUnclaimedBreakdownHTML(d); markup != "" {
+		w.WriteHTML(`<div class="dist-section-unclaimed">` + markup + `</div>`)
+	} else {
+		w.Row("unclaimed rewards", "—")
+	}
+	if html := distributionEscrowBlockHTML(d); html != "" {
+		w.WriteHTML(html)
 	}
 }
