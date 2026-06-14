@@ -6,6 +6,7 @@ import (
 
 	"github.com/arkantos1482/cosmos-monitor/internal/fetch"
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
+	"github.com/arkantos1482/cosmos-monitor/internal/panel"
 )
 
 func TestMergeStatusOverlayFillsMissingEVMAndDocker(t *testing.T) {
@@ -60,13 +61,13 @@ func TestMergeStatusOverlaySkipsFailedBarSources(t *testing.T) {
 
 func TestStatusBarCacheHit(t *testing.T) {
 	statusBarCache.mu.Lock()
-	statusBarCache.key = statusBarCacheKey{rpc: "r", rest: "s", evm: "e", container: "c"}
+	statusBarCache.key = statusBarCacheKey{view: panel.ViewNode, rpc: "r", rest: "s", evm: "e", container: "c"}
 	statusBarCache.snap = Snapshots{Chain: fetch.ChainSnapshot{BlockHeight: 42}}
 	statusBarCache.bar = model.StatusAvailability{ChainOK: true}
 	statusBarCache.at = time.Now()
 	statusBarCache.mu.Unlock()
 
-	snap, bar := fetchStatusBar("r", "s", "e", "c")
+	snap, bar := fetchStatusBar(panel.ViewNode, "r", "s", "e", "c")
 	if snap.Chain.BlockHeight != 42 || !bar.ChainOK {
 		t.Fatalf("cache miss: %+v %+v", snap, bar)
 	}

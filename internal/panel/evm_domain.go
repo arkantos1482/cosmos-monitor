@@ -31,37 +31,42 @@ func evmReachabilityCardHTML(d model.Report) string {
 			badge = "warn"
 		}
 	}
+	apis := d.JSONRPCAPIs
+	if apis == "" {
+		apis = report.DefaultJSONRPCAPIs
+	}
 	fmt.Fprintf(&b, `<div class="eco-domain eco-domain--rpc-reach">`)
-	ecoDomainCardTitle(&b, "Reachability", "JSON-RPC & wallet endpoints", badge, status)
+	ecoDomainCardTitle(&b, "Reachability", "JSON-RPC transport", badge, status)
 	b.WriteString(`<div class="eco-domain__rows">`)
 
+	listen := "not listening"
+	if d.EVMListening {
+		listen = "listening"
+	}
+	ecoDomainRow(&b, "", "net_listening", listen, "socket accepting connections")
+	ecoDomainRow(&b, "", "probes", fmt.Sprintf("%d / %d ok", d.RPCProbeOK, d.RPCProbeTotal), "method health checks this refresh")
+	ecoDomainRow(&b, "", "enabled APIs", apis, "namespaces exposed by this node")
+
+	ecoDomainCardClose(&b)
+	return b.String()
+}
+
+func evmMetaMaskCardHTML(d model.Report) string {
 	httpEP := evmHTTPEndpoint(d)
 	wsEP := d.EVMWSEndpoint
 	if wsEP == "" {
 		wsEP = report.EVMWSEndpoint(httpEP)
 	}
-	apis := d.JSONRPCAPIs
-	if apis == "" {
-		apis = report.DefaultJSONRPCAPIs
-	}
-	listen := "not listening"
-	if d.EVMListening {
-		listen = "listening"
-	}
-	ecoDomainRow(&b, "", "HTTP endpoint", orEcoDash(httpEP), "POST target for probes")
-	ecoDomainRow(&b, "", "WebSocket", wsEP, "subscriptions and event filters")
-	ecoDomainRow(&b, "", "net_listening", listen, "socket accepting connections")
-	ecoDomainRow(&b, "", "probes", fmt.Sprintf("%d / %d ok", d.RPCProbeOK, d.RPCProbeTotal), "method health checks this refresh")
-	ecoDomainRow(&b, "", "enabled APIs", apis, "namespaces exposed by this node")
 
-	fmt.Fprintf(&b, `<div class="eco-domain__divider">MetaMask custom network</div>`)
+	var b strings.Builder
+	ecoDomainCardOpen(&b, "eco-domain--rpc-metamask", "Custom network", "MetaMask / wallet import")
 	ecoDomainRow(&b, "", "network name", evmNetworkName(d), "custom network label")
-	ecoDomainRow(&b, "", "RPC URL", httpEP, "same as HTTP endpoint above")
+	ecoDomainRow(&b, "", "RPC URL", httpEP, "HTTP JSON-RPC endpoint")
+	ecoDomainRow(&b, "", "WebSocket", wsEP, "subscriptions and event filters")
 	if d.EVMChainID > 0 {
 		ecoDomainRow(&b, "", "chain ID", fmt.Sprintf("%d", d.EVMChainID), "eth_chainId")
 	}
 	ecoDomainRow(&b, "", "currency symbol", evmDisplaySymbol(d.EVMDenom), "evm_denom from vm params")
-
 	ecoDomainCardClose(&b)
 	return b.String()
 }
@@ -176,6 +181,9 @@ func evmRPCProbeTableHTML(d model.Report) string {
 			status = "FAIL"
 		}
 		checks := rpcProbeHint(p.Method)
+		if p.Transport == "ws" {
+			checks = "WebSocket · " + checks
+		}
 		if !p.OK && p.Error != "" {
 			checks = p.Error
 		}
@@ -203,6 +211,8 @@ func rpcProbeHint(method string) string {
 		return "latest block header + timestamp"
 	case "txpool_status":
 		return "mempool pending / queued counts"
+	case "net_version":
+		return "network version string"
 	case "net_peerCount":
 		return "execution-layer peer count"
 	case "net_listening":

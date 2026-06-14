@@ -13,7 +13,7 @@ func TestBuildEVMRPCSection(t *testing.T) {
 		EVMRPCOk: true, EVMSynced: true, EVMListening: true,
 		EVMBlockAge: "4.2s", EVMBlock: "100", EVMChainID: 290290,
 		Network: "pmt", EVMHTTPEndpoint: "http://localhost:8545",
-		RPCProbeOK: 8, RPCProbeTotal: 8,
+		RPCProbeOK: 10, RPCProbeTotal: 10,
 		RPCProbes: []model.RPCProbe{
 			{Method: "eth_blockNumber", OK: true, Latency: "12ms"},
 		},
@@ -96,7 +96,7 @@ func TestEVMSummaryLayout(t *testing.T) {
 		EVMRPCOk: true, EVMSynced: true, EVMListening: true,
 		EVMBlock: "12345", EVMBlockAge: "3.1s", EVMChainID: 290290,
 		EVMHTTPEndpoint: "http://localhost:8545",
-		RPCProbeOK: 8, RPCProbeTotal: 8,
+		RPCProbeOK: 10, RPCProbeTotal: 10,
 		RPCProbes: []model.RPCProbe{
 			{Method: "eth_blockNumber", OK: true, Latency: "10ms"},
 			{Method: "eth_chainId", OK: true, Latency: "14ms"},

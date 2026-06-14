@@ -6,9 +6,11 @@ import (
 
 	"github.com/arkantos1482/cosmos-monitor/internal/fetch"
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
+	"github.com/arkantos1482/cosmos-monitor/internal/panel"
 )
 
 type statusBarCacheKey struct {
+	view                        panel.View
 	rpc, rest, evm, container string
 }
 
@@ -20,8 +22,9 @@ var statusBarCache struct {
 	at   time.Time
 }
 
-func fetchStatusBar(rpc, rest, evm, container string) (Snapshots, model.StatusAvailability) {
-	key := statusBarCacheKey{rpc: rpc, rest: rest, evm: evm, container: container}
+func fetchStatusBar(view panel.View, rpc, rest, evm, container string) (Snapshots, model.StatusAvailability) {
+	key := statusBarCacheKey{view: view, rpc: rpc, rest: rest, evm: evm, container: container}
+	skipEVMPeer := view == panel.ViewHome || view == panel.ViewEVM
 
 	statusBarCache.mu.Lock()
 	if !statusBarCache.at.IsZero() &&
@@ -41,18 +44,21 @@ func fetchStatusBar(rpc, rest, evm, container string) (Snapshots, model.StatusAv
 		p      fetch.ChainParams
 		wg     sync.WaitGroup
 	)
-	wg.Add(4)
+	wg.Add(3)
 	go func() { defer wg.Done(); chain = fetch.FetchChainStatus(rpc, rest) }()
-	go func() { defer wg.Done(); evSnap = fetch.FetchEVMPeerCount(evm) }()
 	go func() { defer wg.Done(); docker = fetch.FetchDockerRunning(container) }()
 	go func() { defer wg.Done(); p = cachedParams(rest) }()
+	if !skipEVMPeer {
+		wg.Add(1)
+		go func() { defer wg.Done(); evSnap = fetch.FetchEVMPeerCount(evm) }()
+	}
 	wg.Wait()
 	chain.Params = p
 
 	snap := Snapshots{Chain: chain, EVM: evSnap, Docker: docker}
 	bar := model.StatusAvailability{
 		ChainOK:  chain.Err == nil,
-		EVMOK:    evSnap.Err == nil,
+		EVMOK:    !skipEVMPeer && evSnap.Err == nil,
 		DockerOK: docker.Err == nil,
 	}
 

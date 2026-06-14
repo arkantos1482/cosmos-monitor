@@ -373,8 +373,9 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 			d.RPCProbeOK++
 		}
 		d.RPCProbes = append(d.RPCProbes, model.RPCProbe{
-			Method:   probe.Method,
-			OK:       probe.OK,
+			Method:    probe.Method,
+			Transport: probe.Transport,
+			OK:        probe.OK,
 			Latency:  fmt.Sprintf("%.0fms", float64(probe.Latency)/float64(time.Millisecond)),
 			Error:    probe.Error,
 			Request:  probe.Request,

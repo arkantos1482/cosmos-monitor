@@ -149,7 +149,7 @@ func TestContentInventory(t *testing.T) {
 		`class="dash-heading">2. VALIDATOR</h2>`,
 		`class="dash-heading">3. EVM JSON-RPC</h2>`,
 		`class="dash-subheading">Method probes</h3>`,
-		`eco-domain__divider">MetaMask custom network`,
+		`class="dash-subheading">MetaMask</h3>`,
 		`class="kpi-grid"`,
 		`class="kpi-tile"`,
 		`class="data-table"`,

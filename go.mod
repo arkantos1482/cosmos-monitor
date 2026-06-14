@@ -5,3 +5,5 @@ go 1.24.0
 require cosmossdk.io/math v1.5.3
 
 require github.com/btcsuite/btcd/btcutil v1.1.6
+
+require github.com/gorilla/websocket v1.5.0

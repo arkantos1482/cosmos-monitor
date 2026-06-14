@@ -62,13 +62,16 @@ func LoadFor(view panel.View, rpc, rest, evm, container string) Snapshots {
 
 	fetch.BeginTrace()
 	viewSnap := fetchForView(view, rpc, rest, evm, container)
-	barSnap, barOK := fetchStatusBar(rpc, rest, evm, container)
+	barSnap, barOK := fetchStatusBar(view, rpc, rest, evm, container)
 	if needsAppToml(view) {
 		viewSnap.AppToml = fetch.FetchAppTomlGasConfig()
 	}
 	exchanges := fetch.EndTrace()
 	viewSnap.Exchanges = exchanges
 	snap := mergeStatusOverlay(viewSnap, barSnap, barOK)
+	if view == panel.ViewHome || view == panel.ViewEVM {
+		barOK.EVMOK = viewSnap.EVM.Err == nil
+	}
 	snap.Status = barOK
 	snap.Exchanges = exchanges
 

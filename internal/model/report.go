@@ -235,12 +235,13 @@ type LocalValidator struct {
 }
 
 type RPCProbe struct {
-	Method   string
-	OK       bool
-	Latency  string
-	Error    string
-	Request  string
-	Response string
+	Method    string
+	Transport string // "http" (default) or "ws"
+	OK        bool
+	Latency   string
+	Error     string
+	Request   string
+	Response  string
 }
 
 type Proposal struct {

@@ -9,16 +9,19 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 // RPCProbe holds one JSON-RPC health check with raw request/response.
 type RPCProbe struct {
-	Method   string
-	Request  string
-	Response string
-	OK       bool
-	Error    string
-	Latency  time.Duration
+	Method    string
+	Transport string // "http" (default) or "ws"
+	Request   string
+	Response  string
+	OK        bool
+	Error     string
+	Latency   time.Duration
 }
 
 // EVMSnapshot holds EVM JSON-RPC data.
@@ -135,6 +138,87 @@ func evmProbe(endpoint, method string, params []any) RPCProbe {
 	return p
 }
 
+func evmWSProbe(wsURL, method string, params []any) RPCProbe {
+	if params == nil {
+		params = []any{}
+	}
+	req := rpcRequest{JSONRPC: "2.0", Method: method, Params: params, ID: 1}
+	reqBody, _ := json.Marshal(req)
+	reqJSON := compactJSONFull(reqBody)
+	p := RPCProbe{
+		Method:    method,
+		Transport: "ws",
+		Request:   reqJSON,
+	}
+
+	start := time.Now()
+	ex := Exchange{
+		Kind:    "jsonrpc",
+		Method:  "WS",
+		URL:     wsURL,
+		Request: reqJSON,
+	}
+
+	dialer := websocket.Dialer{HandshakeTimeout: 10 * time.Second}
+	conn, _, err := dialer.Dial(wsURL, nil)
+	p.Latency = time.Since(start)
+	ex.Latency = p.Latency
+	if err != nil {
+		p.Error = err.Error()
+		ex.Error = p.Error
+		recordTrace(ex)
+		return p
+	}
+	defer conn.Close()
+
+	if err := conn.WriteMessage(websocket.TextMessage, reqBody); err != nil {
+		p.Error = err.Error()
+		ex.Error = p.Error
+		recordTrace(ex)
+		return p
+	}
+	_ = conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+	_, raw, err := conn.ReadMessage()
+	if err != nil {
+		p.Error = err.Error()
+		ex.Error = p.Error
+		recordTrace(ex)
+		return p
+	}
+	p.Response = compactJSONFull(raw)
+	ex.Response = truncateExchangeResponse(p.Response)
+
+	var rpc rpcResponse
+	if err := json.Unmarshal(raw, &rpc); err != nil {
+		p.Error = err.Error()
+		ex.Error = p.Error
+		recordTrace(ex)
+		return p
+	}
+	if rpc.Error != nil {
+		p.Error = rpc.Error.Message
+		ex.Error = p.Error
+		recordTrace(ex)
+		return p
+	}
+	p.OK = true
+	ex.OK = true
+	recordTrace(ex)
+	return p
+}
+
+func evmWSEndpoint(httpURL string) string {
+	u := strings.Replace(httpURL, "https://", "wss://", 1)
+	u = strings.Replace(u, "http://", "ws://", 1)
+	if strings.Contains(u, ":8545") {
+		return strings.Replace(u, ":8545", ":8546", 1)
+	}
+	if strings.HasSuffix(u, "/") {
+		return strings.TrimSuffix(u, "/") + ":8546"
+	}
+	return u + ":8546"
+}
+
 func compactJSONFull(b []byte) string {
 	var buf bytes.Buffer
 	if err := json.Compact(&buf, b); err != nil {
@@ -200,10 +284,27 @@ func FetchEVM(endpoint string) EVMSnapshot {
 		}()
 	}
 	probeWG.Wait()
-	snap.Probes = probes
+
+	wsURL := evmWSEndpoint(endpoint)
+	wsMethods := []string{"eth_chainId", "net_version"}
+	wsProbes := make([]RPCProbe, len(wsMethods))
+	var wsWG sync.WaitGroup
+	for i, method := range wsMethods {
+		i, method := i, method
+		wsWG.Add(1)
+		go func() {
+			defer wsWG.Done()
+			wsProbes[i] = evmWSProbe(wsURL, method, nil)
+		}()
+	}
+	wsWG.Wait()
+	snap.Probes = append(probes, wsProbes...)
 
 	byMethod := map[string]RPCProbe{}
 	for _, p := range snap.Probes {
+		if p.Transport == "ws" {
+			continue
+		}
 		byMethod[p.Method] = p
 	}
 

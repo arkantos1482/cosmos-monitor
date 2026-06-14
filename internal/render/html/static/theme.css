@@ -1139,12 +1139,17 @@ body::after {
   line-height: 1.25;
 }
 
+.evm-metamask-section {
+  margin-bottom: 0.85rem;
+}
+
 .evm-probes-section {
   margin-top: 0.85rem;
   padding-top: 0.35rem;
 }
 
 .eco-domain--rpc-reach,
+.eco-domain--rpc-metamask,
 .eco-domain--rpc-head,
 .eco-domain--rpc-txpool,
 .eco-domain--rpc-net {

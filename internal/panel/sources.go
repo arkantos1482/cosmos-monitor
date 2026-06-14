@@ -130,6 +130,12 @@ func urlContains(parts ...string) func(model.SourceExchange) bool {
 func exchangeLabel(e model.SourceExchange) string {
 	switch e.Kind {
 	case "jsonrpc":
+		if e.Method == "WS" {
+			if method := jsonRPCMethod(e.Request); method != "" {
+				return "WS " + method
+			}
+			return "WS JSON-RPC"
+		}
 		if method := jsonRPCMethod(e.Request); method != "" {
 			return "POST " + method
 		}
@@ -211,6 +217,12 @@ func sourceRequestBody(e model.SourceExchange) string {
 func exchangeEndpointParts(e model.SourceExchange) (verb, path string) {
 	switch e.Kind {
 	case "jsonrpc":
+		if e.Method == "WS" {
+			if method := jsonRPCMethod(e.Request); method != "" {
+				return "WS", method
+			}
+			return "WS", "JSON-RPC"
+		}
 		if method := jsonRPCMethod(e.Request); method != "" {
 			return "POST", method
 		}

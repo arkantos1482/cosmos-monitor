@@ -13,7 +13,7 @@ func TestEVMRPCHealthCards(t *testing.T) {
 		EVMBlock: "100", EVMBlockAge: "4.2s", EVMChainID: 290290,
 		EVMHTTPEndpoint: "http://localhost:8545", EVMClient: "evmd/v1",
 		PendingTx: 2, QueuedTx: 1, EVMPeerCount: 0,
-		RPCProbeOK: 8, RPCProbeTotal: 8,
+		RPCProbeOK: 10, RPCProbeTotal: 10,
 		RPCProbes: []model.RPCProbe{
 			{Method: "eth_blockNumber", OK: true, Latency: "12ms"},
 			{Method: "eth_chainId", OK: true, Latency: "8ms"},
@@ -21,12 +21,12 @@ func TestEVMRPCHealthCards(t *testing.T) {
 	}
 	out := BuildView(ViewEVM, d)
 	for _, want := range []string{
+		`class="dash-subheading">MetaMask</h3>`,
+		`eco-domain--rpc-metamask`,
 		`eco-domain--rpc-reach`,
 		`eco-domain--rpc-head`,
 		`eco-domain--rpc-txpool`,
 		`eco-domain--rpc-net`,
-		`wallet endpoints`,
-		`eco-domain__divider">MetaMask custom network`,
 		`network name`,
 		`currency symbol`,
 		`evm-summary__stack-line">2 pending`,
@@ -38,16 +38,20 @@ func TestEVMRPCHealthCards(t *testing.T) {
 			t.Fatalf("EVM RPC view missing %q", want)
 		}
 	}
-	probesIdx := strings.Index(out, `class="dash-subheading">Method probes</h3>`)
+	metaIdx := strings.Index(out, `class="dash-subheading">MetaMask</h3>`)
 	reachIdx := strings.Index(out, `eco-domain--rpc-reach`)
-	if reachIdx < 0 || probesIdx < 0 || reachIdx > probesIdx {
-		t.Fatal("reachability card should appear before method probes")
+	probesIdx := strings.Index(out, `class="dash-subheading">Method probes</h3>`)
+	if metaIdx < 0 || reachIdx < 0 || probesIdx < 0 || !(metaIdx < reachIdx && reachIdx < probesIdx) {
+		t.Fatal("MetaMask subsection should appear before health cards and method probes")
 	}
 	for _, absent := range []string{
 		`class="dash-subheading">Wallet endpoints</h3>`,
 		`eco-domain--rpc-wallet`,
 		`evm-wallet-section`,
+		`eco-domain__divider">MetaMask custom network`,
+		`HTTP endpoint`,
 		`Network name: PMT`,
+		`wallet endpoints`,
 		`eco-domain--vm`,
 		`eco-domain--erc20`,
 	} {

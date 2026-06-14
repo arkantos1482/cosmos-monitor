@@ -187,6 +187,11 @@ func parseProbeLatencyMS(s string) (float64, bool) {
 }
 
 func writeEVMRPCSection(w Writer, d model.Report) {
+	w.WriteHTML(`<div class="evm-metamask-section">`)
+	w.Subsection("MetaMask")
+	w.WriteHTML(evmMetaMaskCardHTML(d))
+	w.WriteHTML(`</div>`)
+
 	w.WriteHTML(evmRPCHealthCardsHTML(d))
 
 	w.WriteHTML(`<div class="evm-probes-section">`)
