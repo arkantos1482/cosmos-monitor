@@ -9,7 +9,7 @@ import (
 
 func writeDistribution(w Writer, d model.Report) {
 	w.Section("5. DISTRIBUTION")
-	writeEmbeddedSectionIntro(w, "x/distribution params, community pool, module accounts, and per-validator outstanding rewards from BeginBlock fee routing.")
+	writeEmbeddedSectionIntro(w, "Unclaimed staking rewards, where those coins sit on-chain, and x/distribution params from BeginBlock fee routing.")
 	writeDistributionSummary(w, d, SummaryEmbedded)
 
 	if d.Local.IsValidator {
@@ -34,18 +34,17 @@ func writeDistributionSummary(w Writer, d model.Report, mode SummaryMode) {
 func writeDistributionSummaryBody(w Writer, d model.Report) {
 	w.WriteHTML(`<div class="dist-summary">`)
 	w.WriteHTML(`<div class="dist-summary__kpis">`)
-	if d.CommunityPool != "" {
-		writeDistributionSummaryKPI(w, "community pool", d.CommunityPool, "")
-	}
-	if d.CommunityTax != "" {
-		tone := ""
-		if d.CommunityTaxZero {
-			tone = "warn"
-		}
-		writeDistributionSummaryKPI(w, "community tax", d.CommunityTax, tone)
-	}
 	if total := distributionUnclaimedTotal(d); total != "" {
-		writeDistributionSummaryKPI(w, "unclaimed", total, "")
+		writeDistributionSummaryKPI(w, "unclaimed total", total, "")
+	}
+	if d.UnclaimedDelegator != "" {
+		writeDistributionSummaryKPI(w, "delegator share", d.UnclaimedDelegator, "")
+	}
+	if d.UnclaimedCommission != "" {
+		writeDistributionSummaryKPI(w, "operator commission", d.UnclaimedCommission, "")
+	}
+	if bal := distributionModuleBalance(d); bal != "" {
+		writeDistributionSummaryKPI(w, "distribution escrow", bal, "")
 	}
 	if status := distributionFeeCollectorStatus(d); status != "—" {
 		writeDistributionSummaryKPI(w, "fee_collector", status, distributionFeeCollectorTone(d))
@@ -68,14 +67,12 @@ func writeDistributionSummaryKPI(w Writer, label, value, tone string) {
 }
 
 func writeDistributionLocal(w Writer, lv model.LocalValidator) {
-	if lv.Outstanding != "" {
-		w.Row("outstanding rewards", lv.Outstanding+"  _(unclaimed delegator share)_")
+	if html := localUnclaimedBreakdownHTML(lv); html != "" {
+		w.RowHTML("unclaimed rewards", html, "")
 	} else {
-		w.Row("outstanding rewards", "—")
+		w.Row("unclaimed rewards", "—")
 	}
-	if lv.CommissionEarned != "" {
-		w.Row("commission", lv.CommissionEarned+"  _(unclaimed validator commission)_")
-	} else {
-		w.Row("commission", "—")
+	if lv.Commission > 0 {
+		w.Row("commission rate", fmt.Sprintf("%.1f%% of rewards before delegator split", lv.Commission))
 	}
 }

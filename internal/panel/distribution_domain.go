@@ -13,12 +13,29 @@ func distributionCardHTML(d model.Report) string {
 	var b strings.Builder
 	ecoDomainCardOpen(&b, "eco-domain--distribution", "Distribution", "x/distribution")
 
+	ecoDomainDividerDist(&b, "Unclaimed rewards")
+	writeDistributionUnclaimedRows(&b, d)
+
+	ecoDomainDividerDist(&b, "Coin balances")
+	writeModuleAccountRow(&b, d, "fee_collector",
+		"transit — block fees and minted rewards land here, then move out in BeginBlock")
+	writeModuleAccountRow(&b, d, "distribution",
+		"escrow — holds unclaimed delegator and operator rewards until withdrawn")
+	writeDistributionEscrowReconcileRow(&b, d)
+	poolCls := ""
+	if d.CommunityPool == "" {
+		poolCls = ` class="eco-domain__row--inactive"`
+	}
+	ecoDomainRow(&b, poolCls, "community pool", orEcoDash(d.CommunityPool),
+		"community tax and direct funding — separate from validator rewards; spent via governance")
+
+	ecoDomainDividerDist(&b, "Params")
 	taxCls := ""
 	if d.CommunityTaxZero {
 		taxCls = ` class="eco-domain__row--inactive"`
 	}
 	ecoDomainRow(&b, taxCls, "community_tax", orEcoDash(d.CommunityTax),
-		"fraction of block rewards sent to community pool before validator split")
+		"fraction of block rewards diverted to community pool before validator split")
 
 	withdrawEffect := "delegators may set a custom withdraw address"
 	if !d.WithdrawAddrEnabled {
@@ -26,24 +43,26 @@ func distributionCardHTML(d model.Report) string {
 	}
 	ecoDomainRow(&b, "", "withdraw_addr_enabled", boolStr(d.WithdrawAddrEnabled), withdrawEffect)
 
-	poolCls := ""
-	if d.CommunityPool == "" {
-		poolCls = ` class="eco-domain__row--inactive"`
-	}
-	ecoDomainRow(&b, poolCls, "community pool", orEcoDash(d.CommunityPool),
-		"accumulated tax and direct funding — spendable via governance")
-
-	ecoDomainDividerDist(&b, "Module accounts")
-	writeModuleAccountRow(&b, d, "fee_collector",
-		"receives fees and minted rewards each block; cleared in BeginBlock")
-	writeModuleAccountRow(&b, d, "distribution",
-		"module escrow — typically ~0 after payout")
-
-	ecoDomainDividerDist(&b, "Outstanding (network)")
-	writeDistributionUnclaimedRows(&b, d)
-
 	ecoDomainCardClose(&b)
 	return b.String()
+}
+
+func writeDistributionEscrowReconcileRow(b *strings.Builder, d model.Report) {
+	effect, warn := distributionEscrowReconcile(d)
+	if effect == "" {
+		return
+	}
+	cls := ""
+	if warn {
+		cls = ` class="eco-domain__row--warn"`
+	}
+	state := distributionUnclaimedTotal(d)
+	bank := distributionModuleBalance(d)
+	val := orEcoDash(bank)
+	if state != "" && bank != "" && state != bank {
+		val = fmt.Sprintf("%s → state tracks %s", bank, state)
+	}
+	ecoDomainRow(b, cls, "escrow check", val, effect)
 }
 
 func ecoDomainDividerDist(b *strings.Builder, title string) {
@@ -53,22 +72,23 @@ func ecoDomainDividerDist(b *strings.Builder, title string) {
 func writeDistributionUnclaimedRows(b *strings.Builder, d model.Report) {
 	del := d.UnclaimedDelegator
 	comm := d.UnclaimedCommission
+	total := distributionUnclaimedTotal(d)
 	if del == "" && comm == "" {
-		ecoDomainRow(b, ` class="eco-domain__row--inactive"`, "outstanding rewards", "—",
-			"no unclaimed delegator rewards across validators")
+		ecoDomainRow(b, ` class="eco-domain__row--inactive"`, "total unclaimed", "—",
+			"no rewards waiting to be withdrawn network-wide")
 		return
 	}
+	if total != "" {
+		ecoDomainRow(b, "", "total unclaimed", total,
+			"delegator share + operator commission — all escrowed until someone claims")
+	}
 	if del != "" {
-		ecoDomainRow(b, "", "delegator rewards", del,
-			"summed outstanding_rewards — claim with MsgWithdrawDelegatorReward")
+		ecoDomainRow(b, "", "for delegators", del,
+			"sum of per-validator delegator shares — MsgWithdrawDelegatorReward")
 	}
 	if comm != "" {
-		ecoDomainRow(b, "", "validator commission", comm,
-			"summed accumulated commission — claim with MsgWithdrawValidatorCommission")
-	}
-	total := distributionUnclaimedTotal(d)
-	if total != "" && del != "" && comm != "" {
-		ecoDomainRow(b, "", "total outstanding", total, "delegator share + validator commission")
+		ecoDomainRow(b, "", "for operators", comm,
+			"sum of validator commission balances — MsgWithdrawValidatorCommission")
 	}
 }
 
@@ -120,23 +140,23 @@ func writeDistributionValidatorTable(w Writer, d model.Report) {
 	}
 	rows := make([][]string, 0, len(d.Validators))
 	for _, v := range d.Validators {
-		out := v.Outstanding
-		if out == "" {
-			out = "—"
+		del := v.Outstanding
+		if del == "" {
+			del = "—"
 		}
-		comm := v.CommissionEarned
-		if comm == "" {
-			comm = "—"
+		op := v.CommissionEarned
+		if op == "" {
+			op = "—"
 		}
 		rows = append(rows, []string{
 			report.Truncate(v.Moniker, 14),
 			identityCell(v.Operator),
-			out,
-			comm,
+			del,
+			op,
 			fmt.Sprintf("%.1f%%", v.CommissionFloat),
 		})
 	}
 	writeValidatorSetTable(w,
-		[]string{"moniker", "operator", "outstanding", "commission", "rate"},
+		[]string{"moniker", "operator", "unclaimed (delegators)", "unclaimed (operator)", "comm. rate"},
 		rows, d.Validators)
 }

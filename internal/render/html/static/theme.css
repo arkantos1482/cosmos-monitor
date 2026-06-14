@@ -2155,6 +2155,70 @@ body::after {
   flex-shrink: 0;
 }
 
+.unclaimed-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.unclaimed-breakdown__total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.45rem 0.65rem;
+}
+
+.unclaimed-breakdown__amount {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 1.05em;
+}
+
+.unclaimed-breakdown__hint {
+  font-size: 0.82em;
+  color: var(--muted);
+}
+
+.unclaimed-breakdown__parts {
+  margin: 0;
+  padding: 0 0 0 1rem;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.unclaimed-breakdown__parts li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.55rem;
+}
+
+.unclaimed-breakdown__parts li::before {
+  content: "└";
+  color: var(--muted);
+  margin-left: -1rem;
+  width: 0.75rem;
+  flex-shrink: 0;
+}
+
+.unclaimed-breakdown__part-label {
+  color: var(--muted);
+  font-size: 0.88em;
+}
+
+.unclaimed-breakdown__part-val {
+  font-family: var(--mono);
+  font-weight: 600;
+}
+
+.unclaimed-breakdown__part-claim {
+  font-size: 0.78em;
+  color: var(--muted);
+}
+
 .id-dual {
   display: flex;
   flex-direction: column;

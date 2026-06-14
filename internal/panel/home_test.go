@@ -18,6 +18,8 @@ func TestBuildOverviewStack(t *testing.T) {
 		PMTRate: "0.1 PMT/block",
 		CommunityTax: "2%", 
 		CommunityPool: "0.5 PMT",
+		UnclaimedDelegator:  "0.006 PMT",
+		UnclaimedCommission: "0.0006 PMT",
 		ModuleAccounts: []model.ModuleAccountRow{
 			{Name: "fee_collector", Balance: "0 PMT", Role: "fees"},
 		},
@@ -93,8 +95,8 @@ func TestBuildOverviewStack(t *testing.T) {
 	if !strings.Contains(out[rewardsCard:distCard], `rewards-summary`) {
 		t.Fatal("rewards overview card should show rewards summary KPIs")
 	}
-	if !strings.Contains(out[distCard:], `dist-summary__kpi-label">community pool`) {
-		t.Fatal("distribution overview card should include community pool summary")
+	if !strings.Contains(out[distCard:], `dist-summary__kpi-label">unclaimed total`) {
+		t.Fatal("distribution overview card should include unclaimed total summary")
 	}
 }
 
@@ -108,6 +110,7 @@ func TestOverviewReusesSectionSummaries(t *testing.T) {
 			Commission: 10, Missed: 2, MaxMissed: 50,
 		},
 		CommunityTax: "2%", CommunityPool: "0.5 PMT",
+		UnclaimedDelegator: "0.006 PMT", UnclaimedCommission: "0.0006 PMT",
 	}
 	overview := BuildView(ViewHome, d)
 	for _, tc := range []struct {
@@ -123,10 +126,7 @@ func TestOverviewReusesSectionSummaries(t *testing.T) {
 			`slashing-summary__kpi-label">jailed`,
 		}},
 		{ViewDistribution, []string{
-			`dist-summary__kpi-label">community pool`,
-			`0.5 PMT`,
-			`dist-summary__kpi-label">community tax`,
-			`2%`,
+			`dist-summary__kpi-label">unclaimed total`,
 		}},
 	} {
 		section := BuildView(tc.section, d)

@@ -28,9 +28,11 @@ func TestDistributionCardCommunityTax(t *testing.T) {
 		"withdraw_addr_enabled",
 		"community pool",
 		"0.50 PMT",
-		"delegator rewards",
-		"validator commission",
+		"for delegators",
+		"for operators",
+		"total unclaimed",
 		"fee_collector",
+		"escrow check",
 	} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("distribution card missing %q:\n%s", want, html)
