@@ -321,6 +321,7 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 		d.BlockGasLimit = uint64(chain.BlockGasLimit)
 	}
 	d.ParentBlockGasUsed = chain.ParentBlockGasUsed
+	d.ParentBlockTxGasWanted = chain.ParentBlockTxGasWanted
 	d.ParentBlockGasWanted = chain.ParentBlockGasWanted
 	d.ParentBlockResultsOK = chain.ParentBlockResultsOK
 	if d.ParentBlockGasWanted == 0 && chain.BlockGas > 0 {

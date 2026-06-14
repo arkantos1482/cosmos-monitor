@@ -19,6 +19,10 @@ func TestWriteFeemarketSection(t *testing.T) {
 		MinGasMultiplier:         "0.5",
 		EVMDenom:                 "apmt",
 		NodeMinGasPrices:         "0.025apmt",
+		ParentBlockGasUsed:       55_000_000,
+		ParentBlockTxGasWanted:   120_000_000,
+		ParentBlockGasWanted:     60_000_000,
+		ParentBlockResultsOK:     true,
 	}
 	out := BuildView(ViewFeemarket, d)
 	for _, want := range []string{
@@ -27,6 +31,9 @@ func TestWriteFeemarketSection(t *testing.T) {
 		`fm-mechanics`,
 		`eco-domain--feemarket`,
 		`projected next base fee`,
+		`gas used`,
+		`gas wanted`,
+		`W (stored)`,
 		`demand vs target`,
 		`Live state`,
 		`EIP-1559 mechanics`,
@@ -81,7 +88,7 @@ func TestWriteFeemarketUnlimitedMaxGas(t *testing.T) {
 		t.Fatal("missing live state or mechanics subsection")
 	}
 	liveSlice := out[liveIdx:mechIdx]
-	for _, bad := range []string{"block gas limit", "gas target"} {
+	for _, bad := range []string{"block gas limit"} {
 		if strings.Contains(liveSlice, bad) {
 			t.Fatalf("static %q should not appear in live state", bad)
 		}

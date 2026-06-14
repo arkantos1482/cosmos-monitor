@@ -56,9 +56,10 @@ type ChainSnapshot struct {
 	MaxBlockBytes int64
 
 	// Parent block (H-1) from CometBFT block_results.
-	ParentBlockGasUsed   uint64
-	ParentBlockGasWanted uint64 // stored wanted (block_gas event or REST fallback)
-	ParentBlockResultsOK bool
+	ParentBlockGasUsed     uint64
+	ParentBlockTxGasWanted uint64 // Σ tx gas_wanted from parent block_results
+	ParentBlockGasWanted   uint64 // W from block_gas event or REST fallback
+	ParentBlockResultsOK   bool
 	ParentBaseFeeEvent   string // fee_market base_fee from begin_block at H (optional)
 
 	VotingProposals  []ProposalInfo

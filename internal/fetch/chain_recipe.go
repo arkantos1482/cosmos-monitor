@@ -343,6 +343,7 @@ func fetchFeemarketLive(rpc, rest string, snap *ChainSnapshot) {
 		if parent.OK {
 			snap.ParentBlockResultsOK = true
 			snap.ParentBlockGasUsed = parent.GasUsedSum
+			snap.ParentBlockTxGasWanted = parent.TxGasWantedSum
 			snap.ParentBlockGasWanted = parent.BlockGasWanted
 		}
 		cur := FetchBlockResults(rpc, snap.BlockHeight)

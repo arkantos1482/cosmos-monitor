@@ -66,8 +66,9 @@ type State struct {
 	EIP1559On    bool
 	Mode         string
 
-	GasWanted uint64
-	GasUsed   uint64
+	GasWanted   uint64 // W — stored parent block demand (fee formula input)
+	TxGasWanted uint64 // Σ tx gas_wanted on parent block
+	GasUsed     uint64 // parent block execution gas
 	GasLimit  uint64
 	GasTarget uint64
 	UtilPct   int
@@ -104,17 +105,19 @@ func LoadState(d model.Report) State {
 		ChangeDenom:     d.BaseFeeChangeDenominator,
 		BaseFeeParam:    d.BaseFeeParam,
 		LastBlockFees:   d.LastBlockFees,
-		GasWanted:       parseUint(d.BlockGas),
 		GasUsed:         d.ParentBlockGasUsed,
+		TxGasWanted:     d.ParentBlockTxGasWanted,
 		GasLimit:        d.BlockGasLimit,
 		NodeMinGas:      d.NodeMinGasPrices,
 		NodeEVMTip:      d.NodeEVMMinTip,
 		NodePriceLimit:  d.NodeMempoolPriceLimit,
 		NodeMaxGasWant:  d.NodeMaxTxGasWanted,
 	}
-	if s.GasUsed == 0 && d.ParentBlockGasWanted > 0 {
-		s.GasUsed = d.ParentBlockGasWanted
+	w := d.ParentBlockGasWanted
+	if w == 0 {
+		w = parseUint(d.BlockGas)
 	}
+	s.GasWanted = w
 	if s.Elasticity > 0 && s.GasLimit > 0 {
 		s.GasTarget = s.GasLimit / uint64(s.Elasticity)
 	}

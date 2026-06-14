@@ -120,6 +120,7 @@ type Report struct {
 	Elasticity               int64
 	BaseFeeChangeDenominator int64
 	ParentBlockGasUsed       uint64
+	ParentBlockTxGasWanted   uint64
 	ParentBlockGasWanted     uint64
 	ParentBlockResultsOK     bool
 

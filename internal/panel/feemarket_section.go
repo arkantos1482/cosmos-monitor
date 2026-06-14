@@ -33,7 +33,7 @@ func writeFeemarketSummaryBody(w Writer, s feemarket.State, d model.Report) {
 	w.WriteHTML(`<div class="fm-summary__kpis">`)
 	writeFmSummaryKPI(w, "mode", s.Mode)
 	if s.GasWanted > 0 {
-		writeFmSummaryKPI(w, "block gas (W)", formatUint(s.GasWanted))
+		writeFmSummaryKPI(w, "W (parent)", formatUint(s.GasWanted))
 	}
 	transfer := feemarket.TransferCost(s.BaseFeeRaw, s.Denom)
 	if transfer != "—" {
@@ -60,13 +60,17 @@ func writeFeemarket(w Writer, d model.Report) {
 	writeFeemarketSummary(w, d, SummaryEmbedded)
 
 	w.Subsection("Live state")
+	w.Hint("Parent block (H−1) gas metrics feed this block's base-fee adjustment.")
 	w.Row("block height", d.BlockHeight)
 	w.Row("base fee", orDash(d.BaseFee))
-	if s.GasWanted > 0 {
-		w.Row("block gas (W)", formatUint(s.GasWanted)+" gas  _(parent demand input)_")
+	if d.ParentBlockResultsOK || s.GasUsed > 0 {
+		w.Row("gas used", formatUint(s.GasUsed)+" gas  _(parent block, Σ tx gas_used)_")
 	}
-	if s.GasUsed > 0 {
-		w.Row("parent gas used", formatUint(s.GasUsed)+" gas")
+	if d.ParentBlockResultsOK || s.TxGasWanted > 0 {
+		w.Row("gas wanted", formatUint(s.TxGasWanted)+" gas  _(parent block, Σ tx gas_wanted)_")
+	}
+	if s.GasWanted > 0 || d.ParentBlockResultsOK {
+		w.Row("W (stored)", formatUint(s.GasWanted)+" gas  _(max(gas_used, gas_wanted × min_gas_multiplier))_")
 	}
 	if html := fmDemandVsTargetHTML(s); html != "" {
 		w.RowHTML("demand vs target", html, "")
