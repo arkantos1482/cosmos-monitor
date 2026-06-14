@@ -41,7 +41,26 @@ type bankBalancesResp struct {
 }
 
 // FetchModuleBalances returns live bank balances for core economics module accounts.
-func FetchModuleBalances(rest, preferDenom string) []ModuleBalanceInfo {
+// When names is non-empty, only those module account names are queried.
+func FetchModuleBalances(rest, preferDenom string, names []string) []ModuleBalanceInfo {
+	specs := trackedModuleAccounts
+	if len(names) > 0 {
+		want := make(map[string]bool, len(names))
+		for _, n := range names {
+			want[n] = true
+		}
+		filtered := make([]struct {
+			name string
+			role string
+		}, 0, len(names))
+		for _, s := range trackedModuleAccounts {
+			if want[s.name] {
+				filtered = append(filtered, s)
+			}
+		}
+		specs = filtered
+	}
+
 	var ma moduleAccountsResp
 	if err := doJSON(rest+"/cosmos/auth/v1beta1/module_accounts", &ma); err != nil {
 		return nil
@@ -53,9 +72,9 @@ func FetchModuleBalances(rest, preferDenom string) []ModuleBalanceInfo {
 		}
 	}
 
-	out := make([]ModuleBalanceInfo, len(trackedModuleAccounts))
+	out := make([]ModuleBalanceInfo, len(specs))
 	var wg sync.WaitGroup
-	for i, spec := range trackedModuleAccounts {
+	for i, spec := range specs {
 		i, spec := i, spec
 		out[i].Name = spec.name
 		addr, ok := addrByName[spec.name]

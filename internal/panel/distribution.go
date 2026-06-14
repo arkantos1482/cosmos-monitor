@@ -12,6 +12,8 @@ func writeDistribution(w Writer, d model.Report) {
 	writeEmbeddedSectionIntro(w, "Unclaimed staking rewards, where those coins sit on-chain, and x/distribution params from BeginBlock fee routing.")
 	writeDistributionSummary(w, d, SummaryEmbedded)
 
+	w.Hint("`unclaimed total`, `delegator share`, `operator commission` → derived (Σ per-validator outstanding_rewards + Σ commission from distribution REST); `distribution escrow`, `fee_collector` → REST bank balance for module accounts (auth module_accounts + bank/balances); `community pool` → REST GET /cosmos/distribution/v1beta1/community_pool; `community_tax`, `withdraw_addr_enabled` → REST GET /cosmos/distribution/v1beta1/params; `escrow check` → derived (bank distribution balance vs unclaimed total); validator table → REST outstanding_rewards + commission per valoper; `comm. rate`, local validator → REST GET /cosmos/staking/v1beta1/validators; local identity → CometBFT GET /status.")
+
 	if d.Local.IsValidator {
 		w.Subsection("This validator")
 		writeDistributionLocal(w, d.Local)

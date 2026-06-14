@@ -48,12 +48,24 @@ func ecoDomainRow(b *strings.Builder, rowClass, param, value, effect string) {
 }
 
 func ecoDomainRowHTML(b *strings.Builder, rowClass, param, valueHTML, effect string) {
-	cls := `eco-domain__row`
-	if mod := strings.Trim(rowClass, ` "'`); mod != "" {
+	cls := "eco-domain__row"
+	if mod := ecoRowModifierClass(rowClass); mod != "" {
 		cls += " " + mod
 	}
 	fmt.Fprintf(b, `<div class="%s"><div class="eco-domain__param">%s</div><div class="eco-domain__value">%s</div><div class="eco-domain__effect">%s</div></div>`,
 		cls, html.EscapeString(param), valueHTML, html.EscapeString(effect))
+}
+
+// ecoRowModifierClass accepts either "eco-domain__row--warn" or legacy ` class="eco-domain__row--warn"`.
+func ecoRowModifierClass(rowClass string) string {
+	s := strings.TrimSpace(rowClass)
+	if strings.HasPrefix(s, `class="`) {
+		s = strings.TrimPrefix(s, `class="`)
+		if i := strings.IndexByte(s, '"'); i >= 0 {
+			s = s[:i]
+		}
+	}
+	return strings.Trim(s, `"' `)
 }
 
 func ecoBalanceAddrHTML(balance, addr string) string {

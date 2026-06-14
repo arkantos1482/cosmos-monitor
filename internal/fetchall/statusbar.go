@@ -49,7 +49,7 @@ func fetchStatusBar(view panel.View, rpc, rest, evm, container string) (Snapshot
 	go func() { defer wg.Done(); docker = fetch.FetchDockerRunning(container) }()
 	if view != panel.ViewEVM {
 		wg.Add(1)
-		go func() { defer wg.Done(); p = cachedParams(rest) }()
+		go func() { defer wg.Done(); p = paramsForView(view, rest) }()
 	}
 	if !skipEVMPeer {
 		wg.Add(1)

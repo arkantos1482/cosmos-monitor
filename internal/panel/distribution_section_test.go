@@ -99,7 +99,22 @@ func TestDistributionSourcesProvenance(t *testing.T) {
 		ModuleAccounts: []model.ModuleAccountRow{
 			{Name: "fee_collector", Balance: "0 PMT"},
 		},
-		Exchanges: sampleExchanges(),
+		Exchanges: append(sampleExchanges(), []model.SourceExchange{
+			{
+				Kind: "http", Method: "GET",
+				URL:      "http://localhost:1317/cosmos/staking/v1beta1/validators?status=BOND_STATUS_BONDED",
+				Request:  "(none)",
+				Response: `{"validators":[]}`,
+				OK:       true, Latency: "4ms",
+			},
+			{
+				Kind: "http", Method: "GET",
+				URL:      "http://localhost:1317/cosmos/distribution/v1beta1/community_pool",
+				Request:  "(none)",
+				Response: `{"pool":[]}`,
+				OK:       true, Latency: "5ms",
+			},
+		}...),
 	}
 	out := BuildWithOptions(d, Options{ShowSources: true})
 	chunk := distributionChunk(t, out)
@@ -109,7 +124,12 @@ func TestDistributionSourcesProvenance(t *testing.T) {
 		`dash-sources__exchange`,
 		`dash-sources__tag">req`,
 		`dash-sources__tag">res`,
+		`class="hint-provenance"`,
+		"outstanding_rewards",
 		"distribution/v1beta1/params",
+		"distribution/v1beta1/community_pool",
+		"staking/v1beta1/validators",
+		"/status",
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("distribution data sources missing %q", want)

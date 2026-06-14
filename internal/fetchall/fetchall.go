@@ -112,6 +112,13 @@ func cachedParams(rest string) fetch.ChainParams {
 	return p
 }
 
+func paramsForView(view panel.View, rest string) fetch.ChainParams {
+	if view == panel.ViewDistribution {
+		return fetch.FetchDistributionParams(rest)
+	}
+	return cachedParams(rest)
+}
+
 func fetchForView(view panel.View, rpc, rest, evm, container string) Snapshots {
 	switch view {
 	case panel.ViewInfra:
@@ -150,7 +157,7 @@ func fetchForView(view panel.View, rpc, rest, evm, container string) Snapshots {
 	)
 	wg.Add(2)
 	go func() { defer wg.Done(); chain = fetch.FetchChainRecipe(rpc, rest, chainOpts) }()
-	go func() { defer wg.Done(); p = cachedParams(rest) }()
+	go func() { defer wg.Done(); p = paramsForView(view, rest) }()
 	if needEVM {
 		wg.Add(1)
 		go func() { defer wg.Done(); evSnap = fetch.FetchEVM(evm) }()

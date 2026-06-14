@@ -73,10 +73,44 @@ func TestExchangesForViewNode(t *testing.T) {
 }
 
 func TestExchangesForViewDistribution(t *testing.T) {
-	all := sampleExchanges()
-	got := exchangesForView(ViewDistribution, all)
-	if len(got) != 1 || !strings.Contains(got[0].URL, "distribution") {
-		t.Fatalf("distribution view should match distribution endpoint, got %d", len(got))
+	all := append(sampleExchanges(), []model.SourceExchange{
+		{
+			Kind: "http", Method: "GET",
+			URL:      "http://localhost:1317/cosmos/staking/v1beta1/validators?status=BOND_STATUS_BONDED",
+			Request:  "(none)",
+			Response: `{"validators":[]}`,
+			OK:       true, Latency: "4ms",
+		},
+		{
+			Kind: "http", Method: "GET",
+			URL:      "http://localhost:1317/cosmos/distribution/v1beta1/community_pool",
+			Request:  "(none)",
+			Response: `{"pool":[]}`,
+			OK:       true, Latency: "5ms",
+		},
+		{
+			Kind: "http", Method: "GET",
+			URL:      "http://localhost:1317/cosmos/mint/v1beta1/inflation",
+			Request:  "(none)",
+			Response: `{"inflation":"0"}`,
+			OK:       true, Latency: "6ms",
+		},
+	}...)
+	got := sourcesForView(ViewDistribution, model.Report{Exchanges: all})
+	if len(got) != 4 {
+		t.Fatalf("distribution view should match status + distribution + staking endpoints, got %d", len(got))
+	}
+	for _, want := range []string{"/status", "distribution", "staking"} {
+		found := false
+		for _, e := range got {
+			if strings.Contains(e.URL, want) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("distribution sources missing %q", want)
+		}
 	}
 }
 

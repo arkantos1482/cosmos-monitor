@@ -734,6 +734,17 @@ func evmDisplayDecimals(display string, units []bankDenomUnit) uint32 {
 	return max
 }
 
+// FetchDistributionParams fetches only x/distribution params (view-scoped; always traced).
+func FetchDistributionParams(rest string) ChainParams {
+	p := ChainParams{}
+	var dp distributionParamsResp
+	if err := doJSON(rest+"/cosmos/distribution/v1beta1/params", &dp); err == nil {
+		p.CommunityTax = parseFloat(dp.Params.CommunityTax)
+		p.WithdrawAddrEnabled = dp.Params.WithdrawAddrEnabled
+	}
+	return p
+}
+
 // FetchParams fetches chain params (called once on launch).
 func FetchParams(rest string) ChainParams {
 	p := ChainParams{}

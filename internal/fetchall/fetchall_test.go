@@ -80,4 +80,7 @@ func TestChainRecipeForDistributionFetchesValidatorRewards(t *testing.T) {
 	if !r.ValidatorRewards || r.Governance || !r.ModuleBalances || !r.CommunityPool {
 		t.Fatalf("unexpected recipe: %+v", r)
 	}
+	if len(r.ModuleAccountNames) != 2 || r.ModuleAccountNames[0] != "fee_collector" || r.ModuleAccountNames[1] != "distribution" {
+		t.Fatalf("distribution recipe should only fetch fee_collector and distribution modules, got %+v", r.ModuleAccountNames)
+	}
 }

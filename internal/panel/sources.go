@@ -41,6 +41,9 @@ func sourcesForView(v View, d model.Report) []model.SourceExchange {
 	if v == ViewEVM {
 		exchanges = mergeEVMRPCProbes(exchanges, d)
 	}
+	if v == ViewDistribution {
+		exchanges = filterDistributionExchanges(exchanges)
+	}
 	return exchanges
 }
 
@@ -59,6 +62,31 @@ func exchangesForView(v View, all []model.SourceExchange) []model.SourceExchange
 				out = append(out, e)
 				break
 			}
+		}
+	}
+	return out
+}
+
+// filterDistributionExchanges keeps only endpoints the Distribution section uses
+// (drops unrelated bank/module fetches from other views sharing the trace buffer).
+func filterDistributionExchanges(exchanges []model.SourceExchange) []model.SourceExchange {
+	if len(exchanges) == 0 {
+		return exchanges
+	}
+	var out []model.SourceExchange
+	for _, e := range exchanges {
+		u := strings.ToLower(e.URL)
+		switch {
+		case strings.Contains(u, "/status"):
+			out = append(out, e)
+		case strings.Contains(u, "/cosmos/staking/"):
+			out = append(out, e)
+		case strings.Contains(u, "/cosmos/distribution/"):
+			out = append(out, e)
+		case strings.Contains(u, "/cosmos/auth/v1beta1/module_accounts"):
+			out = append(out, e)
+		case strings.Contains(u, "/cosmos/bank/v1beta1/balances/"):
+			out = append(out, e)
 		}
 	}
 	return out
@@ -170,7 +198,8 @@ func viewExchangeMatchers(v View) []func(model.SourceExchange) bool {
 		}
 	case ViewDistribution:
 		return []func(model.SourceExchange) bool{
-			urlContains("/cosmos/distribution/", "/cosmos/bank/", "/cosmos/auth/"),
+			urlContains("/status"),
+			urlContains("/cosmos/staking/", "/cosmos/distribution/", "/cosmos/bank/", "/cosmos/auth/"),
 		}
 	case ViewGovernance:
 		return []func(model.SourceExchange) bool{

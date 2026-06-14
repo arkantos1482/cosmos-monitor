@@ -29,6 +29,7 @@ type ChainRecipe struct {
 	CommunityPool    bool
 	FeemarketLive    bool // base_fee, block_gas, block_results
 	ModuleBalances   bool
+	ModuleAccountNames []string // nil = all tracked module accounts
 	Governance       bool
 	ValidatorRewards bool
 	LocalStaking     bool // local delegations (balance enrichment is separate)
@@ -69,7 +70,9 @@ var ChainRecipeRewards = ChainRecipe{
 // ChainRecipeDistribution is the Distribution section.
 var ChainRecipeDistribution = ChainRecipe{
 	ValidatorScope: ValidatorsAll, CommunityPool: true,
-	ModuleBalances: true, ValidatorRewards: true,
+	ModuleBalances:     true,
+	ModuleAccountNames: []string{"fee_collector", "distribution"},
+	ValidatorRewards:   true,
 }
 
 // ChainRecipeFeemarket is the Fee market section.
@@ -211,7 +214,7 @@ func FetchChainRecipe(rpc, rest string, recipe ChainRecipe) ChainSnapshot {
 		if preferDenom == "" {
 			preferDenom = snap.TotalSupplyDenom
 		}
-		snap.ModuleBalances = FetchModuleBalances(rest, preferDenom)
+		snap.ModuleBalances = FetchModuleBalances(rest, preferDenom, recipe.ModuleAccountNames)
 	}
 
 	if recipe.Governance {
