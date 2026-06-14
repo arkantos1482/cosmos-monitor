@@ -32,7 +32,6 @@ func TestInfraContent(t *testing.T) {
 		`pmt-blockchain:latest`,
 		`started at`,
 		`52%`,
-		`136 GiB free`,
 		`class="infra-summary__hero"`,
 	} {
 		if !strings.Contains(out, want) {
@@ -44,6 +43,7 @@ func TestInfraContent(t *testing.T) {
 		`class="dash-layer__title">evmd-node</h3>`,
 		`Host vs container`,
 		`infra-compare`,
+		`>root disk<`,
 	} {
 		if strings.Contains(out, gone) {
 			t.Fatalf("infra view should not contain %q", gone)

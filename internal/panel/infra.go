@@ -32,9 +32,6 @@ func writeInfraSummaryBody(w Writer, d model.Report, s infraState) {
 	writeMiniGauge(w, "load", infraLoadPct(d))
 	writeMiniGauge(w, "RAM", d.MemPct)
 	writeMiniGauge(w, s.chainDiskLabel, s.chainDiskPct)
-	if s.chainDiskLabel == "chain data" {
-		writeMiniGauge(w, "root disk", d.DiskPct)
-	}
 	w.WriteHTML(`</div>`)
 
 	if foot := infraSummaryFootHTML(d); foot != "" {

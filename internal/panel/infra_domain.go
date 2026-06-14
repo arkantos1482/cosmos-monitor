@@ -110,9 +110,6 @@ func infraHostMetersHTML(d model.Report, s infraState) string {
 	b.WriteString(infraMeterHTML("memory", fmt.Sprintf("%s used · %s free of %s",
 		d.MemUsed, orDash(d.MemAvail), d.MemTotal), d.MemPct))
 	b.WriteString(infraMeterHTML(s.chainDiskLabel, diskDetailForLabel(d, s.chainDiskLabel), s.chainDiskPct))
-	if s.chainDiskLabel == "chain data" {
-		b.WriteString(infraMeterHTML("root disk", diskDetailForLabel(d, "root disk"), d.DiskPct))
-	}
 	b.WriteString(infraMeterHTML("load (1m)", s.loadDetail, infraLoadPct(d)))
 	if d.SwapTotal != "" {
 		b.WriteString(infraStatHTML("swap", fmt.Sprintf("%s / %s", orDash(d.SwapUsed), d.SwapTotal)))
