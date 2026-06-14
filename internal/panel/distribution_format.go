@@ -18,34 +18,43 @@ func localUnclaimedBreakdownHTML(lv model.LocalValidator) string {
 	}
 	total := localUnclaimedTotal(lv)
 	var b strings.Builder
-	b.WriteString(`<div class="unclaimed-breakdown">`)
+	b.WriteString(`<div class="unclaimed-breakdown unclaimed-breakdown--horizontal">`)
 	if total != "" {
-		fmt.Fprintf(&b, `<div class="unclaimed-breakdown__total"><span class="unclaimed-breakdown__amount">%s</span>`+
-			`<span class="unclaimed-breakdown__hint">total not yet withdrawn</span></div>`,
-			html.EscapeString(total))
+		b.WriteString(unclaimedBreakdownCard("total", total, "not yet withdrawn", true))
 	}
-	b.WriteString(`<ul class="unclaimed-breakdown__parts">`)
 	if del != "" {
-		b.WriteString(unclaimedPartLI("delegator share", del, "claim with MsgWithdrawDelegatorReward"))
+		b.WriteString(unclaimedBreakdownCard("delegator share", del, "MsgWithdrawDelegatorReward", false))
 	}
 	if comm != "" {
-		b.WriteString(unclaimedPartLI("your commission", comm, "claim with MsgWithdrawValidatorCommission"))
+		b.WriteString(unclaimedBreakdownCard("your commission", comm, "MsgWithdrawValidatorCommission", false))
 	}
-	b.WriteString(`</ul></div>`)
+	b.WriteString(`</div>`)
 	return b.String()
 }
 
-func unclaimedPartLI(label, amount, claim string) string {
+func unclaimedBreakdownCard(label, amount, hint string, hero bool) string {
+	cls := "unclaimed-breakdown__card"
+	if hero {
+		cls += " unclaimed-breakdown__card--hero"
+	}
 	return fmt.Sprintf(
-		`<li><span class="unclaimed-breakdown__part-label">%s</span>`+
-			`<span class="unclaimed-breakdown__part-val">%s</span>`+
-			`<span class="unclaimed-breakdown__part-claim">%s</span></li>`,
-		html.EscapeString(label), html.EscapeString(amount), html.EscapeString(claim))
+		`<div class="%s"><span class="unclaimed-breakdown__card-label">%s</span>`+
+			`<span class="unclaimed-breakdown__card-val">%s</span>`+
+			`<span class="unclaimed-breakdown__card-hint">%s</span></div>`,
+		cls, html.EscapeString(label), html.EscapeString(amount), html.EscapeString(hint))
+}
+
+func validatorUnclaimedTotal(v model.Validator) string {
+	return sumUnclaimedAmounts(v.Outstanding, v.CommissionEarned, model.Report{})
 }
 
 func localUnclaimedTotal(lv model.LocalValidator) string {
-	del := strings.TrimSpace(lv.Outstanding)
-	comm := strings.TrimSpace(lv.CommissionEarned)
+	return sumUnclaimedAmounts(lv.Outstanding, lv.CommissionEarned, model.Report{})
+}
+
+func sumUnclaimedAmounts(outstanding, commission string, d model.Report) string {
+	del := strings.TrimSpace(outstanding)
+	comm := strings.TrimSpace(commission)
 	if del != "" && comm != "" {
 		delF, ok1 := economicsParseAmount(del)
 		commF, ok2 := economicsParseAmount(comm)

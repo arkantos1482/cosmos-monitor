@@ -35,18 +35,61 @@ func writeDistributionSummary(w Writer, d model.Report, mode SummaryMode) {
 
 func writeDistributionSummaryBody(w Writer, d model.Report) {
 	w.WriteHTML(`<div class="dist-summary">`)
-	w.WriteHTML(`<div class="dist-summary__kpis">`)
+	if d.Local.IsValidator {
+		w.WriteHTML(`<div class="dist-summary__columns">`)
+		writeDistributionSummaryScope(w, "This validator", distributionLocalSummaryKPIs(d.Local))
+		writeDistributionSummaryScope(w, "Network", distributionNetworkSummaryKPIs(d))
+		w.WriteHTML(`</div>`)
+	} else {
+		writeDistributionSummaryScope(w, "Network", distributionNetworkSummaryKPIs(d))
+	}
+	w.WriteHTML(`</div>`)
+}
+
+type distSummaryKPI struct {
+	label, value, tone string
+}
+
+func distributionLocalSummaryKPIs(lv model.LocalValidator) []distSummaryKPI {
+	var kpis []distSummaryKPI
+	if total := localUnclaimedTotal(lv); total != "" {
+		kpis = append(kpis, distSummaryKPI{"unclaimed total", total, ""})
+	}
+	if lv.Outstanding != "" {
+		kpis = append(kpis, distSummaryKPI{"delegator share", lv.Outstanding, ""})
+	}
+	if lv.CommissionEarned != "" {
+		kpis = append(kpis, distSummaryKPI{"your commission", lv.CommissionEarned, ""})
+	}
+	return kpis
+}
+
+func distributionNetworkSummaryKPIs(d model.Report) []distSummaryKPI {
+	var kpis []distSummaryKPI
 	if total := distributionUnclaimedTotal(d); total != "" {
-		writeDistributionSummaryKPI(w, "unclaimed total", total, "")
+		kpis = append(kpis, distSummaryKPI{"unclaimed total", total, ""})
 	}
 	if d.UnclaimedDelegator != "" {
-		writeDistributionSummaryKPI(w, "delegator share", d.UnclaimedDelegator, "")
+		kpis = append(kpis, distSummaryKPI{"delegator share", d.UnclaimedDelegator, ""})
 	}
 	if d.UnclaimedCommission != "" {
-		writeDistributionSummaryKPI(w, "operator commission", d.UnclaimedCommission, "")
+		kpis = append(kpis, distSummaryKPI{"operator commission", d.UnclaimedCommission, ""})
 	}
 	if bal := distributionModuleBalance(d); bal != "" {
-		writeDistributionSummaryKPI(w, "distribution escrow", bal, "")
+		kpis = append(kpis, distSummaryKPI{"distribution escrow", bal, ""})
+	}
+	return kpis
+}
+
+func writeDistributionSummaryScope(w Writer, title string, kpis []distSummaryKPI) {
+	if len(kpis) == 0 {
+		return
+	}
+	w.WriteHTML(`<div class="dist-summary__scope">`)
+	w.WriteHTML(fmt.Sprintf(`<div class="dist-summary__scope-label">%s</div>`, html.EscapeString(title)))
+	w.WriteHTML(`<div class="dist-summary__kpis">`)
+	for _, k := range kpis {
+		writeDistributionSummaryKPI(w, k.label, k.value, k.tone)
 	}
 	w.WriteHTML(`</div></div>`)
 }
@@ -66,8 +109,8 @@ func writeDistributionSummaryKPI(w Writer, label, value, tone string) {
 }
 
 func writeDistributionLocal(w Writer, lv model.LocalValidator) {
-	if html := localUnclaimedBreakdownHTML(lv); html != "" {
-		w.RowHTML("unclaimed rewards", html, "")
+	if markup := localUnclaimedBreakdownHTML(lv); markup != "" {
+		w.WriteHTML(`<div class="dist-local-unclaimed">` + markup + `</div>`)
 	} else {
 		w.Row("unclaimed rewards", "—")
 	}

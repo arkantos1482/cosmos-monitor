@@ -16,24 +16,24 @@ func distributionCardHTML(d model.Report) string {
 	ecoDomainDividerDist(&b, "Unclaimed rewards")
 	writeDistributionUnclaimedRows(&b, d)
 
-	ecoDomainDividerDist(&b, "Coin balances")
-	writeModuleAccountRow(&b, d, "distribution",
-		"escrow — holds unclaimed delegator and operator rewards until withdrawn")
-	writeDistributionEscrowReconcileRow(&b, d)
+	ecoDomainDividerDist(&b, "Community treasury")
 	poolCls := ""
 	if d.CommunityPool == "" {
 		poolCls = ` class="eco-domain__row--inactive"`
 	}
 	ecoDomainRow(&b, poolCls, "community pool", orEcoDash(d.CommunityPool),
-		"community tax and direct funding — separate from validator rewards; spent via governance")
-
-	ecoDomainDividerDist(&b, "Params")
+		"governance-controlled reserve — funded by community tax and direct deposits")
 	taxCls := ""
 	if d.CommunityTaxZero {
 		taxCls = ` class="eco-domain__row--inactive"`
 	}
 	ecoDomainRow(&b, taxCls, "community_tax", orEcoDash(d.CommunityTax),
 		"fraction of block rewards diverted to community pool before validator split")
+
+	ecoDomainDividerDist(&b, "Distribution escrow")
+	writeModuleAccountRow(&b, d, "distribution",
+		"bank balance — holds all unclaimed delegator and operator rewards until withdrawn")
+	writeDistributionEscrowReconcileRow(&b, d)
 
 	withdrawEffect := "delegators may set a custom withdraw address"
 	if !d.WithdrawAddrEnabled {
@@ -104,23 +104,28 @@ func writeDistributionValidatorTable(w Writer, d model.Report) {
 	}
 	rows := make([][]string, 0, len(d.Validators))
 	for _, v := range d.Validators {
+		total := validatorUnclaimedTotal(v)
+		if total == "" {
+			total = "—"
+		}
+		comm := v.CommissionEarned
+		if comm == "" {
+			comm = "—"
+		}
 		del := v.Outstanding
 		if del == "" {
 			del = "—"
 		}
-		op := v.CommissionEarned
-		if op == "" {
-			op = "—"
-		}
 		rows = append(rows, []string{
 			report.Truncate(v.Moniker, 14),
 			identityCell(v.Operator),
+			total,
+			comm,
 			del,
-			op,
 			fmt.Sprintf("%.1f%%", v.CommissionFloat),
 		})
 	}
 	writeValidatorSetTable(w,
-		[]string{"moniker", "operator", "unclaimed (delegators)", "unclaimed (operator)", "comm. rate"},
+		[]string{"moniker", "operator", "total", "commission", "outstanding share", "comm. rate"},
 		rows, d.Validators)
 }

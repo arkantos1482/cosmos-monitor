@@ -27,6 +27,8 @@ func TestDistributionCardCommunityTax(t *testing.T) {
 		"withdraw_addr_enabled",
 		"community pool",
 		"0.50 PMT",
+		"Community treasury",
+		"Distribution escrow",
 		"for delegators",
 		"for operators",
 		"total unclaimed",

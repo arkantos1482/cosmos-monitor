@@ -505,6 +505,30 @@ body::after {
   border-radius: var(--radius);
 }
 
+.dist-summary__columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.dist-summary__scope {
+  min-width: 0;
+  padding: 0.55rem 0.65rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.dist-summary__scope-label {
+  display: block;
+  margin-bottom: 0.45rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
 .dist-summary__kpis,
 .rewards-summary__kpis {
   display: grid;
@@ -2162,6 +2186,51 @@ body::after {
   min-width: 0;
 }
 
+.unclaimed-breakdown--horizontal {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.dist-local-unclaimed {
+  margin: 0.25rem 0 0.5rem;
+}
+
+.unclaimed-breakdown__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  min-width: 0;
+  padding: 0.5rem 0.65rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.unclaimed-breakdown__card--hero {
+  border-color: rgba(94, 179, 255, 0.25);
+}
+
+.unclaimed-breakdown__card-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: lowercase;
+  color: var(--muted);
+}
+
+.unclaimed-breakdown__card-val {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.unclaimed-breakdown__card-hint {
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
 .unclaimed-breakdown__total {
   display: flex;
   flex-wrap: wrap;
@@ -2217,6 +2286,16 @@ body::after {
 .unclaimed-breakdown__part-claim {
   font-size: 0.78em;
   color: var(--muted);
+}
+
+@media (max-width: 720px) {
+  .unclaimed-breakdown--horizontal {
+    grid-template-columns: 1fr;
+  }
+
+  .dist-summary__columns {
+    grid-template-columns: 1fr;
+  }
 }
 
 .id-dual {

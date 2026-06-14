@@ -13,7 +13,7 @@ func TestLocalUnclaimedBreakdownHTML(t *testing.T) {
 		CommissionEarned: "0.0001 PMT",
 	})
 	for _, want := range []string{
-		`class="unclaimed-breakdown"`,
+		`unclaimed-breakdown--horizontal`,
 		"0.0011 PMT",
 		"delegator share",
 		"your commission",

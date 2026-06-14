@@ -45,6 +45,8 @@ func TestWriteDistributionSection(t *testing.T) {
 
 	for _, want := range []string{
 		`class="dist-summary"`,
+		`dist-summary__scope-label">This validator`,
+		`dist-summary__scope-label">Network`,
 		`dist-summary__kpi-label">unclaimed total`,
 		`dist-summary__kpi-label">delegator share`,
 		`eco-domain--distribution`,
@@ -52,18 +54,21 @@ func TestWriteDistributionSection(t *testing.T) {
 		"community_tax",
 		"withdraw_addr_enabled",
 		"community pool",
+		"Community treasury",
+		"Distribution escrow",
 		"for delegators",
 		"for operators",
 		"total unclaimed",
 		"escrow check",
 		`class="dash-subheading">This validator</h3>`,
 		`class="dash-subheading">Network-wide</h3>`,
-		`class="unclaimed-breakdown"`,
+		`unclaimed-breakdown--horizontal`,
 		"delegator share",
 		`data-table--staking-set`,
 		`table-scroll--fit`,
-		"unclaimed (delegators)",
-		"unclaimed (operator)",
+		">total<",
+		">commission<",
+		">outstanding share<",
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("distribution chunk missing %q", want)
