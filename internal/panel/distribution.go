@@ -19,7 +19,7 @@ func writeDistribution(w Writer, d model.Report) {
 		writeDistributionLocal(w, d.Local)
 	}
 
-	w.Subsection("Unclaimed rewards")
+	w.Subsection("Network")
 	writeDistributionNetworkUnclaimed(w, d)
 	writeDistributionValidatorTable(w, d)
 

@@ -60,7 +60,7 @@ func TestWriteDistributionSection(t *testing.T) {
 		`class="dist-escrow"`,
 		"distribution escrow",
 		`class="dash-subheading">This validator</h3>`,
-		`class="dash-subheading">Unclaimed rewards</h3>`,
+		`class="dash-subheading">Network</h3>`,
 		`class="dash-subheading">Treasury &amp; params</h3>`,
 		"delegator share",
 		`data-table--staking-set`,
