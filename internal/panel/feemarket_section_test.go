@@ -27,8 +27,10 @@ func TestWriteFeemarketSection(t *testing.T) {
 		`fm-mechanics`,
 		`eco-domain--feemarket`,
 		`projected next base fee`,
+		`demand vs target`,
 		`Live state`,
 		`EIP-1559 mechanics`,
+		`fm-mechanics__cosmos`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("missing %q in output", want)
@@ -67,5 +69,21 @@ func TestWriteFeemarketUnlimitedMaxGas(t *testing.T) {
 	}
 	if strings.Contains(out, `projected next base fee`) {
 		t.Fatal("unlimited max_gas should not show projected base fee")
+	}
+	for _, want := range []string{`(-1) ∞`, `max ÷ 2`, `fm-sentinel__raw`} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("missing %q in unlimited max_gas view", want)
+		}
+	}
+	liveIdx := strings.Index(out, "Live state")
+	mechIdx := strings.Index(out, "EIP-1559 mechanics")
+	if liveIdx < 0 || mechIdx < 0 || mechIdx <= liveIdx {
+		t.Fatal("missing live state or mechanics subsection")
+	}
+	liveSlice := out[liveIdx:mechIdx]
+	for _, bad := range []string{"block gas limit", "gas target"} {
+		if strings.Contains(liveSlice, bad) {
+			t.Fatalf("static %q should not appear in live state", bad)
+		}
 	}
 }

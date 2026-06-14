@@ -33,16 +33,8 @@ func fmModuleCardHTML(s feemarket.State, d model.Report) string {
 func fmConsensusCardHTML(s feemarket.State, d model.Report) string {
 	var b strings.Builder
 	ecoDomainCardOpen(&b, "eco-domain--feemarket-consensus", "Consensus limits", "CometBFT block caps")
-	limit := "unlimited"
-	if s.GasLimit > 0 {
-		limit = formatUint(s.GasLimit) + " gas"
-	}
-	ecoDomainRow(&b, "", "max_gas", limit, "block gas meter ceiling")
-	target := "—"
-	if s.GasTarget > 0 {
-		target = formatUint(s.GasTarget) + " gas"
-	}
-	ecoDomainRow(&b, "", "gas target", target, "limit ÷ elasticity_multiplier")
+	ecoDomainRowHTML(&b, "", "max_gas", fmGasLimitHTML(s), "block gas meter ceiling (−1 = unlimited)")
+	ecoDomainRowHTML(&b, "", "gas target", fmGasTargetHTML(s), "limit ÷ elasticity_multiplier")
 	if d.MaxBlockBytes > 0 {
 		ecoDomainRow(&b, "", "max_block_bytes", formatParamInt(d.MaxBlockBytes), "serialized block size cap")
 	}

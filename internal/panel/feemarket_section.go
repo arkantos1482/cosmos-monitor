@@ -35,9 +35,6 @@ func writeFeemarketSummaryBody(w Writer, s feemarket.State, d model.Report) {
 	if s.GasWanted > 0 {
 		writeFmSummaryKPI(w, "block gas (W)", formatUint(s.GasWanted))
 	}
-	if s.GasTarget > 0 {
-		writeFmSummaryKPI(w, "gas target", formatUint(s.GasTarget))
-	}
 	transfer := feemarket.TransferCost(s.BaseFeeRaw, s.Denom)
 	if transfer != "—" {
 		writeFmSummaryKPI(w, "21k transfer", transfer)
@@ -66,20 +63,13 @@ func writeFeemarket(w Writer, d model.Report) {
 	w.Row("block height", d.BlockHeight)
 	w.Row("base fee", orDash(d.BaseFee))
 	if s.GasWanted > 0 {
-		bar := ""
-		if s.UtilPct > 0 {
-			bar = fmt.Sprintf(`<div class="kpi-bar"><div class="kpi-bar__fill" style="width:%d%%"></div></div>`, s.UtilPct)
-		}
-		w.RowHTML("block gas (W)", formatUint(s.GasWanted)+" gas", bar)
+		w.Row("block gas (W)", formatUint(s.GasWanted)+" gas  _(parent demand input)_")
 	}
 	if s.GasUsed > 0 {
 		w.Row("parent gas used", formatUint(s.GasUsed)+" gas")
 	}
-	if s.GasTarget > 0 {
-		w.Row("gas target", formatUint(s.GasTarget)+" gas  _(max_gas ÷ elasticity)_")
-	}
-	if s.GasLimit > 0 {
-		w.Row("block gas limit", formatUint(s.GasLimit)+" gas")
+	if html := fmDemandVsTargetHTML(s); html != "" {
+		w.RowHTML("demand vs target", html, "")
 	}
 	if s.LastBlockFees != "" {
 		w.Row("parent block fees", s.LastBlockFees+"  _(gas_used × base_fee)_")
@@ -101,18 +91,19 @@ func writeFeemarket(w Writer, d model.Report) {
 func fmMechanicsHTML(s feemarket.State) string {
 	var b strings.Builder
 	b.WriteString(`<div class="fm-mechanics">`)
+	b.WriteString(`<p class="fm-mechanics__lead">Base fee tracks block <strong>demand vs target</strong> — same EIP-1559 curve as Ethereum (` +
+		`<code>CalcGasBaseFee</code>).</p>`)
 	b.WriteString(`<ol class="fm-mechanics__steps">`)
-	b.WriteString(`<li><strong>EndBlock</strong> — store block gas wanted: ` +
-		`W = max(gas_used, gas_wanted × min_gas_multiplier). Emits <code>block_gas</code> event.</li>`)
-	b.WriteString(`<li><strong>BeginBlock</strong> — read parent W, compute gas target = max_gas ÷ elasticity_multiplier, ` +
-		`then adjust base fee with <code>CalcGasBaseFee</code> (same formula as go-ethereum EIP-1559).</li>`)
+	b.WriteString(`<li><strong>BeginBlock</strong> — read parent demand, compare to <code>target = gasLimit ÷ elasticity</code>, adjust base fee.</li>`)
 	b.WriteString(`<li><strong>CheckTx / ante</strong> — txs must meet base fee (EVM) and node <code>minimum-gas-prices</code> (Cosmos).</li>`)
 	b.WriteString(`</ol>`)
+	b.WriteString(`<p class="fm-mechanics__cosmos"><span class="fm-mechanics__cosmos-tag">Cosmos</span> ` +
+		`EndBlock stores <strong>W</strong> = max(gas_used, gas_wanted × min_gas_multiplier) so mempool pressure counts — not execution gas alone.</p>`)
 	b.WriteString(`<pre class="fm-mechanics__formula">`)
 	b.WriteString(html.EscapeString(
-		"if gas_used > target:  base_fee += max(base_fee × Δ / target / denom, 1 apmt)\n" +
-			"if gas_used < target:  base_fee -= base_fee × Δ / target / denom  (floor = min_gas_price)\n" +
-			"if gas_used == target: base_fee unchanged"))
+		"if W > target:  base_fee += max(base_fee × |W−target| / target / denom, 1 apmt)\n" +
+			"if W < target:  base_fee -= base_fee × |W−target| / target / denom  (floor = min_gas_price)\n" +
+			"if W == target: base_fee unchanged"))
 	b.WriteString(`</pre>`)
 	if s.Mode != "" {
 		b.WriteString(fmt.Sprintf(`<p class="fm-mechanics__mode">Current mode: <strong>%s</strong></p>`,
