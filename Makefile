@@ -67,7 +67,7 @@ remote-stop: ## atomic remote pmtop — kill tmux / process on node4
 
 remote-start: ## atomic remote pmtop — start in tmux on node4
 	$(SSH_NODE4) \
-		'tmux new-session -d -s pmtop "$(REMOTE_PMTOP) $(REMOTE_PMTOP_FLAGS)"; \
+		'tmux new-session -d -s pmtop "DATA_PATH=/home/ubuntu/.evmd $(REMOTE_PMTOP) $(REMOTE_PMTOP_FLAGS)"; \
 		 sleep 1; \
 		 pgrep -a pmtop || (echo "failed to start" && exit 1)'
 

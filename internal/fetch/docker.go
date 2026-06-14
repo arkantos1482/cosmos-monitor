@@ -20,6 +20,8 @@ var (
 // DockerSnapshot holds Docker container metrics.
 type DockerSnapshot struct {
 	Running      bool
+	Image        string
+	OOMKilled    bool
 	CPUPercent   float64
 	MemUsage     uint64
 	MemLimit     uint64
@@ -49,9 +51,14 @@ type dockerStats struct {
 }
 
 type dockerInspect struct {
+	Config struct {
+		Image string `json:"Image"`
+	} `json:"Config"`
 	State struct {
 		Running      bool   `json:"Running"`
 		StartedAt    string `json:"StartedAt"`
+		Status       string `json:"Status"`
+		OOMKilled    bool   `json:"OOMKilled"`
 		RestartCount int    `json:"RestartCount"`
 	} `json:"State"`
 	RestartCount int `json:"RestartCount"`
@@ -69,6 +76,8 @@ func FetchDocker(container string) DockerSnapshot {
 	}
 
 	snap.Running = insp.State.Running
+	snap.Image = insp.Config.Image
+	snap.OOMKilled = insp.State.OOMKilled
 	snap.RestartCount = insp.RestartCount
 	if snap.RestartCount == 0 {
 		snap.RestartCount = insp.State.RestartCount

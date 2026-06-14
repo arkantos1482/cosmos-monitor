@@ -128,7 +128,7 @@ Base URL: `http://localhost` (dialed over the socket).
 | Endpoint | Used for | Key fields |
 |----------|----------|------------|
 | `GET /containers/{name}/stats?stream=false` | CPU%, RAM usage/limit | `cpu_stats.cpu_usage.total_usage`, `precpu_stats.cpu_usage.total_usage`, `cpu_stats.system_cpu_usage`, `precpu_stats.system_cpu_usage`, `cpu_stats.online_cpus`, `memory_stats.{usage,limit}` |
-| `GET /containers/{name}/json` | running state, restarts, uptime | `State.{Running,StartedAt}`, `RestartCount` |
+| `GET /containers/{name}/json` | running state, image, restarts, uptime, OOM | `Config.Image`, `State.{Running,StartedAt,OOMKilled}`, `RestartCount` |
 
 CPU% formula:
 ```
@@ -144,9 +144,11 @@ cpuPercent = (cpuDelta / sysDelta) * numCPUs * 100
 | File | Used for | Fields parsed |
 |------|----------|---------------|
 | `/proc/loadavg` | load averages | columns 1, 2, 3 (1m, 5m, 15m) |
-| `/proc/meminfo` | RAM | `MemTotal`, `MemAvailable` (kB) |
+| `/proc/meminfo` | RAM, swap | `MemTotal`, `MemAvailable`, `SwapTotal`, `SwapFree` (kB) |
 
-Disk: `syscall.Statfs("/")` → `Blocks`, `Bfree`, `Bsize` → total and used bytes.
+Disk: `syscall.Statfs(DISK_PATH or "/")` → total, used, and available bytes (`Bavail`).
+
+Optional `DATA_PATH` (e.g. `/home/ubuntu/.evmd`): separate `statfs` on the validator data directory for chain-data disk pressure.
 
 ---
 

@@ -3,127 +3,141 @@ package panel
 import (
 	"fmt"
 	"html"
+	"strings"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-const infraContainerName = "evmd-node"
-
 func writeInfraSummary(w Writer, d model.Report, mode SummaryMode) {
-	nodeStatus, nodeKind := infraNodeStatus(d)
+	nodeStatus := "stopped"
+	nodeKind := "bad"
+	if d.NodeRunning {
+		nodeStatus = "running"
+		nodeKind = "ok"
+	}
+
+	diskLabel := "disk"
+	diskPct := d.DiskPct
+	if d.DataPath != "" && d.DataDiskPct > 0 {
+		diskLabel = "chain data"
+		diskPct = d.DataDiskPct
+	}
 
 	summaryWrapStart(w, mode, "infra")
 	w.WriteHTML(`<div class="infra-summary">`)
 	w.WriteHTML(`<div class="infra-summary__top">`)
-	w.WriteHTML(fmt.Sprintf(`<span class="infra-summary__name">%s</span>`, html.EscapeString(infraContainerName)))
-	writeSummaryBadges(w, "infra-summary__badges", summaryBadge{nodeStatus, nodeKind})
+	writeSummaryBadges(w, "infra-summary__status", summaryBadge{nodeStatus, nodeKind})
+	if img := infraImageLabel(d.NodeImage); img != "" {
+		w.WriteHTML(fmt.Sprintf(`<span class="infra-summary__hint">%s</span>`, html.EscapeString(img)))
+	}
 	w.WriteHTML(`</div>`)
-
 	w.WriteHTML(`<div class="infra-summary__gauges">`)
-	writeMiniGauge(w, "host RAM", d.MemPct)
-	writeMiniGauge(w, "host disk", d.DiskPct)
+	writeMiniGauge(w, "RAM", d.MemPct)
+	writeMiniGauge(w, diskLabel, diskPct)
 	writeMiniGauge(w, "load 1m", loadGaugePct(d.Load1))
 	w.WriteHTML(`</div>`)
-
-	w.WriteHTML(`<div class="infra-summary__kpis">`)
-	writeInfraSummaryKPI(w, "host RAM", fmt.Sprintf("%s / %s", d.MemUsed, d.MemTotal))
-	writeInfraSummaryKPI(w, "host disk", fmt.Sprintf("%s / %s", d.DiskUsed, d.DiskTotal))
-	writeInfraSummaryKPI(w, "load avg", fmt.Sprintf("%.2f · %.2f · %.2f", d.Load1, d.Load5, d.Load15))
-	writeInfraSummaryKPI(w, "container CPU", orDash(d.NodeCPU))
-	writeInfraSummaryKPI(w, "container RAM", fmt.Sprintf("%s / %s", d.NodeMemUsed, d.NodeMemTotal))
-	writeInfraSummaryKPI(w, "restarts", fmt.Sprintf("%d · %s uptime", d.Restarts, orDash(d.NodeUptime)))
-	w.WriteHTML(`</div></div>`)
+	if line := infraContainerHeadline(d); line != "" {
+		w.WriteHTML(fmt.Sprintf(`<p class="infra-summary__row">%s</p>`, line))
+	}
+	w.WriteHTML(`</div>`)
 	summaryWrapEnd(w, mode)
 }
 
-func writeInfraSummaryKPI(w Writer, label, value string) {
-	if value == "" || value == " / " || value == "0 · — uptime" {
-		return
+func infraContainerHeadline(d model.Report) string {
+	var parts []string
+	if d.NodeCPU != "" && d.NodeCPU != "0.0%" {
+		parts = append(parts, fmt.Sprintf("CPU <strong>%s</strong>", html.EscapeString(d.NodeCPU)))
 	}
-	w.WriteHTML(fmt.Sprintf(
-		`<div class="infra-summary__kpi"><span class="infra-summary__kpi-label">%s</span>`+
-			`<span class="infra-summary__kpi-val">%s</span></div>`,
-		html.EscapeString(label), html.EscapeString(value)))
+	if d.NodeMemPct > 0 {
+		parts = append(parts, fmt.Sprintf("RAM <strong>%d%%</strong> of limit", d.NodeMemPct))
+	} else if d.NodeMemUsed != "" && d.NodeMemTotal != "" {
+		parts = append(parts, fmt.Sprintf("RAM <strong>%s / %s</strong>",
+			html.EscapeString(d.NodeMemUsed), html.EscapeString(d.NodeMemTotal)))
+	}
+	if d.NodeUptime != "" {
+		parts = append(parts, fmt.Sprintf("up <strong>%s</strong>", html.EscapeString(d.NodeUptime)))
+	}
+	if d.Restarts > 0 {
+		parts = append(parts, fmt.Sprintf("<strong>%d</strong> restarts", d.Restarts))
+	}
+	if d.NodeOOMKilled {
+		parts = append(parts, `<span class="badge badge--bad">OOM killed</span>`)
+	}
+	return strings.Join(parts, " · ")
 }
 
 func writeInfra(w Writer, d model.Report) {
 	w.Section("1. INFRASTRUCTURE")
-	writeEmbeddedSectionIntro(w, "Host CPU load, memory, and disk, plus the `evmd-node` Docker container cgroup usage and lifecycle.")
+	writeEmbeddedSectionIntro(w, "Host resource pressure and the `evmd-node` container — CPU, memory, disk, and process health.")
 	writeInfraSummary(w, d, SummaryEmbedded)
-	writeInfraCompare(w, d)
+	writeInfraHost(w, d)
+	writeInfraContainer(w, d)
 	writeSectionSources(w, ViewInfra, d)
 }
 
-func writeInfraCompare(w Writer, d model.Report) {
-	nodeStatus, nodeKind := infraNodeStatus(d)
+func writeInfraHost(w Writer, d model.Report) {
+	w.Layer("Host")
 
-	w.Subsection("Host vs container")
-	w.WriteHTML(`<div class="infra-compare-wrap"><table class="data-table infra-compare">`)
-	w.WriteHTML(`<thead><tr><th>resource</th><th>host</th><th>` + html.EscapeString(infraContainerName) + `</th></tr></thead><tbody>`)
+	w.Row("load", infraLoadValue(d))
+	w.Row("memory", fmt.Sprintf("%s used / %s total  (%d%%) · %s free",
+		d.MemUsed, d.MemTotal, d.MemPct, orDash(d.MemAvail)))
 
-	writeInfraCompareRow(w, "CPU", "—", orDash(d.NodeCPU))
-	writeInfraCompareRowHTML(w, "memory",
-		infraHostResourceCell(d.MemUsed, d.MemTotal, d.MemPct),
-		infraContainerMemCell(d.NodeMemUsed, d.NodeMemTotal))
-	writeInfraCompareRowHTML(w, "disk",
-		infraHostResourceCell(d.DiskUsed, d.DiskTotal, d.DiskPct),
-		`<span class="id-empty">—</span>`)
-	writeInfraCompareRow(w, "load avg (1m · 5m · 15m)",
-		fmt.Sprintf("%.2f · %.2f · %.2f", d.Load1, d.Load5, d.Load15), "—")
-	writeInfraCompareRowHTML(w, "status", "—",
-		fmt.Sprintf(`<span class="badge badge--%s">%s</span>`, nodeKind, html.EscapeString(nodeStatus)))
-	writeInfraCompareRow(w, "restarts", "—", fmt.Sprintf("%d", d.Restarts))
+	if d.DataPath != "" {
+		w.Row("chain data", fmt.Sprintf("%s / %s  (%d%%)  _(%s)_",
+			d.DataDiskUsed, d.DataDiskTotal, d.DataDiskPct, d.DataPath))
+	}
+	w.Row("disk", fmt.Sprintf("%s used / %s total  (%d%%) · %s free",
+		d.DiskUsed, d.DiskTotal, d.DiskPct, orDash(d.DiskAvail)))
+
+	if d.SwapTotal != "" {
+		w.Row("swap", fmt.Sprintf("%s / %s", orDash(d.SwapUsed), d.SwapTotal))
+	}
+}
+
+func writeInfraContainer(w Writer, d model.Report) {
+	w.Layer("evmd-node")
+
+	if d.NodeImage != "" {
+		w.Row("image", infraImageLabel(d.NodeImage))
+	}
+	w.Row("cpu", orDash(d.NodeCPU))
+	if d.NodeMemPct > 0 {
+		w.Row("memory", fmt.Sprintf("%s / %s  (%d%%)", d.NodeMemUsed, d.NodeMemTotal, d.NodeMemPct))
+	} else {
+		w.Row("memory", fmt.Sprintf("%s / %s", d.NodeMemUsed, d.NodeMemTotal))
+	}
 	if d.NodeUptime != "" {
-		writeInfraCompareRow(w, "uptime", "—", d.NodeUptime)
+		w.Row("uptime", d.NodeUptime)
 	}
-
-	w.WriteHTML(`</tbody></table></div>`)
-}
-
-func writeInfraCompareRow(w Writer, label, host, container string) {
-	writeInfraCompareRowHTML(w, label, html.EscapeString(host), html.EscapeString(container))
-}
-
-func writeInfraCompareRowHTML(w Writer, label, hostHTML, containerHTML string) {
-	w.WriteHTML(fmt.Sprintf(
-		`<tr><td class="infra-compare__metric">%s</td><td class="infra-compare__host">%s</td><td class="infra-compare__container">%s</td></tr>`,
-		html.EscapeString(label), hostHTML, containerHTML))
-}
-
-func infraHostResourceCell(used, total string, pct int) string {
-	if used == "" && total == "" {
-		return `<span class="id-empty">—</span>`
+	if d.NodeStartedAt != "" {
+		w.Row("started", d.NodeStartedAt)
 	}
-	cell := fmt.Sprintf(`<span class="infra-compare__amount">%s / %s</span>`,
-		html.EscapeString(used), html.EscapeString(total))
-	if pct > 0 {
-		cell += fmt.Sprintf(` <span class="infra-compare__pct">(%d%%)</span>`, pct)
-		cell += infraPctBar(pct)
+	if d.Restarts > 0 {
+		w.Row("restarts", fmt.Sprintf("%d", d.Restarts))
 	}
-	return cell
+	if d.NodeOOMKilled {
+		w.Row("oom killed", "**yes**")
+	}
 }
 
-func infraContainerMemCell(used, total string) string {
-	if used == "" && total == "" {
-		return `<span class="id-empty">—</span>`
+func infraLoadValue(d model.Report) string {
+	v := fmt.Sprintf("%.2f / %.2f / %.2f  (1m 5m 15m)", d.Load1, d.Load5, d.Load15)
+	if d.NumCPU > 0 {
+		v += fmt.Sprintf("  _(%d CPUs — %.2f per core @ 1m)_", d.NumCPU, d.Load1/float64(d.NumCPU))
 	}
-	return fmt.Sprintf(`<span class="infra-compare__amount">%s / %s</span>`,
-		html.EscapeString(used), html.EscapeString(total))
+	return v
 }
 
-func infraPctBar(pct int) string {
-	if pct <= 0 {
+func infraImageLabel(image string) string {
+	image = strings.TrimSpace(image)
+	if image == "" {
 		return ""
 	}
-	if pct > 100 {
-		pct = 100
+	if i := strings.LastIndex(image, "/"); i >= 0 {
+		image = image[i+1:]
 	}
-	return fmt.Sprintf(`<div class="kpi-bar infra-compare__bar"><div class="kpi-bar__fill" style="width:%d%%"></div></div>`, pct)
-}
-
-func infraNodeStatus(d model.Report) (status, kind string) {
-	if d.NodeRunning {
-		return "running", "ok"
+	if i := strings.Index(image, "@sha256:"); i >= 0 {
+		image = image[:i]
 	}
-	return "stopped", "bad"
+	return image
 }

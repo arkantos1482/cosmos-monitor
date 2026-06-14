@@ -7,37 +7,56 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-func TestInfraLayout(t *testing.T) {
+func TestInfraContent(t *testing.T) {
 	d := model.Report{
-		NodeRunning: true, MemPct: 72, DiskPct: 45,
+		NodeRunning: true, NumCPU: 4,
+		MemPct: 72, MemUsed: "11 GiB", MemTotal: "16 GiB", MemAvail: "4.5 GiB",
+		DiskPct: 45, DiskUsed: "120 GiB", DiskTotal: "256 GiB", DiskAvail: "136 GiB",
+		DataPath: "/home/ubuntu/.evmd", DataDiskUsed: "88 GiB", DataDiskTotal: "200 GiB", DataDiskPct: 44,
 		Load1: 1.2, Load5: 0.9, Load15: 0.7,
-		MemUsed: "11 GiB", MemTotal: "16 GiB",
-		DiskUsed: "120 GiB", DiskTotal: "256 GiB",
-		NodeCPU: "12.3%", NodeMemUsed: "2.1 GiB", NodeMemTotal: "4 GiB",
-		Restarts: 2, NodeUptime: "3d 4h",
+		NodeImage: "ghcr.io/blockstars-tech/pmt-blockchain:latest",
+		NodeCPU: "12.3%", NodeMemUsed: "2.1 GiB", NodeMemTotal: "4 GiB", NodeMemPct: 52,
+		Restarts: 2, NodeUptime: "3d 4h", NodeStartedAt: "2026-06-10 12:00:00 UTC",
 	}
 	out := BuildView(ViewInfra, d)
 
 	for _, want := range []string{
-		`class="infra-summary__top"`,
-		`class="infra-summary__kpis"`,
-		`class="data-table infra-compare"`,
-		`Host vs container`,
-		`evmd-node`,
-		`badge--ok">running</span>`,
+		`class="dash-layer__title">Host</h3>`,
+		`class="dash-layer__title">evmd-node</h3>`,
+		`chain data`,
+		`/home/ubuntu/.evmd`,
+		`4 CPUs`,
+		`pmt-blockchain:latest`,
+		`started`,
+		`52%`,
+		`136 GiB free`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("infra view missing %q", want)
 		}
 	}
 	for _, gone := range []string{
-		`infra-summary__row`,
-		`infra-summary__load`,
 		`<h3 class="dash-subheading">OS</h3>`,
-		`<h3 class="dash-subheading">Container</h3>`,
+		`Host vs container`,
+		`infra-compare`,
 	} {
 		if strings.Contains(out, gone) {
-			t.Fatalf("infra view should not contain stale %q", gone)
+			t.Fatalf("infra view should not contain %q", gone)
 		}
+	}
+}
+
+func TestInfraSummaryUsesChainDataGauge(t *testing.T) {
+	d := model.Report{
+		NodeRunning: true,
+		MemPct:      10,
+		DiskPct:     90,
+		DataPath:    "/data/.evmd",
+		DataDiskPct: 55,
+		Load1:       0.4,
+	}
+	out := BuildView(ViewInfra, d)
+	if !strings.Contains(out, `>chain data<`) {
+		t.Fatal("summary should label disk gauge as chain data when DATA_PATH is set")
 	}
 }
