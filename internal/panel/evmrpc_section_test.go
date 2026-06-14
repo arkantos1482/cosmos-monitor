@@ -107,6 +107,8 @@ func TestEVMSummaryLayout(t *testing.T) {
 		`evm-summary__hero`,
 		`evm-summary__kpis`,
 		`evm-summary__kpi-label">block age`,
+		`evm-summary__stack-line">2 pending`,
+		`evm-summary__stack-line">1 queued`,
 		`probe pass rate`,
 		`12ms avg`,
 		`evm-summary__badges`,

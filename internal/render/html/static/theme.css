@@ -1128,6 +1128,22 @@ body::after {
   color: var(--bad);
 }
 
+.evm-summary__kpi-val--stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.evm-summary__stack-line {
+  display: block;
+  line-height: 1.25;
+}
+
+.evm-probes-section {
+  margin-top: 0.85rem;
+  padding-top: 0.35rem;
+}
+
 .evm-summary__probes {
   display: flex;
   flex-wrap: wrap;
@@ -1264,13 +1280,6 @@ body::after {
   margin: 0;
   font-size: 0.78rem;
   color: var(--muted);
-}
-
-.eco-domain--rpc-reach,
-.eco-domain--rpc-head,
-.eco-domain--rpc-txpool,
-.eco-domain--rpc-net {
-  border-left: 2px solid var(--accent);
 }
 
 .mono {

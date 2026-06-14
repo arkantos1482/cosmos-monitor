@@ -122,10 +122,14 @@ func writeEVMSummary(w Writer, d model.Report, mode SummaryMode) {
 	if d.EVMChainID > 0 {
 		writeEvmSummaryKPI(w, "chain id", fmt.Sprintf("%d", d.EVMChainID), "")
 	}
-	writeEvmSummaryKPI(w, "txpool", fmt.Sprintf("%d pending · %d queued", d.PendingTx, d.QueuedTx), "")
+	writeEvmSummaryTxpoolKPI(w, d)
 	if avg := evmAvgProbeLatency(d.RPCProbes); avg != "" {
 		writeEvmSummaryKPI(w, "probe latency", avg, "")
 	}
+	if d.EVMClient != "" {
+		writeEvmSummaryKPI(w, "client", report.Truncate(d.EVMClient, 36), "")
+	}
+	writeEvmSummaryKPI(w, "evm peers", fmt.Sprintf("%d", d.EVMPeerCount), "")
 	w.WriteHTML(`</div>`)
 
 	w.WriteHTML(fmt.Sprintf(
@@ -147,6 +151,19 @@ func writeEvmSummaryKPI(w Writer, label, value, tone string) {
 		`<div class="evm-summary__kpi"><span class="evm-summary__kpi-label">%s</span>`+
 			`<span class="evm-summary__kpi-val%s">%s</span></div>`,
 		html.EscapeString(label), toneClass, html.EscapeString(value)))
+}
+
+func writeEvmSummaryTxpoolKPI(w Writer, d model.Report) {
+	pending := formatTxpoolCount(d.PendingTx, d.TxpoolGlobalSlots)
+	queued := formatTxpoolCount(d.QueuedTx, d.TxpoolGlobalQueue)
+	w.WriteHTML(`<div class="evm-summary__kpi evm-summary__kpi--stack">`)
+	w.WriteHTML(`<span class="evm-summary__kpi-label">txpool</span>`)
+	w.WriteHTML(`<span class="evm-summary__kpi-val evm-summary__kpi-val--stack">`)
+	w.WriteHTML(fmt.Sprintf(`<span class="evm-summary__stack-line">%s pending</span>`,
+		html.EscapeString(pending)))
+	w.WriteHTML(fmt.Sprintf(`<span class="evm-summary__stack-line">%s queued</span>`,
+		html.EscapeString(queued)))
+	w.WriteHTML(`</span></div>`)
 }
 
 func evmBlockAgeKPI(d model.Report) (value, tone string) {
@@ -190,10 +207,10 @@ func parseProbeLatencyMS(s string) (float64, bool) {
 }
 
 func writeEVMRPCSection(w Writer, d model.Report) {
-	w.WriteHTML(evmRPCHealthCardsHTML(d))
-
+	w.WriteHTML(`<div class="evm-probes-section">`)
 	w.Subsection("Method probes")
 	w.WriteHTML(evmRPCProbeTableHTML(d))
+	w.WriteHTML(`</div>`)
 
 	w.Subsection("Wallet endpoints")
 	httpEP := d.EVMHTTPEndpoint
@@ -211,7 +228,6 @@ func writeEVMRPCSection(w Writer, d model.Report) {
 	w.Row("HTTP JSON-RPC", "`"+httpEP+"`")
 	w.Row("WebSocket", "`"+wsEP+"`")
 	w.Row("enabled APIs", "`"+apis+"`")
-	w.Row("chain ID", fmt.Sprintf("%d  _(eth_chainId · MetaMask custom network)_", d.EVMChainID))
 
 	symbol := evmDisplaySymbol(d.EVMDenom)
 	networkName := strings.ToUpper(d.Network)
