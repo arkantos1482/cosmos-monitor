@@ -152,6 +152,7 @@ type ChainParams struct {
 	EVMDenom                 string
 	EVMDenomName             string // bank metadata name (MetaMask network label)
 	EVMDenomSymbol           string // bank metadata symbol (MetaMask currency symbol)
+	EVMDenomDecimals         uint32 // display-denom exponent (MetaMask decimals)
 	MinGasPrice              float64
 	Elasticity               int64
 	NoBaseFee                bool
@@ -438,16 +439,22 @@ type evmParamsResp struct {
 	Params struct {
 		EvmDenom                string   `json:"evm_denom"`
 		ActiveStaticPrecompiles []string `json:"active_static_precompiles"`
-		HistoryServeWindow      int64    `json:"history_serve_window"`
+		HistoryServeWindow      string   `json:"history_serve_window"`
 	} `json:"params"`
+}
+
+type bankDenomUnit struct {
+	Denom    string `json:"denom"`
+	Exponent uint32 `json:"exponent"`
 }
 
 type bankDenomMetadataResp struct {
 	Metadata struct {
-		Name    string `json:"name"`
-		Symbol  string `json:"symbol"`
-		Display string `json:"display"`
-		Base    string `json:"base"`
+		Name       string          `json:"name"`
+		Symbol     string          `json:"symbol"`
+		Display    string          `json:"display"`
+		Base       string          `json:"base"`
+		DenomUnits []bankDenomUnit `json:"denom_units"`
 	} `json:"metadata"`
 }
 
@@ -705,7 +712,25 @@ func fetchEVMDenomMetadata(rest string, p *ChainParams) {
 	if err := doJSON(rest+"/cosmos/bank/v1beta1/denoms_metadata/"+p.EVMDenom, &meta); err == nil {
 		p.EVMDenomName = meta.Metadata.Name
 		p.EVMDenomSymbol = meta.Metadata.Symbol
+		p.EVMDenomDecimals = evmDisplayDecimals(meta.Metadata.Display, meta.Metadata.DenomUnits)
 	}
+}
+
+func evmDisplayDecimals(display string, units []bankDenomUnit) uint32 {
+	if display != "" {
+		for _, u := range units {
+			if u.Denom == display {
+				return u.Exponent
+			}
+		}
+	}
+	var max uint32
+	for _, u := range units {
+		if u.Exponent > max {
+			max = u.Exponent
+		}
+	}
+	return max
 }
 
 // FetchParams fetches chain params (called once on launch).
@@ -762,7 +787,7 @@ func FetchParams(rest string) ChainParams {
 	if err := doJSON(rest+"/cosmos/evm/vm/v1/params", &ep); err == nil {
 		p.EVMDenom = ep.Params.EvmDenom
 		p.ActiveStaticPrecompiles = ep.Params.ActiveStaticPrecompiles
-		p.HistoryServeWindow = ep.Params.HistoryServeWindow
+		p.HistoryServeWindow = parseInt64(ep.Params.HistoryServeWindow)
 		fetchEVMDenomMetadata(rest, &p)
 	}
 

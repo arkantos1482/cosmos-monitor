@@ -87,6 +87,9 @@ func mergeStatusOverlay(view, bar Snapshots, barOK model.StatusAvailability) Sna
 		if view.Chain.Moniker == "" {
 			view.Chain.Moniker = bar.Chain.Moniker
 		}
+		if view.Chain.Network == "" {
+			view.Chain.Network = bar.Chain.Network
+		}
 	}
 	if barOK.EVMOK {
 		view.EVM.PeerCount = bar.EVM.PeerCount

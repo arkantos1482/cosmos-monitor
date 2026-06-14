@@ -46,24 +46,47 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 	}
 
 	d.Load1, d.Load5, d.Load15 = sys.LoadAvg1, sys.LoadAvg5, sys.LoadAvg15
+	d.NumCPU = sys.NumCPU
 	memUsed := uint64(0)
 	if sys.MemTotal > sys.MemAvail {
 		memUsed = sys.MemTotal - sys.MemAvail
 	}
 	d.MemUsed = FormatBytes(memUsed)
 	d.MemTotal = FormatBytes(sys.MemTotal)
+	d.MemAvail = FormatBytes(sys.MemAvail)
 	d.MemPct = int(float64(memUsed) / float64(max(sys.MemTotal, uint64(1))) * 100)
+	if sys.SwapTotal > 0 {
+		swapUsed := sys.SwapTotal
+		if sys.SwapFree < sys.SwapTotal {
+			swapUsed = sys.SwapTotal - sys.SwapFree
+		}
+		d.SwapUsed = FormatBytes(swapUsed)
+		d.SwapTotal = FormatBytes(sys.SwapTotal)
+	}
 	d.DiskUsed = FormatBytes(sys.DiskUsed)
 	d.DiskTotal = FormatBytes(sys.DiskTotal)
+	d.DiskAvail = FormatBytes(sys.DiskAvail)
 	d.DiskPct = int(float64(sys.DiskUsed) / float64(max(sys.DiskTotal, uint64(1))) * 100)
+	if sys.DataPath != "" && sys.DataTotal > 0 {
+		d.DataPath = sys.DataPath
+		d.DataDiskUsed = FormatBytes(sys.DataUsed)
+		d.DataDiskTotal = FormatBytes(sys.DataTotal)
+		d.DataDiskPct = int(float64(sys.DataUsed) / float64(max(sys.DataTotal, uint64(1))) * 100)
+	}
 
 	d.NodeRunning = docker.Running
+	d.NodeImage = docker.Image
+	d.NodeOOMKilled = docker.OOMKilled
 	d.NodeCPU = fmt.Sprintf("%.1f%%", docker.CPUPercent)
 	d.NodeMemUsed = FormatBytes(docker.MemUsage)
 	d.NodeMemTotal = FormatBytes(docker.MemLimit)
+	if docker.MemLimit > 0 {
+		d.NodeMemPct = int(float64(docker.MemUsage) / float64(docker.MemLimit) * 100)
+	}
 	d.Restarts = docker.RestartCount
 	if !docker.StartedAt.IsZero() {
 		d.NodeUptime = FormatDurFull(time.Since(docker.StartedAt))
+		d.NodeStartedAt = docker.StartedAt.UTC().Format("2006-01-02 15:04:05 UTC")
 	}
 
 	maxMissed := int64(0)
@@ -347,6 +370,7 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 	}
 	d.EVMDenomName = p.EVMDenomName
 	d.EVMDenomSymbol = p.EVMDenomSymbol
+	d.EVMDenomDecimals = p.EVMDenomDecimals
 	d.EVMClient = ev.ClientVersion
 	d.EVMRPCOk = ev.Err == nil
 	d.EVMListening = ev.NetListening

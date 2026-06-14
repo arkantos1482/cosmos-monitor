@@ -12,7 +12,7 @@ func TestEVMRPCHealthCards(t *testing.T) {
 		EVMRPCOk: true, EVMSynced: true, EVMListening: true,
 		EVMBlock: "100", EVMBlockAge: "4.2s", EVMChainID: 290290,
 		EVMHTTPEndpoint: "http://localhost:8545", EVMClient: "evmd/v1",
-		EVMDenomName: "PMT", EVMDenomSymbol: "PMT",
+		EVMDenomName: "PMT", EVMDenomSymbol: "PMT", EVMDenomDecimals: 18,
 		PendingTx: 2, QueuedTx: 1, EVMPeerCount: 0,
 		RPCProbeOK: 10, RPCProbeTotal: 10,
 		RPCProbes: []model.RPCProbe{
@@ -31,6 +31,7 @@ func TestEVMRPCHealthCards(t *testing.T) {
 		`eco-domain--rpc-net`,
 		`network name`,
 		`currency symbol`,
+		`decimals`,
 		`HTTP probes`,
 		`WS probes`,
 		`evm-probes__group-title">HTTP`,
@@ -88,13 +89,16 @@ func TestEVMRPCProbeTableShowsFailure(t *testing.T) {
 
 func TestEVMWalletLabelsFromBankMetadata(t *testing.T) {
 	d := model.Report{
-		EVMDenomName: "Acme Chain", EVMDenomSymbol: "ACM",
+		EVMDenomName: "Acme Chain", EVMDenomSymbol: "ACM", EVMDenomDecimals: 6,
 	}
 	if got := evmNetworkName(d); got != "Acme Chain" {
 		t.Fatalf("network name = %q, want Acme Chain", got)
 	}
 	if got := evmCurrencySymbol(d); got != "ACM" {
 		t.Fatalf("currency symbol = %q, want ACM", got)
+	}
+	if got := evmCurrencyDecimals(d); got != "6" {
+		t.Fatalf("decimals = %q, want 6", got)
 	}
 }
 

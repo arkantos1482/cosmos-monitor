@@ -35,17 +35,29 @@ type Report struct {
 	NextProposer       string
 
 	Load1, Load5, Load15 float64
+	NumCPU               int
 	MemUsed, MemTotal    string
+	MemAvail             string
 	MemPct               int
+	SwapUsed, SwapTotal  string
 	DiskUsed, DiskTotal  string
+	DiskAvail            string
 	DiskPct              int
+	DataPath             string
+	DataDiskUsed         string
+	DataDiskTotal        string
+	DataDiskPct          int
 
-	NodeRunning  bool
-	NodeCPU      string
-	NodeMemUsed  string
-	NodeMemTotal string
-	NodeUptime   string
-	Restarts     int
+	NodeRunning   bool
+	NodeImage     string
+	NodeOOMKilled bool
+	NodeCPU       string
+	NodeMemUsed   string
+	NodeMemTotal  string
+	NodeMemPct    int
+	NodeUptime    string
+	NodeStartedAt string
+	Restarts      int
 
 	Validators      []Validator
 	BondedCount     int
@@ -129,6 +141,7 @@ type Report struct {
 	EVMDenom          string
 	EVMDenomName      string // bank metadata name (wallet network label)
 	EVMDenomSymbol    string // bank metadata symbol (wallet currency symbol)
+	EVMDenomDecimals  uint32 // display-denom exponent (wallet decimals)
 	EVMClient         string
 	EVMRPCOk          bool
 	EVMListening      bool

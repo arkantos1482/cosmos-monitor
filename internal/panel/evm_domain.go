@@ -73,6 +73,9 @@ func evmMetaMaskCardHTML(d model.Report) string {
 		ecoDomainRow(&b, "", "chain ID", fmt.Sprintf("%d", d.EVMChainID), "eth_chainId")
 	}
 	ecoDomainRow(&b, "", "currency symbol", evmCurrencySymbol(d), "bank denom metadata symbol")
+	if dec := evmCurrencyDecimals(d); dec != "" {
+		ecoDomainRow(&b, "", "decimals", dec, "display denom exponent")
+	}
 	ecoDomainCardClose(&b)
 	return b.String()
 }
@@ -151,6 +154,13 @@ func evmNetworkName(d model.Report) string {
 		return strings.ToUpper(net)
 	}
 	return "—"
+}
+
+func evmCurrencyDecimals(d model.Report) string {
+	if d.EVMDenomDecimals > 0 {
+		return fmt.Sprintf("%d", d.EVMDenomDecimals)
+	}
+	return ""
 }
 
 func evmCurrencySymbol(d model.Report) string {
