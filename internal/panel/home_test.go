@@ -119,7 +119,7 @@ func TestOverviewReusesSectionSummaries(t *testing.T) {
 	}{
 		{ViewStaking, []string{
 			`staking-summary__kpi-label">voting power`,
-			`staking-summary__kpi-label">network bonded`,
+			`staking-summary__kpi-label">bonded`,
 		}},
 		{ViewSlashing, []string{
 			`slashing-summary__kpi-label">signing health`,

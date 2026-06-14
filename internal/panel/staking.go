@@ -23,11 +23,11 @@ func writeStakingSummaryBody(w Writer, d model.Report, lv model.LocalValidator) 
 	}
 	if lv.IsValidator {
 		w.WriteHTML(`<div class="staking-summary__kpis">`)
-		writeStakingSummaryKPI(w, "voting power", fmt.Sprintf("%.1f%%", lv.VPPercent))
-		writeStakingSummaryKPI(w, "status", lv.Status)
-		writeStakingSummaryKPI(w, "commission", fmt.Sprintf("%.1f%%", lv.Commission))
+		writeStakingSummaryKPI(w, "voting power", fmt.Sprintf("%.1f%%", lv.VPPercent), "")
+		writeStakingSummaryKPI(w, "status", lv.Status, "")
+		writeStakingSummaryKPI(w, "commission", fmt.Sprintf("%.1f%%", lv.Commission), "")
 		if lv.VotingPower != "" {
-			writeStakingSummaryKPI(w, "bonded stake", lv.VotingPower)
+			writeStakingSummaryKPI(w, "bonded stake", lv.VotingPower, "")
 		}
 		w.WriteHTML(`</div>`)
 	} else if lv.SigningStatus != "" {
@@ -36,22 +36,79 @@ func writeStakingSummaryBody(w Writer, d model.Report, lv model.LocalValidator) 
 			html.EscapeString(lv.SigningStatus)))
 	}
 	w.WriteHTML(`<div class="staking-summary__kpis staking-summary__kpis--network">`)
-	writeStakingSummaryKPI(w, "network bonded", fmt.Sprintf("%.2f%%", d.BondedPct))
-	writeStakingSummaryKPI(w, "active set", fmt.Sprintf("%d", d.BondedCount))
-	if d.JailedCount > 0 {
-		writeStakingSummaryKPI(w, "jailed", fmt.Sprintf("%d", d.JailedCount))
+	if d.BondedCount > 0 {
+		writeStakingSummaryKPI(w, "active set", fmt.Sprintf("%d", d.BondedCount), "")
+	}
+	if d.BondedPct > 0 {
+		writeStakingSummaryKPI(w, "bonded", fmt.Sprintf("%.1f%%", d.BondedPct), "")
+	}
+	if unhealthy := stakingUnhealthyCount(d); unhealthy > 0 {
+		writeStakingSummaryKPI(w, "unhealthy", fmt.Sprintf("%d", unhealthy), "warn")
 	}
 	if d.BondedAmt != "" {
-		writeStakingSummaryKPI(w, "total staked", d.BondedAmt)
+		writeStakingSummaryKPI(w, "total staked", d.BondedAmt, "")
 	}
-	w.WriteHTML(`</div></div>`)
+	w.WriteHTML(`</div>`)
+	writeStakingValidatorChips(w, d)
+	w.WriteHTML(`</div>`)
 }
 
-func writeStakingSummaryKPI(w Writer, label, value string) {
+func stakingUnhealthyCount(d model.Report) int {
+	return d.JailedCount + d.BelowThreshold + d.TombstonedCount
+}
+
+func writeStakingValidatorChips(w Writer, d model.Report) {
+	if len(d.Validators) == 0 {
+		return
+	}
+	w.WriteHTML(`<p class="staking-summary__heading">Validator set</p>`)
+	w.WriteHTML(`<div class="staking-summary__chips">`)
+	for _, v := range d.Validators {
+		cls := stakingChipClass(v)
+		if v.IsLocal {
+			cls += " staking-summary__chip--local"
+		}
+		vp := ""
+		if v.VPFloat > 0 {
+			vp = fmt.Sprintf(` <span class="staking-summary__chip-vp">%.0f%%</span>`, v.VPFloat)
+		}
+		w.WriteHTML(fmt.Sprintf(
+			`<span class="staking-summary__chip%s" title="%s">%s%s</span>`,
+			cls, html.EscapeString(stakingChipTitle(v)),
+			html.EscapeString(report.Truncate(v.Moniker, 14)), vp))
+	}
+	w.WriteHTML(`</div>`)
+}
+
+func stakingChipClass(v model.Validator) string {
+	if v.Jailed || v.Tombstoned || v.MissedHigh {
+		return " staking-summary__chip--warn"
+	}
+	return ""
+}
+
+func stakingChipTitle(v model.Validator) string {
+	if v.Jailed {
+		return "jailed"
+	}
+	if v.Tombstoned {
+		return "tombstoned"
+	}
+	return v.Status
+}
+
+func writeStakingSummaryKPI(w Writer, label, value, tone string) {
+	if value == "" {
+		return
+	}
+	valCls := "staking-summary__kpi-val"
+	if tone != "" {
+		valCls += " staking-summary__kpi-val--" + tone
+	}
 	w.WriteHTML(fmt.Sprintf(
 		`<div class="staking-summary__kpi"><span class="staking-summary__kpi-label">%s</span>`+
-			`<span class="staking-summary__kpi-val">%s</span></div>`,
-		html.EscapeString(label), html.EscapeString(value)))
+			`<span class="%s">%s</span></div>`,
+		html.EscapeString(label), valCls, html.EscapeString(value)))
 }
 
 func writeStaking(w Writer, d model.Report) {

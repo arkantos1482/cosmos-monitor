@@ -21,9 +21,7 @@ func writeNodeSummary(w Writer, d model.Report, mode SummaryMode) {
 	w.WriteHTML(`<div class="node-summary">`)
 	w.WriteHTML(`<div class="node-summary__header">`)
 	w.WriteHTML(fmt.Sprintf(`<span class="node-summary__moniker">%s</span>`, html.EscapeString(d.Moniker)))
-	badges := []summaryBadge{{syncStr, syncKind}}
-	badges = append(badges, localBadges(d)...)
-	writeSummaryBadges(w, "node-summary__badges", badges...)
+	writeSummaryBadges(w, "node-summary__badges", summaryBadge{syncStr, syncKind})
 	w.WriteHTML(`</div>`)
 	w.WriteHTML(`<div class="node-summary__grid">`)
 	for _, row := range nodeSummaryRows(d) {

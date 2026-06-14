@@ -121,12 +121,17 @@ func TestStakingSectionNoDuplicateFields(t *testing.T) {
 	}
 	for _, field := range []string{"val-summary__kpi", "val-summary__chip"} {
 		if strings.Contains(chunk, field) {
-			t.Fatalf("staking section should not repeat chain KPI/chip summary alongside tables: %q", field)
+			t.Fatalf("staking section should not use validator-summary classes: %q", field)
 		}
 	}
 	summaryEnd := strings.Index(chunk, `class="dash-subheading">This validator</h3>`)
 	if summaryEnd < 0 {
 		t.Fatal("expected staking body")
+	}
+	for _, want := range []string{"staking-summary__chip", "staking-summary__heading"} {
+		if !strings.Contains(chunk[:summaryEnd], want) {
+			t.Fatalf("staking summary missing %q", want)
+		}
 	}
 	summary := chunk[:summaryEnd]
 	if strings.Count(summary, "25.0%") != 1 {

@@ -762,6 +762,48 @@ body::after {
   color: var(--muted);
 }
 
+.staking-summary__heading {
+  margin: 0.55rem 0 0.5rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.staking-summary__kpi-val--warn {
+  color: var(--warn);
+}
+
+.staking-summary__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.staking-summary__chip {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.72rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.staking-summary__chip--warn {
+  border-color: rgba(240, 113, 120, 0.4);
+  color: var(--bad);
+}
+
+.staking-summary__chip--local {
+  border-color: rgba(99, 179, 237, 0.45);
+  background: rgba(99, 179, 237, 0.08);
+}
+
+.staking-summary__chip-vp {
+  font-family: var(--mono);
+  color: var(--muted);
+}
+
 .slashing-summary__badges {
   margin-bottom: 0.55rem;
 }
