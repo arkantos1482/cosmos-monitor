@@ -89,3 +89,40 @@ func TestEvmWSEndpoint(t *testing.T) {
 		t.Fatalf("unexpected ws endpoint: %s", ws)
 	}
 }
+
+func TestEVMSummaryLayout(t *testing.T) {
+	d := model.Report{
+		EVMRPCOk: true, EVMSynced: true, EVMListening: true,
+		EVMBlock: "12345", EVMBlockAge: "3.1s", EVMChainID: 290290,
+		EVMHTTPEndpoint: "http://localhost:8545",
+		RPCProbeOK: 8, RPCProbeTotal: 8,
+		RPCProbes: []model.RPCProbe{
+			{Method: "eth_blockNumber", OK: true, Latency: "10ms"},
+			{Method: "eth_chainId", OK: true, Latency: "14ms"},
+		},
+		PendingTx: 2, QueuedTx: 1,
+	}
+	out := BuildView(ViewEVM, d)
+	for _, want := range []string{
+		`evm-summary__hero`,
+		`evm-summary__kpis`,
+		`evm-summary__kpi-label">block age`,
+		`probe pass rate`,
+		`12ms avg`,
+		`evm-summary__badges`,
+		`badge--ok">RPC OK`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("EVM summary missing %q", want)
+		}
+	}
+	for _, gone := range []string{
+		`evm-summary__meta`,
+		`evm-summary__probes-label`,
+		`evm-summary__detail`,
+	} {
+		if strings.Contains(out, gone) {
+			t.Fatalf("EVM summary should not include legacy %q", gone)
+		}
+	}
+}

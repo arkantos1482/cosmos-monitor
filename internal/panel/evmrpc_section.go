@@ -3,6 +3,7 @@ package panel
 import (
 	"fmt"
 	"html"
+	"strconv"
 	"strings"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
@@ -50,47 +51,142 @@ func writeEVMSummary(w Writer, d model.Report, mode SummaryMode) {
 		overallKind = "warn"
 	}
 	syncLabel := "synced"
+	syncKind := "ok"
 	if !d.EVMSynced {
 		syncLabel = "syncing"
+		syncKind = "warn"
 	}
-	blockAge := "—"
-	if d.EVMBlockAge != "" {
-		blockAge = d.EVMBlockAge
+	listenLabel := "listening"
+	listenKind := "ok"
+	if !d.EVMListening {
+		listenLabel = "not listening"
+		listenKind = "warn"
 	}
-	listenLabel := "not listening"
-	if d.EVMListening {
-		listenLabel = "listening"
-	}
+	blockAge, ageTone := evmBlockAgeKPI(d)
 	httpEP := d.EVMHTTPEndpoint
 	if httpEP == "" {
 		httpEP = "http://localhost:8545"
 	}
 
+	probePct := 0
+	if d.RPCProbeTotal > 0 {
+		probePct = d.RPCProbeOK * 100 / d.RPCProbeTotal
+	}
+	heroClass := "evm-summary__hero-ok"
+	switch {
+	case !d.EVMRPCOk:
+		heroClass += " evm-summary__hero-ok--bad"
+	case probePct < 100:
+		heroClass += " evm-summary__hero-ok--warn"
+	}
+
 	summaryWrapStart(w, mode, "evm")
 	w.WriteHTML(`<div class="evm-summary">`)
-	w.WriteHTML(`<div class="evm-summary__header">`)
-	writeSummaryBadges(w, "evm-summary__status", summaryBadge{"RPC " + overall, overallKind})
-	w.WriteHTML(fmt.Sprintf(`<span class="evm-summary__meta">block %s · %s · %s</span>`,
-		html.EscapeString(blockAge), html.EscapeString(syncLabel), html.EscapeString(listenLabel)))
+	w.WriteHTML(`<div class="evm-summary__top">`)
+	w.WriteHTML(`<div class="evm-summary__hero-wrap">`)
+	w.WriteHTML(fmt.Sprintf(
+		`<div class="evm-summary__hero"><span class="%s">%d</span><span class="evm-summary__hero-total">/%d</span></div>`,
+		heroClass, d.RPCProbeOK, d.RPCProbeTotal))
+	w.WriteHTML(`<p class="evm-summary__hero-label">probes passing</p>`)
 	w.WriteHTML(`</div>`)
-	w.WriteHTML(fmt.Sprintf(`<p class="evm-summary__probes-label">Probes %d/%d ok</p>`, d.RPCProbeOK, d.RPCProbeTotal))
-	w.WriteHTML(`<div class="evm-summary__probes">`)
-	for _, ns := range evmProbeNamespaces(d.RPCProbes) {
-		ok := evmNamespaceOK(d.RPCProbes, ns)
-		cls := "evm-summary__probe--ok"
-		if !ok {
-			cls = "evm-summary__probe--fail"
+	writeSummaryBadges(w, "evm-summary__badges",
+		summaryBadge{"RPC " + overall, overallKind},
+		summaryBadge{listenLabel, listenKind},
+		summaryBadge{syncLabel, syncKind},
+	)
+	w.WriteHTML(`</div>`)
+
+	if d.RPCProbeTotal > 0 {
+		writeMiniGauge(w, "probe pass rate", probePct)
+	}
+
+	if len(d.RPCProbes) > 0 {
+		w.WriteHTML(`<div class="evm-summary__ns-row">`)
+		w.WriteHTML(`<span class="evm-summary__ns-label">API</span>`)
+		w.WriteHTML(`<div class="evm-summary__probes">`)
+		for _, ns := range evmProbeNamespaces(d.RPCProbes) {
+			ok := evmNamespaceOK(d.RPCProbes, ns)
+			cls := "evm-summary__probe--ok"
+			if !ok {
+				cls = "evm-summary__probe--fail"
+			}
+			w.WriteHTML(fmt.Sprintf(`<span class="evm-summary__probe %s" title="%s namespace">%s</span>`,
+				cls, html.EscapeString(ns), html.EscapeString(ns)))
 		}
-		w.WriteHTML(fmt.Sprintf(`<span class="evm-summary__probe %s" title="%s namespace">%s</span>`,
-			cls, html.EscapeString(ns), html.EscapeString(ns)))
+		w.WriteHTML(`</div></div>`)
+	}
+
+	w.WriteHTML(`<div class="evm-summary__kpis">`)
+	writeEvmSummaryKPI(w, "block", orDash(d.EVMBlock), "")
+	writeEvmSummaryKPI(w, "block age", blockAge, ageTone)
+	if d.EVMChainID > 0 {
+		writeEvmSummaryKPI(w, "chain id", fmt.Sprintf("%d", d.EVMChainID), "")
+	}
+	writeEvmSummaryKPI(w, "txpool", fmt.Sprintf("%d pending · %d queued", d.PendingTx, d.QueuedTx), "")
+	if avg := evmAvgProbeLatency(d.RPCProbes); avg != "" {
+		writeEvmSummaryKPI(w, "probe latency", avg, "")
 	}
 	w.WriteHTML(`</div>`)
+
 	w.WriteHTML(fmt.Sprintf(
-		`<p class="evm-summary__detail">Chain <strong>%d</strong> · txpool <strong>%d</strong> pending · <strong>%d</strong> queued</p>`,
-		d.EVMChainID, d.PendingTx, d.QueuedTx))
-	w.WriteHTML(fmt.Sprintf(`<p class="evm-summary__endpoint mono">%s</p>`, html.EscapeString(report.Truncate(httpEP, 48))))
+		`<p class="evm-summary__endpoint mono" title="%s">%s</p>`,
+		html.EscapeString(httpEP), html.EscapeString(httpEP)))
 	w.WriteHTML(`</div>`)
 	summaryWrapEnd(w, mode)
+}
+
+func writeEvmSummaryKPI(w Writer, label, value, tone string) {
+	if value == "" || value == "—" {
+		return
+	}
+	toneClass := ""
+	if tone != "" {
+		toneClass = " evm-summary__kpi-val--" + tone
+	}
+	w.WriteHTML(fmt.Sprintf(
+		`<div class="evm-summary__kpi"><span class="evm-summary__kpi-label">%s</span>`+
+			`<span class="evm-summary__kpi-val%s">%s</span></div>`,
+		html.EscapeString(label), toneClass, html.EscapeString(value)))
+}
+
+func evmBlockAgeKPI(d model.Report) (value, tone string) {
+	if d.EVMBlockAge == "" {
+		return "—", ""
+	}
+	value = d.EVMBlockAge
+	switch {
+	case d.EVMBlockAgeErr:
+		tone = "bad"
+	case d.EVMBlockAgeWarn:
+		tone = "warn"
+	default:
+		tone = "ok"
+	}
+	return value, tone
+}
+
+func evmAvgProbeLatency(probes []model.RPCProbe) string {
+	var sum float64
+	var n int
+	for _, p := range probes {
+		if ms, ok := parseProbeLatencyMS(p.Latency); ok {
+			sum += ms
+			n++
+		}
+	}
+	if n == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%.0fms avg", sum/float64(n))
+}
+
+func parseProbeLatencyMS(s string) (float64, bool) {
+	s = strings.TrimSpace(s)
+	if !strings.HasSuffix(s, "ms") {
+		return 0, false
+	}
+	v, err := strconv.ParseFloat(strings.TrimSuffix(s, "ms"), 64)
+	return v, err == nil
 }
 
 func writeEVMRPCSection(w Writer, d model.Report) {

@@ -115,9 +115,12 @@ func evmRPCProbeTableHTML(d model.Report) string {
 	}
 
 	var b strings.Builder
-	b.WriteString(`<table class="dash-sources__table evm-probes__table"><thead><tr>`)
-	b.WriteString(`<th class="dash-sources__mark-hdr" aria-hidden="true"></th>`)
-	b.WriteString(`<th>method</th><th>checks</th><th>status</th><th>latency</th>`)
+	b.WriteString(`<table class="evm-probes__table"><thead><tr>`)
+	b.WriteString(`<th class="evm-probes__mark-hdr" aria-hidden="true"></th>`)
+	b.WriteString(`<th class="evm-probes__col-method">method</th>`)
+	b.WriteString(`<th class="evm-probes__col-checks">checks</th>`)
+	b.WriteString(`<th class="evm-probes__col-status">status</th>`)
+	b.WriteString(`<th class="evm-probes__col-latency">latency</th>`)
 	b.WriteString(`</tr></thead><tbody>`)
 	for _, p := range probes {
 		mark := "·"
@@ -132,14 +135,13 @@ func evmRPCProbeTableHTML(d model.Report) string {
 		if !p.OK && p.Error != "" {
 			checks = p.Error
 		}
-		fmt.Fprintf(&b, `<tr%s><td class="dash-sources__mark">%s</td>`, rowClass, mark)
-		fmt.Fprintf(&b, `<td class="dash-sources__endpoint"><div class="dash-sources__endpoint-inner">`)
-		fmt.Fprintf(&b, `<span class="dash-sources__verb">%s</span>`, html.EscapeString(probeNamespace(p.Method)))
-		fmt.Fprintf(&b, `<span class="dash-sources__path">%s</span>`, html.EscapeString(p.Method))
-		b.WriteString(`</div></td>`)
+		fmt.Fprintf(&b, `<tr%s><td class="evm-probes__mark">%s</td>`, rowClass, mark)
+		fmt.Fprintf(&b, `<td class="evm-probes__method"><span class="evm-probes__ns">%s</span>`,
+			html.EscapeString(probeNamespace(p.Method)))
+		fmt.Fprintf(&b, `<span class="evm-probes__name">%s</span></td>`, html.EscapeString(p.Method))
 		fmt.Fprintf(&b, `<td class="evm-probes__checks">%s</td>`, html.EscapeString(checks))
-		fmt.Fprintf(&b, `<td class="dash-sources__status">%s</td>`, html.EscapeString(status))
-		fmt.Fprintf(&b, `<td class="dash-sources__latency">%s</td></tr>`, html.EscapeString(p.Latency))
+		fmt.Fprintf(&b, `<td class="evm-probes__status">%s</td>`, html.EscapeString(status))
+		fmt.Fprintf(&b, `<td class="evm-probes__latency">%s</td></tr>`, html.EscapeString(p.Latency))
 	}
 	b.WriteString(`</tbody></table>`)
 	return b.String()

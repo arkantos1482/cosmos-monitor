@@ -1010,36 +1010,135 @@ body::after {
   line-height: 1.35;
 }
 
-.evm-summary__header {
+.evm-summary__top {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 0.45rem;
-  margin-bottom: 0.45rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin-bottom: 0.55rem;
 }
 
-.evm-summary__meta {
-  font-size: 0.78rem;
-  color: var(--muted);
+.evm-summary__hero-wrap {
+  min-width: 0;
+}
+
+.evm-summary__hero {
   font-family: var(--mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
 }
 
-.evm-summary__probes-label {
-  margin: 0 0 0.35rem;
-  font-size: 0.72rem;
+.evm-summary__hero-ok {
+  color: var(--ok);
+}
+
+.evm-summary__hero-ok--warn {
+  color: var(--warn);
+}
+
+.evm-summary__hero-ok--bad {
+  color: var(--bad);
+}
+
+.evm-summary__hero-total {
+  font-size: 0.95rem;
+  font-weight: 600;
   color: var(--muted);
+}
+
+.evm-summary__hero-label {
+  margin: 0.15rem 0 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.evm-summary__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
+.evm-summary__ns-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.45rem 0 0.55rem;
+}
+
+.evm-summary__ns-label {
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.evm-summary__kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.45rem;
+}
+
+.evm-summary__kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  min-width: 0;
+  padding: 0.45rem 0.55rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.evm-summary__kpi-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.evm-summary__kpi-val {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+  line-height: 1.3;
+}
+
+.evm-summary__kpi-val--ok {
+  color: var(--ok);
+}
+
+.evm-summary__kpi-val--warn {
+  color: var(--warn);
+}
+
+.evm-summary__kpi-val--bad {
+  color: var(--bad);
 }
 
 .evm-summary__probes {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-bottom: 0.45rem;
+  gap: 0.3rem;
+  min-width: 0;
 }
 
 .evm-summary__probe {
-  width: 2rem;
-  height: 2rem;
+  min-width: 1.85rem;
+  height: 1.55rem;
+  padding: 0 0.35rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1060,21 +1159,105 @@ body::after {
   color: var(--bad);
 }
 
-.evm-summary__detail,
 .evm-summary__endpoint {
-  margin: 0.2rem 0;
-  font-size: 0.78rem;
+  margin: 0.55rem 0 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .evm-probes__table {
+  width: 100%;
   margin-bottom: 0.5rem;
+  border-collapse: collapse;
+  table-layout: auto;
+  font-size: 0.72rem;
+}
+
+.evm-probes__table thead th {
+  padding: 0.15rem 0.5rem 0.35rem 0;
+  font-weight: 500;
+  color: var(--muted);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.evm-probes__table tbody td {
+  padding: 0.28rem 0.5rem 0.28rem 0;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.evm-probes__mark-hdr,
+.evm-probes__mark {
+  width: 1.1rem;
+  padding-right: 0.25rem;
+  color: var(--muted);
+}
+
+.evm-probes__col-method,
+.evm-probes__method {
+  width: 1%;
+  white-space: nowrap;
+  font-family: var(--mono);
+}
+
+.evm-probes__method {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.evm-probes__ns {
+  flex: 0 0 auto;
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.evm-probes__name {
+  flex: 0 0 auto;
+  color: var(--fg);
+}
+
+.evm-probes__col-checks {
+  width: 100%;
 }
 
 .evm-probes__checks {
   font-family: var(--sans);
   font-size: 0.72rem;
   color: var(--muted);
-  line-height: 1.35;
+  line-height: 1.4;
+  white-space: normal;
+}
+
+.evm-probes__col-status,
+.evm-probes__status,
+.evm-probes__col-latency,
+.evm-probes__latency {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+  font-family: var(--mono);
+}
+
+.evm-probes__col-status,
+.evm-probes__status {
+  padding-left: 0.75rem;
+}
+
+.evm-probes__col-latency,
+.evm-probes__latency {
+  padding-left: 0.5rem;
+  color: var(--muted);
+}
+
+.evm-probes__table tr.dash-sources__row--fail .evm-probes__status {
+  color: var(--bad);
 }
 
 .evm-probes__empty {
