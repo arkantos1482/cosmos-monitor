@@ -64,7 +64,7 @@ var ChainRecipeSlashing = ChainRecipe{
 // ChainRecipeRewards is the Rewards section.
 var ChainRecipeRewards = ChainRecipe{
 	CometExtended: true, ValidatorScope: ValidatorsBonded,
-	StakingPool: true, MintData: true, FeemarketLive: true,
+	StakingPool: true, Supply: true, MintData: true, FeemarketLive: true,
 }
 
 // ChainRecipeDistribution is the Distribution section.

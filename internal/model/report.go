@@ -70,7 +70,8 @@ type Report struct {
 	BondDenom        string
 	TotalSupply      string
 	BondedAmt        string
-	BondedPct        float64
+	BondedPct        float64 // bonded ÷ total supply (share staked)
+	MintBondedPct    float64 // bonded ÷ (bonded+not_bonded) — ratio x/mint uses
 	GoalBonded       float64
 	NotBonded        string
 	UnbondingTime    string

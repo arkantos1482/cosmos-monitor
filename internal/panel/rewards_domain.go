@@ -236,7 +236,11 @@ func mintInflationDomainCard(d model.Report) string {
 	ecoDomainRow(&b, "", "goal_bonded", fmt.Sprintf("%.0f%%", d.GoalBonded),
 		"target bonded ratio — mint raises/lowers inflation when stake drifts")
 	ecoDomainRow(&b, "", "bonded now", fmt.Sprintf("%.2f%%", d.BondedPct),
-		mintBondedVsGoalEffect(d)+"; staking pool ratio (bonded ÷ bonded+not_bonded)")
+		mintBondedVsGoalEffect(d)+"; bonded ÷ total supply")
+	if d.MintBondedPct > 0 && d.MintBondedPct != d.BondedPct {
+		ecoDomainRow(&b, "", "mint pool ratio", fmt.Sprintf("%.2f%%", d.MintBondedPct),
+			"x/mint inflation input (bonded ÷ bonded+not_bonded; not_bonded pool may be empty)")
+	}
 	if d.BlocksPerYear != "" {
 		ecoDomainRow(&b, "", "blocks_per_year", d.BlocksPerYear,
 			"denominator for per-block inflation and PMT annual estimates")

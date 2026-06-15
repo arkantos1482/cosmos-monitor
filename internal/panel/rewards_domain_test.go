@@ -179,6 +179,28 @@ func TestInflationCardInactiveWhenZero(t *testing.T) {
 	}
 }
 
+func TestInflationCardShowsMintPoolRatioWhenDistinct(t *testing.T) {
+	d := model.Report{
+		Inflation:       5,
+		GoalBonded:      67,
+		BondedPct:       20,
+		MintBondedPct:   100,
+		InflationPerBlock: "0.01 PMT/block",
+	}
+	card := mintInflationDomainCard(d)
+	for _, want := range []string{
+		`bonded now`,
+		`20.00%`,
+		`mint pool ratio`,
+		`100.00%`,
+		`below goal`,
+	} {
+		if !strings.Contains(card, want) {
+			t.Fatalf("inflation card missing %q:\n%s", want, card)
+		}
+	}
+}
+
 func TestInflationCardActiveWhenMinting(t *testing.T) {
 	d := model.Report{Inflation: 5, InflationPerBlock: "0.01 PMT/block", AnnualProvisions: "1M PMT"}
 	card := mintInflationDomainCard(d)
