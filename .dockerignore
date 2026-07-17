@@ -1,0 +1,4 @@
+graphify-out/
+.git/
+*.md
+**/*_test.go

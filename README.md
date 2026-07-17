@@ -59,7 +59,9 @@ git submodule update --init tools/ops/pmtop
 
 Remote: https://github.com/arkantos1482/cosmos-monitor
 
-**Dev loop:** commit → `make remote-dev-release` (push + reload on node4).
+**Dev loop:** commit → `make remote-dev-release` (push + dev UI on node4 `:7778`).
+
+**Prod:** Ansible `playbooks/5-deploy-pmtop.yml` — Docker on `:7777`. See [`../deploy/docs/operations-dashboard.md`](../deploy/docs/operations-dashboard.md).
 
 ## Build
 
@@ -94,4 +96,6 @@ make dump     # HTML fragment to stdout (one shot)
 | `remote-reload` | remote-pull + remote-build + remote-smoke + remote-stop + remote-start + remote-verify |
 | `remote-dev-release` | push + remote-pull + remote-build + remote-smoke + remote-stop + remote-start + remote-verify |
 
-Typical flow: `make remote-dev-release`, then `make tunnel` → http://localhost:7777
+Typical dev flow: `make remote-dev-release`, then `make tunnel-dev` → http://localhost:7778
+
+Prod on node4: `ansible-playbook -i inventory.ini playbooks/5-deploy-pmtop.yml` from `tools/ops/deploy`, then `make tunnel-pmtop-node4` → http://localhost:7777

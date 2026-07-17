@@ -1,0 +1,125 @@
+package panel
+
+import (
+	"testing"
+
+	"github.com/arkantos1482/cosmos-monitor/internal/model"
+)
+
+func findingKeys(fs []Finding) map[string]string {
+	m := make(map[string]string, len(fs))
+	for _, f := range fs {
+		m[f.Section+"/"+f.Key] = f.Severity
+	}
+	return m
+}
+
+func hasFinding(t *testing.T, fs []Finding, section, key, severity string) {
+	t.Helper()
+	for _, f := range fs {
+		if f.Section == section && f.Key == key {
+			if f.Severity != severity {
+				t.Fatalf("finding %s/%s: want severity %q, got %q", section, key, severity, f.Severity)
+			}
+			return
+		}
+	}
+	t.Fatalf("missing finding %s/%s (%s)", section, key, severity)
+}
+
+func TestFindingsInfra(t *testing.T) {
+	fs := Findings(model.Report{
+		NodeRunning: false, NodeOOMKilled: true, Restarts: 4,
+		MemPct: 80, DiskPct: 92, NodeMemPct: 91,
+	})
+	hasFinding(t, fs, "infra", "container_stopped", "bad")
+	hasFinding(t, fs, "infra", "oom_killed", "bad")
+	hasFinding(t, fs, "infra", "restarts", "warn")
+	hasFinding(t, fs, "infra", "host_ram", "warn")
+	hasFinding(t, fs, "infra", "disk", "bad")
+	hasFinding(t, fs, "infra", "container_mem", "bad")
+}
+
+func TestFindingsInfraChainDataDisk(t *testing.T) {
+	fs := Findings(model.Report{
+		NodeRunning: true, DataPath: "/data", DataDiskPct: 78, DiskPct: 10,
+	})
+	hasFinding(t, fs, "infra", "disk", "warn")
+}
+
+func TestFindingsEVM(t *testing.T) {
+	fs := Findings(model.Report{
+		EVMRPCOk: false, EVMListening: false, EVMSynced: false,
+		EVMBlockAge: "2m", EVMBlockAgeErr: true,
+		RPCProbeOK: 4, RPCProbeTotal: 6,
+	})
+	hasFinding(t, fs, "evm", "rpc_down", "bad")
+	hasFinding(t, fs, "evm", "not_listening", "warn")
+	hasFinding(t, fs, "evm", "syncing", "warn")
+	hasFinding(t, fs, "evm", "block_age", "bad")
+
+	fs = Findings(model.Report{
+		EVMRPCOk: true, EVMListening: true, EVMSynced: true,
+		EVMBlockAge: "45s", EVMBlockAgeWarn: true,
+		RPCProbeOK: 4, RPCProbeTotal: 6,
+	})
+	hasFinding(t, fs, "evm", "rpc_degraded", "warn")
+	hasFinding(t, fs, "evm", "block_age", "warn")
+}
+
+func TestFindingsNode(t *testing.T) {
+	fs := Findings(model.Report{Synced: false})
+	hasFinding(t, fs, "node", "catching_up", "warn")
+}
+
+func TestFindingsStaking(t *testing.T) {
+	fs := Findings(model.Report{
+		Local: model.LocalValidator{IsValidator: true, Jailed: true, MissedHigh: true},
+	})
+	hasFinding(t, fs, "staking", "jailed", "bad")
+	hasFinding(t, fs, "staking", "missed_blocks_high", "warn")
+}
+
+func TestFindingsSlashing(t *testing.T) {
+	fs := Findings(model.Report{
+		JailedCount: 1, BelowThreshold: 2, TombstonedCount: 1,
+		Local: model.LocalValidator{IsValidator: true, Missed: 4800, MaxMissed: 5000},
+	})
+	hasFinding(t, fs, "slashing", "network_jailed", "bad")
+	hasFinding(t, fs, "slashing", "below_min_signed", "warn")
+	hasFinding(t, fs, "slashing", "network_tombstoned", "bad")
+	hasFinding(t, fs, "slashing", "headroom", "bad")
+}
+
+func TestFindingsRewards(t *testing.T) {
+	fs := Findings(model.Report{PMTEnabled: false, Inflation: 0})
+	hasFinding(t, fs, "rewards", "pmt_disabled", "bad")
+	hasFinding(t, fs, "rewards", "inflation_off", "bad")
+
+	fs = Findings(model.Report{PMTEnabled: true, PMTPoolEmpty: true})
+	hasFinding(t, fs, "rewards", "pmt_not_emitting", "warn")
+}
+
+func TestFindingsDistribution(t *testing.T) {
+	d := model.Report{
+		ModuleAccounts: []model.ModuleAccountRow{{
+			Name:    "distribution",
+			Balance: "100 PMT",
+		}},
+		UnclaimedDelegator:  "80 PMT",
+		UnclaimedCommission: "30 PMT",
+	}
+	fs := Findings(d)
+	hasFinding(t, fs, "distribution", "escrow_mismatch", "warn")
+}
+
+func TestFindingsHealthyEmpty(t *testing.T) {
+	fs := Findings(model.Report{
+		NodeRunning: true, Synced: true,
+		EVMRPCOk: true, EVMListening: true, EVMSynced: true,
+		PMTEnabled: true, Inflation: 3.5,
+	})
+	for _, f := range fs {
+		t.Fatalf("unexpected finding on healthy report: %+v", f)
+	}
+}

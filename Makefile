@@ -10,6 +10,13 @@ REMOTE_GO    := /usr/local/go/bin/go
 REMOTE_REPO  := ~/cosmos-monitor
 REMOTE_PMTOP       := ~/pmtop
 REMOTE_PMTOP_FLAGS ?=
+REMOTE_DEV_WEB     := :7778
+REMOTE_DEV_FLAGS   := -web $(REMOTE_DEV_WEB) -show-sources
+
+# Telegram creds for pmtop alerts (gitignored secrets.yml on deploy host).
+DEPLOY_SECRETS := ../deploy/secrets.yml
+TELEGRAM_TOKEN := $(shell grep '^telegram_bot_token:' $(DEPLOY_SECRETS) 2>/dev/null | sed 's/.*: *"\(.*\)".*/\1/')
+TELEGRAM_CHAT_ID := $(shell grep '^telegram_chat_id:' $(DEPLOY_SECRETS) 2>/dev/null | sed 's/.*: *"\(.*\)".*/\1/')
 
 BINARY := pmtop
 
@@ -32,7 +39,7 @@ REMOTE_PMTOP_STOP = tmux kill-session -t pmtop 2>/dev/null || true; \
 # Atomic — local
 # ══════════════════════════════════════════════════════════════════════════════
 
-.PHONY: build test push tunnel
+.PHONY: build test push tunnel tunnel-dev
 build: ## atomic local — compile ./pmtop
 	go build -o $(BINARY) ./cmd/pmtop
 
@@ -42,14 +49,17 @@ test: ## atomic local — unit tests
 push: ## atomic local — git push
 	git push
 
-tunnel: ## atomic local — forward node4 :7777 to localhost:7777
+tunnel: ## atomic local — forward node4 prod pmtop :7777 to localhost:7777
 	ssh -i $(SSH_KEY) -N -L 7777:localhost:7777 $(SSH_USER)@$(NODE4_HOST)
+
+tunnel-dev: ## atomic local — forward node4 dev pmtop :7778 to localhost:7778
+	ssh -i $(SSH_KEY) -N -L 7778:localhost:7778 $(SSH_USER)@$(NODE4_HOST)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Atomic — remote pmtop (on node4)
 # ══════════════════════════════════════════════════════════════════════════════
 
-.PHONY: remote-pull remote-pull-reset remote-build remote-smoke remote-stop remote-start remote-start-dev remote-verify remote-run
+.PHONY: remote-pull remote-pull-reset remote-build remote-smoke remote-stop remote-start remote-start-dev remote-start-alert remote-verify remote-run
 remote-pull: ## atomic remote pmtop — git pull on node4
 	$(SSH_NODE4) 'cd $(REMOTE_REPO) && git pull'
 
@@ -71,13 +81,25 @@ remote-start: ## atomic remote pmtop — start in tmux on node4
 		 sleep 1; \
 		 pgrep -a pmtop || (echo "failed to start" && exit 1)'
 
-remote-start-dev: ## atomic remote pmtop — start with -show-sources on node4
-	$(MAKE) remote-start REMOTE_PMTOP_FLAGS=-show-sources
+remote-start-dev: ## atomic remote pmtop — start dev UI on :7778 with -show-sources
+	$(MAKE) remote-start REMOTE_PMTOP_FLAGS='$(REMOTE_DEV_FLAGS)'
 
-remote-verify: ## atomic remote pmtop — curl node4 :7777 fee market summary
+# Start pmtop with Telegram alerts. Reads telegram_bot_token / telegram_chat_id from
+# tools/ops/deploy/secrets.yml locally and injects via SSH env on node4.
+# Extra flags: REMOTE_PMTOP_FLAGS="-alert-dry-run" or REMOTE_PMTOP_FLAGS="-show-sources"
+remote-start-alert: ## atomic remote pmtop — dev :7778 with -alert -node-name=node4
+	@test -n "$(TELEGRAM_TOKEN)" || (echo "missing telegram_bot_token in $(DEPLOY_SECRETS)" && exit 1)
+	@test -n "$(TELEGRAM_CHAT_ID)" || (echo "missing telegram_chat_id in $(DEPLOY_SECRETS)" && exit 1)
+	$(SSH_NODE4) \
+		'PMTOP_TELEGRAM_TOKEN=$(TELEGRAM_TOKEN) PMTOP_TELEGRAM_CHAT_ID=$(TELEGRAM_CHAT_ID) \
+		 tmux new-session -d -s pmtop "DATA_PATH=/home/ubuntu/.evmd $(REMOTE_PMTOP) -web $(REMOTE_DEV_WEB) -alert -node-name=node4 $(REMOTE_PMTOP_FLAGS)"; \
+		 sleep 1; \
+		 pgrep -a pmtop || (echo "failed to start" && exit 1)'
+
+remote-verify: ## atomic remote pmtop — curl node4 dev :7778 fee market summary
 	@$(SSH_NODE4) \
-		'curl -sf http://localhost:7777/s/feemarket | grep -q "fm-summary" && echo "OK: fee market summary present" \
-		 || (echo "FAIL: fee market summary not found" && exit 1)'
+		'curl -sf http://localhost:7778/s/feemarket | grep -q "fm-summary" && echo "OK: dev fee market summary present" \
+		 || (echo "FAIL: dev fee market summary not found" && exit 1)'
 
 remote-run: ## atomic remote pmtop — foreground on node4 :7777
 	$(SSH_NODE4_TTY) '$(REMOTE_PMTOP)'
@@ -118,7 +140,7 @@ dump: build ## integration local — HTML fragment
 
 remote-restart: remote-stop remote-start ## integration remote pmtop — recycle server on node4 (no pull/build)
 
-remote-dev-release: push remote-pull remote-build remote-smoke remote-stop remote-start-dev remote-verify ## integration remote — push, build, run on node4 (-show-sources)
+remote-dev-release: push remote-pull remote-build remote-smoke remote-stop remote-start-dev remote-verify ## integration remote — push, build, dev UI on :7778
 
 # ══════════════════════════════════════════════════════════════════════════════
 
