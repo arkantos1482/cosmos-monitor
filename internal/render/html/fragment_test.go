@@ -23,7 +23,7 @@ func TestRenderFragmentFeeMarket(t *testing.T) {
 
 func TestRenderFragmentEconomicsTables(t *testing.T) {
 	d := model.Report{
-		Inflation: 3.5, PMTEnabled: true, PMTRate: "0.1 PMT/block", GoalBonded: 67,
+		Inflation: 3.5, HasPMTParams: true, PMTEnabled: true, PMTRate: "0.1 PMT/block", GoalBonded: 67,
 		ModuleAccounts: []model.ModuleAccountRow{{Name: "fee_collector", Balance: "1 PMT"}},
 	}
 	out := RenderFragment(d)

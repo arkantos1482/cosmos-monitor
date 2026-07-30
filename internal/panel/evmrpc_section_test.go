@@ -11,7 +11,7 @@ import (
 
 func TestBuildEVMRPCSection(t *testing.T) {
 	d := model.Report{
-		EVMRPCOk: true, EVMSynced: true, EVMListening: true,
+		EVMRPCOk: true, EVMSynced: true, HasEVMListening: true, EVMListening: true,
 		EVMBlockAge: "4.2s", EVMBlock: "100", EVMChainID: 290290,
 		Network: "pmt", EVMHTTPEndpoint: "http://localhost:8545",
 		RPCProbeOK: 10, RPCProbeTotal: 10,
@@ -125,7 +125,7 @@ func TestEvmWSEndpoint(t *testing.T) {
 
 func TestEVMSummaryLayout(t *testing.T) {
 	d := model.Report{
-		EVMRPCOk: true, EVMSynced: true, EVMListening: true,
+		EVMRPCOk: true, EVMSynced: true, HasEVMListening: true, EVMListening: true,
 		EVMBlock: "12345", EVMBlockAge: "3.1s", EVMChainID: 290290,
 		EVMHTTPEndpoint: "http://localhost:8545",
 		RPCProbeOK: 10, RPCProbeTotal: 10,

@@ -30,6 +30,33 @@ func TestFormatAmount(t *testing.T) {
 	}
 }
 
+func TestFormatPct(t *testing.T) {
+	tests := []struct {
+		v    float64
+		want string
+	}{
+		{0, "0%"},
+		{55.5, "55.5%"},
+		{0.01, "0.01%"},
+		{0.0099, "0.0099%"},
+		{0.00002, "0.00002%"},
+		{-1.25, "-1.25%"},
+	}
+	for _, tc := range tests {
+		if got := FormatPct(tc.v); got != tc.want {
+			t.Errorf("FormatPct(%v) = %q, want %q", tc.v, got, tc.want)
+		}
+	}
+}
+
+func TestSumRawAmounts(t *testing.T) {
+	got := SumRawAmounts("99999900000000000000000000", "100000000000000000000")
+	want := "100000000000000000000000000"
+	if got != want {
+		t.Fatalf("SumRawAmounts = %q, want %q", got, want)
+	}
+}
+
 func TestFormatShares(t *testing.T) {
 	got := FormatShares("100000000000000000000", "apmt")
 	if got != "100" {

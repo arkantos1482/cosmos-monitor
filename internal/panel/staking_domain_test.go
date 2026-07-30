@@ -12,7 +12,7 @@ func TestStakingSectionLocalAndNetwork(t *testing.T) {
 		BondedCount: 4, JailedCount: 1, BelowThreshold: 2,
 		BondedPct: 55.5, SlashWindow: "10000", MinSigned: 50,
 		UnbondingTime: "21d", MaxValidators: 100, BondDenom: "apmt",
-		BondedAmt: "10M PMT",
+		BondedAmt: "10M PMT", NotBonded: "2M PMT",
 		ModuleAccounts: []model.ModuleAccountRow{
 			{Name: "bonded_tokens_pool", Balance: "10M PMT", Address: "cosmos1bonded"},
 		},
@@ -26,6 +26,7 @@ func TestStakingSectionLocalAndNetwork(t *testing.T) {
 			AccountAddr: "cosmos1account", EVMAddr: "0xACCOUNT",
 			OperatorAddr: "cosmosvaloper1abc", CommissionEarned: "0.1 PMT",
 			Outstanding: "0.5 PMT", LiquidBalance: "1M PMT", DelegatorCount: 1,
+			UnbondingAmt: "99.9999M PMT", UnbondingEntries: 1, UnbondingComplete: "2026-08-20",
 			Delegations: []model.DelegationRow{{
 				Delegator: "cosmos1delegator", EVMAddr: "0xDELEGATOR",
 				Balance: "100 PMT", LiquidBalance: "50 PMT", Shares: "100000000000000000000",
@@ -40,6 +41,11 @@ func TestStakingSectionLocalAndNetwork(t *testing.T) {
 		`eco-domain--staking`,
 		"bonded_tokens_pool",
 		"unbonding time",
+		"unbonding",
+		`99.9999M PMT`,
+		`completes 2026-08-20`,
+		`staking-summary__kpi-label">unbonding`,
+		`staking-summary__kpi-label">not bonded`,
 		`<th>operator</th>`,
 		`<th class="data-table__num">vp%</th>`,
 		`<th class="data-table__num">commission</th>`,

@@ -21,8 +21,9 @@ type Snapshots struct {
 }
 
 const (
-	paramsTTL    = 5 * time.Minute
-	snapshotTTL  = 4 * time.Second
+	paramsTTL     = 5 * time.Minute
+	paramsFailTTL = 15 * time.Second
+	snapshotTTL   = 4 * time.Second
 )
 
 type viewCacheKey struct {
@@ -96,10 +97,17 @@ func Moniker() string {
 
 func cachedParams(rest string) fetch.ChainParams {
 	cache.mu.Lock()
-	if !cache.paramsAt.IsZero() && time.Since(cache.paramsAt) < paramsTTL {
-		p := cache.params
-		cache.mu.Unlock()
-		return p
+	if !cache.paramsAt.IsZero() {
+		ttl := paramsTTL
+		if !paramsCacheable(cache.params) {
+			// Failed/empty REST: retry sooner than success TTL, but do not re-hammer every poll.
+			ttl = paramsFailTTL
+		}
+		if time.Since(cache.paramsAt) < ttl {
+			p := cache.params
+			cache.mu.Unlock()
+			return p
+		}
 	}
 	cache.mu.Unlock()
 
@@ -110,6 +118,11 @@ func cachedParams(rest string) fetch.ChainParams {
 	cache.paramsAt = time.Now()
 	cache.mu.Unlock()
 	return p
+}
+
+func paramsCacheable(p fetch.ChainParams) bool {
+	return p.BondDenom != "" || p.PMTRewardsParamsOK || p.EVMDenom != "" ||
+		p.BaseFeeParam != "" || p.MinGasPriceRaw != ""
 }
 
 func paramsForView(view panel.View, rest string) fetch.ChainParams {

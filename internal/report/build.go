@@ -209,8 +209,13 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 		d.CommunityTax = fmt.Sprintf("%.2f%%", d.CommunityTaxPct)
 	}
 
-	d.PMTEnabled = p.PMTRewardsEnabled
-	d.PMTPoolEmpty = p.PMTRewardsPoolBalanceAmt == "" || p.PMTRewardsPoolBalanceAmt == "0"
+	d.HasPMTParams = p.PMTRewardsParamsOK
+	d.PMTEnabled = p.PMTRewardsParamsOK && p.PMTRewardsEnabled
+	// Only treat pool as empty when we successfully read balances (or no pool address).
+	// Failed REST must not look like "pool empty" or "disabled".
+	if p.PMTRewardsParamsOK && p.PMTRewardsPoolBalanceOK {
+		d.PMTPoolEmpty = p.PMTRewardsPoolBalanceAmt == "" || p.PMTRewardsPoolBalanceAmt == "0"
+	}
 	if p.RewardPerBlockAmount != "" {
 		d.PMTRate = fetch.FormatCoin(p.RewardPerBlockAmount, p.RewardPerBlockDenom) + "/block"
 		if p.BlocksPerYear > 0 {
@@ -366,7 +371,8 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 	d.EVMDenomDecimals = p.EVMDenomDecimals
 	d.EVMClient = ev.ClientVersion
 	d.EVMRPCOk = ev.Err == nil
-	d.EVMListening = ev.NetListening
+	d.HasEVMListening = ev.HasNetListening
+	d.EVMListening = ev.HasNetListening && ev.NetListening
 	d.EVMSynced = !ev.Syncing
 	d.EVMBlock = FormatInt(int64(ev.BlockNumber))
 	d.PendingTx = ev.PendingTx
@@ -503,6 +509,13 @@ func buildLocalValidator(chain fetch.ChainSnapshot, v *fetch.ValidatorInfo, maxM
 	lv.Outstanding = validatorDelegatorOutstanding(*v, rewardModel)
 	lv.CommissionEarned = v.CommissionEarned
 	lv.DelegatorCount = len(lv.Delegations)
+	if total, n, earliest := fetch.SummarizeUnbondings(chain.LocalUnbondings); total != "" && total != "0" {
+		lv.UnbondingAmt = fetch.FormatCoin(total, chain.Params.BondDenom)
+		lv.UnbondingEntries = n
+		if !earliest.IsZero() {
+			lv.UnbondingComplete = earliest.Format("2006-01-02")
+		}
+	}
 	if lv.AccountAddr != "" {
 		for _, row := range lv.Delegations {
 			if row.IsLocal {

@@ -33,6 +33,7 @@ func TestStatusStripLiveValues(t *testing.T) {
 		EVMPeerCount:   1,
 		NodeRunning:    true,
 		BaseFee:        "7 apmt",
+		HasPMTParams:   true,
 		PMTEnabled:     true,
 		TimeUTC:        "12:00:00 UTC",
 	})
@@ -47,6 +48,23 @@ func TestStatusStripLiveValues(t *testing.T) {
 		if !strings.Contains(out, want) {
 			t.Fatalf("missing %q in: %s", want, out)
 		}
+	}
+}
+
+func TestStatusStripPMTPoolEmpty(t *testing.T) {
+	out := RenderStatusStrip(model.Report{
+		HasChainStatus: true,
+		HasPMTParams:   true,
+		PMTEnabled:     true,
+		PMTPoolEmpty:   true,
+		BaseFee:        "7e-18 PMT",
+		TimeUTC:        "12:00:00 UTC",
+	})
+	if !strings.Contains(out, ">pool empty<") {
+		t.Fatalf("expected pool empty, got: %s", out)
+	}
+	if strings.Contains(out, "disabled") {
+		t.Fatal("must not show disabled when enabled+empty")
 	}
 }
 

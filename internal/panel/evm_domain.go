@@ -39,9 +39,13 @@ func evmReachabilityCardHTML(d model.Report) string {
 	ecoDomainCardTitle(&b, "Reachability", "JSON-RPC transport", badge, status)
 	b.WriteString(`<div class="eco-domain__rows">`)
 
-	listen := "not listening"
-	if d.EVMListening {
-		listen = "listening"
+	listen := "—"
+	if d.HasEVMListening {
+		if d.EVMListening {
+			listen = "listening"
+		} else {
+			listen = "not listening"
+		}
 	}
 	ecoDomainRow(&b, "", "net_listening", listen, "socket accepting connections")
 	httpOK, httpTotal, wsOK, wsTotal := rpcProbeScores(d.RPCProbes)

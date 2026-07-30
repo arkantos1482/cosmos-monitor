@@ -11,7 +11,7 @@ func TestRewardsSectionConsolidatesChainAndLocal(t *testing.T) {
 	d := model.Report{
 		Inflation:         3.5,
 		InflationPerBlock: "0.01 PMT/block",
-		PMTEnabled:        true,
+		HasPMTParams: true, PMTEnabled:        true,
 		PMTRate:           "0.1000 PMT/block",
 		PMTBalance:        "1.00M PMT",
 		CommunityTaxPct:   2,
@@ -55,7 +55,7 @@ func TestRewardsSectionConsolidatesChainAndLocal(t *testing.T) {
 
 func TestLocalValidatorRewardsMovedFromNodeSection(t *testing.T) {
 	d := model.Report{
-		PMTEnabled:      true,
+		HasPMTParams: true, PMTEnabled:      true,
 		PMTRate:         "0.1000 PMT/block",
 		CommunityTaxPct: 2,
 		BondedCount:     4,
@@ -80,7 +80,7 @@ func TestLocalValidatorRewardsMovedFromNodeSection(t *testing.T) {
 }
 
 func TestRewardsInactivePMTDisabled(t *testing.T) {
-	d := model.Report{PMTEnabled: false, Inflation: 0}
+	d := model.Report{HasPMTParams: true, PMTEnabled: false, Inflation: 0}
 	out := BuildView(ViewRewards, d)
 	for _, want := range []string{
 		`eco-domain--pmtrewards eco-domain--inactive`,
@@ -93,9 +93,25 @@ func TestRewardsInactivePMTDisabled(t *testing.T) {
 	}
 }
 
+func TestRewardsPMTParamsMissing(t *testing.T) {
+	d := model.Report{Inflation: 0}
+	out := BuildView(ViewRewards, d)
+	if !strings.Contains(out, `eco-domain__status">data missing`) &&
+		!strings.Contains(out, `>data missing<`) {
+		t.Fatalf("expected data missing status when PMT params unknown, got: %s", out)
+	}
+	if strings.Contains(out, `PMT disabled`) || strings.Contains(out, `badge--bad">disabled`) {
+		t.Fatal("must not show PMT disabled when params were not fetched")
+	}
+	strip := RenderStatusStrip(d)
+	if !strings.Contains(strip, `>PMT</span><span class="dash-status__value"><span class="badge">—</span>`) {
+		t.Fatalf("status strip should show PMT —, got: %s", strip)
+	}
+}
+
 func TestRewardsPMTPoolEmptyWarn(t *testing.T) {
 	d := model.Report{
-		PMTEnabled:        true,
+		HasPMTParams: true, PMTEnabled:        true,
 		PMTPoolEmpty:      true,
 		PMTRate:           "0.1 PMT/block",
 		Inflation:         3.5,
@@ -131,7 +147,7 @@ func TestRewardsPMTPoolEmptyWarn(t *testing.T) {
 
 func TestRewardsLocalValidatorNeverEmpty(t *testing.T) {
 	d := model.Report{
-		PMTEnabled:   true,
+		HasPMTParams: true, PMTEnabled:   true,
 		PMTPoolEmpty: true,
 		PMTRate:      "0.1 PMT/block",
 		Inflation:    3.5,
@@ -190,9 +206,9 @@ func TestInflationCardShowsMintPoolRatioWhenDistinct(t *testing.T) {
 	card := mintInflationDomainCard(d)
 	for _, want := range []string{
 		`bonded now`,
-		`20.00%`,
+		`20%`,
 		`mint pool ratio`,
-		`100.00%`,
+		`100%`,
 		`below goal`,
 	} {
 		if !strings.Contains(card, want) {
@@ -212,7 +228,7 @@ func TestInflationCardActiveWhenMinting(t *testing.T) {
 func TestPMTRewardsPoolMerged(t *testing.T) {
 	wantEVM := "0xEDACCBBFB7DB3278BC72AEEF66CC10A96C272A38"
 	d := model.Report{
-		PMTEnabled:     true,
+		HasPMTParams: true, PMTEnabled:     true,
 		PMTRate:        "0.1 PMT/block",
 		PMTBalance:     "1.00M PMT",
 		PMTPoolAddress: "cosmos1akkvh0ahmve830rj4mhkdnqs49kzw23c63nhdx",
@@ -233,7 +249,7 @@ func TestPMTRewardsPoolMerged(t *testing.T) {
 
 func TestRewardsEmissionPerBlockCombined(t *testing.T) {
 	d := model.Report{
-		PMTEnabled:        true,
+		HasPMTParams: true, PMTEnabled:        true,
 		PMTRate:           "0.1 PMT/block",
 		InflationPerBlock: "0.01 PMT/block",
 	}

@@ -84,15 +84,19 @@ func writeStatusPills(w Writer, d model.Report) {
 	}
 	writeStatusPill(w, "Base fee", baseFee, "")
 
-	pmtStr := "disabled"
+	pmtStr := "—"
 	pmtCls := ""
-	if d.PMTEnabled {
+	switch {
+	case !d.HasPMTParams:
+		// REST params unavailable — do not conflate with module disabled.
+	case !d.PMTEnabled:
+		pmtStr = "disabled"
+	case d.PMTPoolEmpty:
+		pmtStr = "pool empty"
+		pmtCls = "badge--warn"
+	default:
 		pmtStr = "enabled"
 		pmtCls = "badge--ok"
-		if d.PMTPoolEmpty {
-			pmtStr = "pool empty"
-			pmtCls = "badge--warn"
-		}
 	}
 	writeStatusPillBadge(w, "PMT", pmtStr, pmtCls)
 

@@ -34,6 +34,13 @@ func FetchChainStatus(rpc, rest string) ChainSnapshot {
 	if err := doJSON(rest+"/cosmos/evm/feemarket/v1/base_fee", &bf); err == nil {
 		snap.BaseFee = bf.BaseFee
 	}
+	// REST may be disabled (app.toml api.enable=false) while CometBFT RPC still works.
+	// Fall back to fee_market BeginBlock event from block_results.
+	if snap.BaseFee == "" && snap.BlockHeight > 0 {
+		if br := FetchBlockResults(rpc, snap.BlockHeight); br.OK && br.BaseFeeEvent != "" {
+			snap.BaseFee = br.BaseFeeEvent
+		}
+	}
 
 	return snap
 }

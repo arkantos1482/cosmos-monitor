@@ -4,7 +4,9 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -35,6 +37,7 @@ type ChainSnapshot struct {
 	LocalAccountLiquidAmt   string
 	LocalAccountLiquidDenom string
 	LocalDelegations        []DelegationInfo
+	LocalUnbondings         []UnbondingDelegationInfo
 	LocalP2PDial       string
 	LocalVotingPower          int64
 
@@ -171,10 +174,12 @@ type ChainParams struct {
 	// pmtrewards module
 	RewardPerBlockAmount       string
 	RewardPerBlockDenom        string
+	PMTRewardsParamsOK         bool // true when GET .../pmtrewards/v1/params succeeded
 	PMTRewardsEnabled          bool
 	PMTRewardsPoolAddress      string
 	PMTRewardsPoolBalanceAmt   string // raw base-denom amount
 	PMTRewardsPoolBalanceDenom string
+	PMTRewardsPoolBalanceOK    bool // true when pool balance REST succeeded (or pool addr empty)
 }
 
 // --- RPC response types ---
@@ -754,6 +759,9 @@ func FetchParams(rest string) ChainParams {
 		p.UnbondingTime = parseDuration(sp.Params.UnbondingTime)
 		p.MaxValidators = sp.Params.MaxValidators
 		p.BondDenom = sp.Params.BondDenom
+	} else if restUnreachable(err) {
+		// LCD down / api.enable=false — skip the rest of the param waterfall.
+		return p
 	}
 
 	var slp slashingParamsResp
@@ -826,30 +834,63 @@ func FetchParams(rest string) ChainParams {
 
 	var pmtr pmtRewardsParamsResp
 	if err := doJSON(rest+"/cosmos/evm/pmtrewards/v1/params", &pmtr); err == nil {
+		p.PMTRewardsParamsOK = true
 		p.RewardPerBlockAmount = pmtr.Params.RewardPerBlock.Amount
 		p.RewardPerBlockDenom = pmtr.Params.RewardPerBlock.Denom
 		p.PMTRewardsEnabled = pmtr.Params.Enabled
 		p.PMTRewardsPoolAddress = pmtr.Params.PoolAddress
 	}
 
-	if p.PMTRewardsPoolAddress != "" {
-		var poolBal struct {
-			Balances []struct {
-				Denom  string `json:"denom"`
-				Amount string `json:"amount"`
-			} `json:"balances"`
-		}
-		if err := doJSON(fmt.Sprintf("%s/cosmos/bank/v1beta1/balances/%s", rest, p.PMTRewardsPoolAddress), &poolBal); err == nil {
-			for _, b := range poolBal.Balances {
-				if p.PMTRewardsPoolBalanceAmt == "" || b.Denom == p.BondDenom {
-					p.PMTRewardsPoolBalanceAmt = b.Amount
-					p.PMTRewardsPoolBalanceDenom = b.Denom
-				}
+	if !p.PMTRewardsParamsOK {
+		return p
+	}
+	if p.PMTRewardsPoolAddress == "" {
+		p.PMTRewardsPoolBalanceOK = true
+		return p
+	}
+	var poolBal struct {
+		Balances []struct {
+			Denom  string `json:"denom"`
+			Amount string `json:"amount"`
+		} `json:"balances"`
+	}
+	if err := doJSON(fmt.Sprintf("%s/cosmos/bank/v1beta1/balances/%s", rest, p.PMTRewardsPoolAddress), &poolBal); err == nil {
+		p.PMTRewardsPoolBalanceOK = true
+		for _, b := range poolBal.Balances {
+			if p.PMTRewardsPoolBalanceAmt == "" || b.Denom == p.BondDenom {
+				p.PMTRewardsPoolBalanceAmt = b.Amount
+				p.PMTRewardsPoolBalanceDenom = b.Denom
 			}
 		}
 	}
 
 	return p
+}
+
+// restUnreachable reports transport-level LCD failures (connection refused, timeout, EOF).
+// HTTP 4xx/5xx from a live LCD are not unreachable — other modules may still answer.
+func restUnreachable(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	if strings.HasPrefix(msg, "HTTP ") {
+		return false
+	}
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return true
+	}
+	var opErr *net.OpError
+	if errors.As(err, &opErr) {
+		return true
+	}
+	// url.Error wrapping dial failures
+	return strings.Contains(msg, "connection refused") ||
+		strings.Contains(msg, "connection reset") ||
+		strings.Contains(msg, "i/o timeout") ||
+		strings.Contains(msg, "no such host") ||
+		strings.Contains(msg, "network is unreachable")
 }
 
 // rawToString converts a json.RawMessage to a trimmed string, stripping quotes.

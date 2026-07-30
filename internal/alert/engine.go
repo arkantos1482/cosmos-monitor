@@ -22,6 +22,10 @@ type Engine struct {
 
 	active   map[string]panel.Finding
 	lastFire map[string]time.Time
+
+	// rewardsSeeded is set after the first tick with HasPMTParams so a
+	// pre-existing disabled/empty pool does not page as a "transition".
+	rewardsSeeded bool
 }
 
 func NewEngine(cfg Config, load LoadFunc, sender Sender) *Engine {
@@ -52,23 +56,23 @@ func (e *Engine) Run() {
 func (e *Engine) tick() {
 	d := e.load()
 	now := time.Now()
-	current := indexFindings(panel.Findings(d))
+	current := e.indexCurrentFindings(d)
 
-	var fireAlert bool
+	var delta []panel.Finding
 	var recoveries []panel.Finding
 
 	for id, f := range current {
 		prev, was := e.active[id]
 		if !was {
 			if e.cooldownReady(id, now) {
-				fireAlert = true
+				delta = append(delta, f)
 				e.lastFire[id] = now
 			}
 			continue
 		}
 		if severityRank(f.Severity) > severityRank(prev.Severity) {
 			if e.cooldownReady(id, now) {
-				fireAlert = true
+				delta = append(delta, f)
 				e.lastFire[id] = now
 			}
 		}
@@ -86,14 +90,45 @@ func (e *Engine) tick() {
 
 	e.active = current
 
-	if fireAlert && len(current) > 0 {
-		msg := formatAlertMessage(e.nodeLabel(), current, d)
+	if len(delta) > 0 {
+		msg := formatAlertMessage(e.nodeLabel(), indexFindings(delta), d)
 		e.send(msg, "alert")
 	}
 	for _, f := range recoveries {
 		msg := formatRecoveryMessage(e.nodeLabel(), f)
 		e.send(msg, "recovery")
 	}
+}
+
+// indexCurrentFindings builds the active finding set for this tick.
+// Rewards findings are seeded on the first healthy PMT params fetch so
+// steady-state disabled/empty does not page; later enable↔disable and
+// pool empty↔refill still fire as new/cleared findings.
+func (e *Engine) indexCurrentFindings(d model.Report) map[string]panel.Finding {
+	current := indexFindings(panel.FindingsWithoutRewards(d))
+
+	if !d.HasPMTParams {
+		// Fetch fail ≠ chain recovered — keep prior rewards findings sticky.
+		for id, f := range e.active {
+			if f.Section == "rewards" {
+				current[id] = f
+			}
+		}
+		return current
+	}
+
+	rewards := panel.RewardsStateFindings(d)
+	if !e.rewardsSeeded {
+		for _, f := range rewards {
+			id := findingID(f)
+			e.active[id] = f
+		}
+		e.rewardsSeeded = true
+	}
+	for _, f := range rewards {
+		current[findingID(f)] = f
+	}
+	return current
 }
 
 func (e *Engine) cooldownReady(id string, now time.Time) bool {

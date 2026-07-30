@@ -9,7 +9,7 @@ import (
 
 func TestEVMRPCHealthCards(t *testing.T) {
 	d := model.Report{
-		EVMRPCOk: true, EVMSynced: true, EVMListening: true,
+		EVMRPCOk: true, EVMSynced: true, HasEVMListening: true, EVMListening: true,
 		EVMBlock: "100", EVMBlockAge: "4.2s", EVMChainID: 290290,
 		EVMHTTPEndpoint: "http://localhost:8545", EVMClient: "evmd/v1",
 		EVMDenomName: "PMT", EVMDenomSymbol: "PMT", EVMDenomDecimals: 18,

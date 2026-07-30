@@ -121,6 +121,9 @@ func localBadges(d model.Report) []summaryBadge {
 }
 
 func pmtPoolBadge(d model.Report) summaryBadge {
+	if !d.HasPMTParams {
+		return summaryBadge{"PMT data missing", ""}
+	}
 	if !d.PMTEnabled {
 		return summaryBadge{"PMT disabled", ""}
 	}

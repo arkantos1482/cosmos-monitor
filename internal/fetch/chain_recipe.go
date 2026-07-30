@@ -354,6 +354,9 @@ func fetchFeemarketLive(rpc, rest string, snap *ChainSnapshot) {
 			snap.ParentBaseFeeEvent = cur.BaseFeeEvent
 		}
 	}
+	if snap.BaseFee == "" && snap.ParentBaseFeeEvent != "" {
+		snap.BaseFee = snap.ParentBaseFeeEvent
+	}
 	if snap.ParentBlockGasWanted == 0 && snap.BlockGas > 0 {
 		snap.ParentBlockGasWanted = snap.BlockGas
 	}
@@ -537,6 +540,7 @@ func resolveLocalStaking(rest string, snap *ChainSnapshot) {
 		return
 	}
 	snap.LocalDelegations = FetchValidatorDelegations(rest, localOperator)
+	snap.LocalUnbondings = FetchValidatorUnbondingDelegations(rest, localOperator)
 	snap.LocalAccountAddr = ValOperToAcc(localOperator)
 }
 

@@ -5,6 +5,7 @@ import (
 	"html"
 	"strings"
 
+	"github.com/arkantos1482/cosmos-monitor/internal/fetch"
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 	"github.com/arkantos1482/cosmos-monitor/internal/report"
 )
@@ -72,6 +73,9 @@ func writeStakingLocalScope(w Writer, lv model.LocalValidator, badges []summaryB
 		if lv.VotingPower != "" {
 			writeStakingSummaryKPI(w, "bonded stake", lv.VotingPower, "")
 		}
+		if lv.UnbondingAmt != "" {
+			writeStakingSummaryKPI(w, "unbonding", lv.UnbondingAmt, "")
+		}
 		w.WriteHTML(`</div>`)
 	} else if lv.SigningStatus != "" {
 		w.WriteHTML(fmt.Sprintf(
@@ -86,13 +90,16 @@ func writeStakingNetworkScope(w Writer, d model.Report) {
 		writeStakingSummaryKPI(w, "active set", fmt.Sprintf("%d", d.BondedCount), "")
 	}
 	if d.BondedPct > 0 {
-		writeStakingSummaryKPI(w, "bonded", fmt.Sprintf("%.1f%%", d.BondedPct), "")
+		writeStakingSummaryKPI(w, "bonded", fetch.FormatPct(d.BondedPct), "")
 	}
 	if unhealthy := stakingUnhealthyCount(d); unhealthy > 0 {
 		writeStakingSummaryKPI(w, "unhealthy", fmt.Sprintf("%d", unhealthy), "warn")
 	}
 	if d.BondedAmt != "" {
 		writeStakingSummaryKPI(w, "total staked", d.BondedAmt, "")
+	}
+	if d.NotBonded != "" {
+		writeStakingSummaryKPI(w, "not bonded", d.NotBonded, "")
 	}
 	w.WriteHTML(`</div>`)
 	writeStakingValidatorChips(w, d)
@@ -204,12 +211,32 @@ func writeStakingLocal(w Writer, lv model.LocalValidator) {
 	if lv.Commission > 0 {
 		w.Row("commission", fmt.Sprintf("%.1f%%", lv.Commission))
 	}
+	if lv.UnbondingAmt != "" {
+		note := ""
+		switch {
+		case lv.UnbondingEntries > 0 && lv.UnbondingComplete != "":
+			note = fmt.Sprintf("  _(%d %s · completes %s)_",
+				lv.UnbondingEntries, entryWord(lv.UnbondingEntries), lv.UnbondingComplete)
+		case lv.UnbondingComplete != "":
+			note = fmt.Sprintf("  _(completes %s)_", lv.UnbondingComplete)
+		case lv.UnbondingEntries > 0:
+			note = fmt.Sprintf("  _(%d %s)_", lv.UnbondingEntries, entryWord(lv.UnbondingEntries))
+		}
+		w.Row("unbonding", lv.UnbondingAmt+note)
+	}
 	if lv.LiquidBalance != "" {
 		w.Row("liquid balance", lv.LiquidBalance+"  _(bank — spendable, excl. bonded)_")
 	}
 	if lv.DelegatorCount > 0 {
 		w.Row("delegators", fmt.Sprintf("%d", lv.DelegatorCount))
 	}
+}
+
+func entryWord(n int) string {
+	if n == 1 {
+		return "entry"
+	}
+	return "entries"
 }
 
 func writeValidatorStakingTable(w Writer, d model.Report) {

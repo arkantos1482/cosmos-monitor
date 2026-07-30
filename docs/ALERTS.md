@@ -1,6 +1,6 @@
 # pmtop Telegram Alerts
 
-pmtop can send Telegram messages when dashboard **sections** show warn or bad conditions — the same logic as each section's summary card badges. The global status strip is not evaluated separately.
+pmtop can send Telegram messages when dashboard **sections** show warn or bad conditions. The global status strip is not evaluated separately. Each node that runs `-alert` pages independently (no cross-node dedupe).
 
 ## Setup
 
@@ -29,24 +29,24 @@ telegram_chat_id: "-1001234567890"
 
 Web UI (`-web :7777`) and alerts can run together. Set `-web ""` for alert-only mode.
 
-## Evaluated sections
+## Alert policy
 
-| Section | Examples |
-|---------|----------|
-| Infrastructure | container stopped, OOM, restarts ≥3, disk/RAM pressure |
-| EVM JSON-RPC | RPC down/degraded, block age slow/stale, not listening, syncing |
-| Validator | catching up |
-| Staking | local jailed, tombstoned, missed blocks high |
-| Slashing | local + network slashing KPIs, headroom low |
-| Fee market | base fee rising, disabled/pending |
-| Rewards | PMT disabled/not emitting, inflation off |
-| Distribution | escrow bank ≠ tracked unclaimed total |
+| Section | What pages Telegram | Notes |
+|---------|---------------------|-------|
+| Infrastructure | container stopped, OOM, restarts ≥3, disk/RAM pressure | as-today |
+| EVM JSON-RPC | **liveness only**: `eth_blockNumber` failure (RPC DOWN); `net_listening` false **only if that RPC returned a value** | Degraded probes, syncing, block age stay **UI-only**. Failed blockNumber must not imply “not listening”. |
+| Validator | catching up | as-today |
+| Staking | local jailed, tombstoned, missed blocks high | as-today |
+| Slashing | local + network slashing KPIs, headroom low | as-today |
+| Fee market | base fee rising, disabled/pending | as-today |
+| Rewards | **transitions only**: enable↔disable (when params fetch healthy); pool empty↔refill | No steady-state “still disabled / still empty / inflation off”. Missing PMT params (REST off) is **not** “PMT disabled”. |
+| Distribution | escrow bank ≠ tracked unclaimed total | as-today |
 
-Evaluation lives in `internal/panel/findings.go` and reuses existing domain helpers.
+Evaluation lives in `internal/panel/findings.go` (plus rewards seeding in `internal/alert/engine.go`).
 
 ## Message format
 
-Active alert (one batched message per tick when something new or worsened fires):
+Active alert — **only newly fired or worsened findings this tick** (not a dump of all active):
 
 ```
 🚨 PMT — node4
@@ -57,7 +57,7 @@ Infrastructure · bad
 Height 1842032 · 12s ago
 ```
 
-Recovery when a condition clears:
+Recovery when a condition clears (per finding):
 
 ```
 ✅ PMT — node4 resolved
@@ -65,7 +65,7 @@ Recovery when a condition clears:
 Infrastructure · container stopped
 ```
 
-Cooldown (default 15m) applies per section+key for both alerts and recoveries.
+Cooldown (default 15m) applies per section+key for both alerts and recoveries. Expect up to 4× duplicate messages across nodes when the same chain event is seen on every validator.
 
 ## node4 dev workflow
 
@@ -96,5 +96,5 @@ go run ./cmd/pmtop -alert -alert-dry-run -web ""
 ## Tests
 
 ```bash
-go test ./internal/alert/... ./internal/panel/... -run 'Findings|Engine|Format'
+go test ./internal/alert/... ./internal/panel/... ./internal/fetch/... -run 'Findings|Engine|Format|FetchEVM'
 ```

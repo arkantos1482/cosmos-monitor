@@ -237,6 +237,9 @@ func economicsUnclaimedCheck(d model.Report) string {
 }
 
 func economicsPMTPoolCheck(d model.Report) string {
+	if !d.HasPMTParams {
+		return "data missing"
+	}
 	if !d.PMTEnabled {
 		return "—"
 	}
@@ -249,18 +252,22 @@ func economicsPMTPoolCheck(d model.Report) string {
 func economicsLedgerRows(d model.Report) []EcoLedgerRow {
 	var rows []EcoLedgerRow
 
-	pmtInactive := !d.PMTEnabled
-	pmtWarn := d.PMTEnabled && d.PMTPoolEmpty
+	pmtMissing := !d.HasPMTParams
+	pmtInactive := d.HasPMTParams && !d.PMTEnabled
+	pmtWarn := d.HasPMTParams && d.PMTEnabled && d.PMTPoolEmpty
 	pmtRate := d.PMTRate
 	if pmtRate == "" {
 		pmtRate = "—"
 	}
 	pmtCheck := economicsPMTPoolCheck(d)
-	if pmtInactive {
+	switch {
+	case pmtMissing:
+		pmtCheck = "data missing"
+	case pmtInactive:
 		pmtCheck = "disabled"
-	} else if pmtWarn {
+	case pmtWarn:
 		pmtCheck = "pool empty"
-	} else if d.PMTBalance != "" {
+	case d.PMTBalance != "":
 		pmtCheck = "pool on PMT Rewards card"
 	}
 	rows = append(rows, EcoLedgerRow{
@@ -271,7 +278,7 @@ func economicsLedgerRows(d model.Report) []EcoLedgerRow {
 			"—",
 			pmtCheck,
 		},
-		Inactive: pmtInactive,
+		Inactive: pmtInactive || pmtMissing,
 		Warn:     pmtWarn,
 	})
 

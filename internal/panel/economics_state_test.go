@@ -9,7 +9,7 @@ import (
 
 func TestEconomicsLedgerStep1NoPoolBalanceColumn(t *testing.T) {
 	d := model.Report{
-		PMTEnabled: true,
+		HasPMTParams: true, PMTEnabled: true,
 		PMTRate:    "0.1 PMT/block",
 		PMTBalance: "1.00M PMT",
 		BondedCount: 4,
@@ -26,7 +26,7 @@ func TestEconomicsLedgerStep1NoPoolBalanceColumn(t *testing.T) {
 
 func TestEconomicsCommunityTaxZeroInactive(t *testing.T) {
 	d := model.Report{
-		PMTEnabled:       true,
+		HasPMTParams: true, PMTEnabled:       true,
 		PMTRate:          "0.1 PMT/block",
 		PMTBalance:       "1M PMT",
 		CommunityTax:     "0%",
@@ -79,11 +79,21 @@ func TestStakingCardNoGoalText(t *testing.T) {
 	if strings.Contains(strings.ToLower(card), "goal") {
 		t.Fatal("staking card must not contain goal text")
 	}
-	if !strings.Contains(card, "55.50%") {
+	if !strings.Contains(card, "55.5%") {
 		t.Fatal("staking card should show bonded percentage")
 	}
 	if strings.Contains(card, "slash") {
 		t.Fatal("staking card must not contain slashing params")
+	}
+}
+
+func TestStakingCardTinyBondedPct(t *testing.T) {
+	card := stakingCardHTML(model.Report{BondedPct: 0.00002}, false)
+	if !strings.Contains(card, "0.00002%") {
+		t.Fatalf("tiny bonded %% should not round to 0.00%%, got:\n%s", card)
+	}
+	if strings.Contains(card, "0.00%") {
+		t.Fatal("tiny bonded %% must not display as 0.00%")
 	}
 }
 

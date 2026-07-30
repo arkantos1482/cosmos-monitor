@@ -19,7 +19,7 @@ func rewardsChunk(t *testing.T, out string) string {
 
 func TestWriteRewardsSectionSourcesOnly(t *testing.T) {
 	d := model.Report{
-		PMTEnabled:        true,
+		HasPMTParams: true, PMTEnabled:        true,
 		PMTRate:           "0.1000 PMT/block",
 		Inflation:         3.5,
 		InflationPerBlock: "0.01 PMT/block",
@@ -60,7 +60,7 @@ func TestWriteRewardsSectionSourcesOnly(t *testing.T) {
 
 func TestEconomicsPerBlockSplit(t *testing.T) {
 	d := model.Report{
-		PMTEnabled:      true,
+		HasPMTParams: true, PMTEnabled:      true,
 		PMTRate:         "0.1 PMT/block",
 		CommunityTaxPct: 2,
 		BondedCount:     4,
@@ -126,7 +126,7 @@ func TestEconomicsPerBlockSplitInflationOnly(t *testing.T) {
 
 func TestRewardInPerBlockTotal(t *testing.T) {
 	d := model.Report{
-		PMTEnabled:        true,
+		HasPMTParams: true, PMTEnabled:        true,
 		PMTRate:           "0.1 PMT/block",
 		InflationPerBlock: "0.01 PMT/block",
 		LastBlockFees:     "0.001 PMT  _(parent block gas × base fee)_",

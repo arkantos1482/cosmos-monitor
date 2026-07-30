@@ -41,6 +41,8 @@ func doJSON(url string, target any) error {
 	ex.OK = resp.StatusCode == 200
 	if !ex.OK {
 		ex.Error = fmt.Sprintf("HTTP %d", resp.StatusCode)
+		recordTrace(ex)
+		return fmt.Errorf("HTTP %d", resp.StatusCode)
 	}
 	recordTrace(ex)
 
@@ -90,6 +92,8 @@ func doDockerJSON(client *http.Client, url string, target any) error {
 	ex.OK = resp.StatusCode == 200
 	if !ex.OK {
 		ex.Error = fmt.Sprintf("HTTP %d", resp.StatusCode)
+		recordTrace(ex)
+		return fmt.Errorf("HTTP %d", resp.StatusCode)
 	}
 	recordTrace(ex)
 

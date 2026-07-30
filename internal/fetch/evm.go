@@ -34,6 +34,7 @@ type EVMSnapshot struct {
 	PeerCount         uint64
 	ClientVersion     string
 	NetListening      bool
+	HasNetListening   bool // true when net_listening RPC returned a value
 	EVMBlockTimestamp uint64 // unix seconds of latest EVM block
 	Probes            []RPCProbe
 	Err               error
@@ -310,12 +311,14 @@ func FetchEVM(endpoint string) EVMSnapshot {
 
 	blockProbe := byMethod["eth_blockNumber"]
 	if !blockProbe.OK {
+		// Liveness failure — still parse other probes so net_listening is not
+		// implied false when eth_blockNumber alone failed.
 		snap.Err = fmt.Errorf("eth_blockNumber: %s", firstNonEmpty(blockProbe.Error, "failed"))
-		return snap
-	}
-	var blockHex string
-	if probeResult(blockProbe, &blockHex) {
-		snap.BlockNumber = hexToUint64(blockHex)
+	} else {
+		var blockHex string
+		if probeResult(blockProbe, &blockHex) {
+			snap.BlockNumber = hexToUint64(blockHex)
+		}
 	}
 
 	var chainIDHex string
@@ -359,6 +362,7 @@ func FetchEVM(endpoint string) EVMSnapshot {
 	var listening bool
 	if probeResult(byMethod["net_listening"], &listening) {
 		snap.NetListening = listening
+		snap.HasNetListening = true
 	}
 
 	var latestBlock struct {

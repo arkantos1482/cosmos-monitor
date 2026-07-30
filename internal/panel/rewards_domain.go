@@ -15,6 +15,9 @@ type rewardsCardStatus struct {
 }
 
 func pmtRewardsCardStatus(d model.Report) rewardsCardStatus {
+	if !d.HasPMTParams {
+		return rewardsCardStatus{"eco-domain--inactive", "", "data missing"}
+	}
 	if !d.PMTEnabled {
 		return rewardsCardStatus{"eco-domain--inactive", "badge--bad", "disabled"}
 	}
@@ -56,6 +59,9 @@ func rewardsEmissionAmounts(d model.Report) (total float64, unit string, parts i
 }
 
 func rewardsSummaryPMT(d model.Report) (label, value, tone string) {
+	if !d.HasPMTParams {
+		return "PMT emission", "data missing", ""
+	}
 	if !d.PMTEnabled {
 		return "PMT emission", "disabled", "bad"
 	}
@@ -83,12 +89,15 @@ func rewardsSummaryInflation(d model.Report) (label, value, tone string) {
 }
 
 func pmtConfiguredNotEmitting(d model.Report) bool {
-	return d.PMTEnabled && d.PMTPoolEmpty && d.PMTRate != ""
+	return d.HasPMTParams && d.PMTEnabled && d.PMTPoolEmpty && d.PMTRate != ""
 }
 
 func rewardsSummaryBadges(d model.Report) []summaryBadge {
 	var b []summaryBadge
 	switch {
+	case !d.HasPMTParams:
+		// No severity — missing REST must not look like "PMT disabled".
+		b = append(b, summaryBadge{"PMT data missing", ""})
 	case !d.PMTEnabled:
 		b = append(b, summaryBadge{"PMT disabled", "bad"})
 	case d.PMTPoolEmpty:
@@ -136,18 +145,29 @@ func pmtRewardsDomainCard(d model.Report) string {
 	b.WriteString(`<div class="eco-domain__rows">`)
 
 	enabledCls := ""
-	if !d.PMTEnabled {
+	enabledVal := "—"
+	enabledEffect := "REST params unavailable"
+	if d.HasPMTParams {
+		enabledVal = boolStr(d.PMTEnabled)
+		enabledEffect = "governance toggle — when false, no pool transfers run"
+		if !d.PMTEnabled {
+			enabledCls = ` class="eco-domain__row--inactive"`
+		}
+	} else {
 		enabledCls = ` class="eco-domain__row--inactive"`
 	}
-	ecoDomainRow(&b, enabledCls, "enabled", boolStr(d.PMTEnabled),
-		"governance toggle — when false, no pool transfers run")
+	ecoDomainRow(&b, enabledCls, "enabled", enabledVal, enabledEffect)
 
 	rateCls := ""
 	rateEffect := "fixed per-block payout from params"
-	if !d.PMTEnabled {
+	switch {
+	case !d.HasPMTParams:
+		rateCls = ` class="eco-domain__row--inactive"`
+		rateEffect = "data missing"
+	case !d.PMTEnabled:
 		rateCls = ` class="eco-domain__row--inactive"`
 		rateEffect = "inactive"
-	} else if d.PMTPoolEmpty || d.PMTRate == "" {
+	case d.PMTPoolEmpty || d.PMTRate == "":
 		rateCls = ` class="eco-domain__row--warn"`
 		if d.PMTPoolEmpty {
 			rateEffect = "configured but pool cannot fund transfers"
@@ -157,13 +177,17 @@ func pmtRewardsDomainCard(d model.Report) string {
 
 	poolCls := ""
 	poolEffect := "bank account debited each block (up to reward_per_block)"
-	if !d.PMTEnabled {
+	switch {
+	case !d.HasPMTParams:
+		poolCls = ` class="eco-domain__row--inactive"`
+		poolEffect = "data missing"
+	case !d.PMTEnabled:
 		poolCls = ` class="eco-domain__row--inactive"`
 		poolEffect = "—"
-	} else if d.PMTPoolEmpty {
+	case d.PMTPoolEmpty:
 		poolCls = ` class="eco-domain__row--warn"`
 		poolEffect = "empty — BeginBlock transfer skipped"
-	} else if d.PMTRunway != "" {
+	case d.PMTRunway != "":
 		poolEffect = "funded · " + d.PMTRunway + " at current rate"
 	}
 	poolVal := ecoBalanceAddrHTML(orEcoDash(d.PMTBalance), displayAddress(d.PMTPoolAddress))
@@ -171,13 +195,13 @@ func pmtRewardsDomainCard(d model.Report) string {
 
 	if d.PMTAnnual != "" {
 		annualCls := ""
-		if !d.PMTEnabled {
+		if !d.HasPMTParams || !d.PMTEnabled {
 			annualCls = ` class="eco-domain__row--inactive"`
 		}
 		ecoDomainRow(&b, annualCls, "annual (est.)", d.PMTAnnual,
 			"reward_per_block × blocks_per_year")
 	}
-	if d.PMTDailyEmit != "" && d.PMTEnabled {
+	if d.PMTDailyEmit != "" && d.HasPMTParams && d.PMTEnabled {
 		ecoDomainRow(&b, "", "daily (est.)", d.PMTDailyEmit,
 			"reward_per_block × blocks/day from observed block time")
 	}
@@ -235,10 +259,10 @@ func mintInflationDomainCard(d model.Report) string {
 	ecoDomainDividerDist(&b, "Inflation params")
 	ecoDomainRow(&b, "", "goal_bonded", fmt.Sprintf("%.0f%%", d.GoalBonded),
 		"target bonded ratio — mint raises/lowers inflation when stake drifts")
-	ecoDomainRow(&b, "", "bonded now", fmt.Sprintf("%.2f%%", d.BondedPct),
+	ecoDomainRow(&b, "", "bonded now", fetch.FormatPct(d.BondedPct),
 		mintBondedVsGoalEffect(d)+"; bonded ÷ total supply")
 	if d.MintBondedPct > 0 && d.MintBondedPct != d.BondedPct {
-		ecoDomainRow(&b, "", "mint pool ratio", fmt.Sprintf("%.2f%%", d.MintBondedPct),
+		ecoDomainRow(&b, "", "mint pool ratio", fetch.FormatPct(d.MintBondedPct),
 			"x/mint inflation input (bonded ÷ bonded+not_bonded; not_bonded pool may be empty)")
 	}
 	if d.BlocksPerYear != "" {
@@ -283,7 +307,7 @@ func rewardsEmissionTableHTML(d model.Report) string {
 	b.WriteString(`</tr></thead><tbody>`)
 	for _, row := range rows {
 		trCls := ""
-		if row[3] == "inactive" || row[3] == "disabled" {
+		if row[3] == "inactive" || row[3] == "disabled" || row[3] == "data missing" {
 			trCls = ` class="eco-row--inactive"`
 		} else if row[3] == "pool empty" {
 			trCls = ` class="eco-row--warn"`
@@ -305,11 +329,14 @@ func rewardsEmissionTableHTML(d model.Report) string {
 func rewardsEmissionRowPMT(d model.Report) []string {
 	rate := orEcoDash(d.PMTRate)
 	status := "inactive"
-	if !d.PMTEnabled {
+	switch {
+	case !d.HasPMTParams:
+		status = "data missing"
+	case !d.PMTEnabled:
 		status = "disabled"
-	} else if d.PMTPoolEmpty {
+	case d.PMTPoolEmpty:
 		status = "pool empty"
-	} else if d.PMTRate != "" {
+	case d.PMTRate != "":
 		status = "active"
 	}
 	return []string{"x/pmtrewards (pool)", rate, "fee_collector", status}

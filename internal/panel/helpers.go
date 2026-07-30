@@ -24,6 +24,9 @@ func writeValidatorSetTable(w Writer, headers []string, rows [][]string, validat
 }
 
 func pmtStatus(d model.Report) string {
+	if !d.HasPMTParams {
+		return "data missing"
+	}
 	if !d.PMTEnabled {
 		return "disabled"
 	}

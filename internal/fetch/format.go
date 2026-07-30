@@ -37,6 +37,49 @@ func FormatAmountUnit(v float64, unit string) string {
 	return s + " " + unit
 }
 
+// FormatPct formats a percentage for dashboards. Values that would round to
+// "0.00%" with two decimals keep enough precision to stay non-zero (e.g. 0.00002%).
+func FormatPct(v float64) string {
+	if math.IsNaN(v) || math.IsInf(v, 0) {
+		return "—"
+	}
+	if v == 0 {
+		return "0%"
+	}
+	sign := ""
+	if v < 0 {
+		sign = "-"
+		v = -v
+	}
+	var body string
+	switch {
+	case v >= 0.01:
+		body = trimTrailingZeros(fmt.Sprintf("%.2f", v))
+	case v >= 0.0001:
+		body = trimTrailingZeros(fmt.Sprintf("%.4f", v))
+	default:
+		body = trimTrailingZeros(fmt.Sprintf("%.6f", v))
+	}
+	return sign + body + "%"
+}
+
+// SumRawAmounts adds integer Cosmos coin amount strings with math/big.
+func SumRawAmounts(amts ...string) string {
+	sum := new(big.Int)
+	for _, a := range amts {
+		a = strings.TrimSpace(a)
+		if a == "" {
+			continue
+		}
+		n := new(big.Int)
+		if _, ok := n.SetString(a, 10); !ok {
+			continue
+		}
+		sum.Add(sum, n)
+	}
+	return sum.String()
+}
+
 func formatAmountAbs(v float64) string {
 	for _, s := range []struct {
 		div float64

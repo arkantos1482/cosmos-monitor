@@ -93,6 +93,9 @@ type Report struct {
 	InflationPerBlock string
 	InflationPerDay   string
 
+	// HasPMTParams is true when x/pmtrewards params were fetched successfully.
+	// When false, PMTEnabled/PMTPoolEmpty are unknown — UI must not say "disabled".
+	HasPMTParams   bool
 	PMTEnabled     bool
 	PMTPoolEmpty   bool
 	PMTRate        string
@@ -146,6 +149,9 @@ type Report struct {
 	EVMDenomDecimals  uint32 // display-denom exponent (wallet decimals)
 	EVMClient         string
 	EVMRPCOk          bool
+	// HasEVMListening is true when net_listening RPC returned a value.
+	// When false, EVMListening is unknown — do not treat as "not listening".
+	HasEVMListening   bool
 	EVMListening      bool
 	EVMBlockAge       string
 	EVMBlockAgeWarn   bool
@@ -249,6 +255,10 @@ type LocalValidator struct {
 	CommissionEarned  string
 	LiquidBalance     string
 	DelegatorCount    int
+	// Unbonding* is stake leaving this validator (sum of unbonding_delegations).
+	UnbondingAmt      string
+	UnbondingEntries  int
+	UnbondingComplete string // earliest completion date (YYYY-MM-DD)
 }
 
 type RPCProbe struct {

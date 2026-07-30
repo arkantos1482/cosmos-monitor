@@ -10,7 +10,7 @@ import (
 func TestBuildOverviewStack(t *testing.T) {
 	d := model.Report{
 		Moniker: "node1", Synced: true, BlockHeight: "100",
-		NodeRunning: true, BondedCount: 4, PMTEnabled: true,
+		NodeRunning: true, BondedCount: 4, HasPMTParams: true, PMTEnabled: true,
 		EVMChainID: 290290, EVMSynced: true, EVMRPCOk: true,
 		MemPct: 42, DiskPct: 55, Load1: 0.5,
 		RPCProbeOK: 4, RPCProbeTotal: 4,
@@ -193,7 +193,7 @@ func TestBuildViewSingleSection(t *testing.T) {
 func TestOverviewDataSourcesProvenance(t *testing.T) {
 	d := model.Report{
 		Moniker: "node1", Synced: true, BlockHeight: "100",
-		NodeRunning: true, BondedCount: 4, PMTEnabled: true,
+		NodeRunning: true, BondedCount: 4, HasPMTParams: true, PMTEnabled: true,
 		Exchanges: []model.SourceExchange{
 			{
 				Kind: "http", Method: "GET",
@@ -275,7 +275,7 @@ func TestStatusStripNotInBuildView(t *testing.T) {
 func TestSectionSummariesEmbedded(t *testing.T) {
 	d := model.Report{
 		Moniker: "n", Synced: true, BlockHeight: "1", BondedCount: 4,
-		PMTEnabled: true, PMTRate: "0.1 PMT/block",
+		HasPMTParams: true, PMTEnabled: true, PMTRate: "0.1 PMT/block",
 		EVMRPCOk: true, EVMSynced: true, RPCProbeOK: 1, RPCProbeTotal: 1,
 		RPCProbes: []model.RPCProbe{{Method: "eth_chainId", OK: true}},
 		CommunityTax: "2%",

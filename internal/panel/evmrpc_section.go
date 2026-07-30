@@ -45,7 +45,11 @@ func writeEVMSummary(w Writer, d model.Report, mode SummaryMode) {
 	}
 	listenLabel := "listening"
 	listenKind := "ok"
-	if !d.EVMListening {
+	switch {
+	case !d.HasEVMListening:
+		listenLabel = "listening unknown"
+		listenKind = ""
+	case !d.EVMListening:
 		listenLabel = "not listening"
 		listenKind = "warn"
 	}

@@ -5,6 +5,7 @@ import (
 	"html"
 	"strings"
 
+	"github.com/arkantos1482/cosmos-monitor/internal/fetch"
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
@@ -38,7 +39,7 @@ func stakingCardHTML(d model.Report, compact bool) string {
 	b.WriteString(`<h3 class="eco-domain__title">Staking <span class="eco-domain__subtitle">x/staking</span></h3>`)
 	b.WriteString(`<div class="eco-domain__rows">`)
 
-	ecoDomainRow(&b, "", "bonded", fmt.Sprintf("%.2f%%", d.BondedPct), "share of supply staked")
+	ecoDomainRow(&b, "", "bonded", fetch.FormatPct(d.BondedPct), "share of supply staked")
 
 	if !compact {
 		if d.BondedAmt != "" {

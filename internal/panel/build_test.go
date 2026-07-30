@@ -9,7 +9,7 @@ import (
 
 func TestBuildRewardsUsesTablesNotMermaid(t *testing.T) {
 	d := model.Report{
-		Inflation: 3.5, PMTEnabled: true, PMTRate: "0.1 PMT/block",
+		Inflation: 3.5, HasPMTParams: true, PMTEnabled: true, PMTRate: "0.1 PMT/block",
 		BaseFee: "1000", Elasticity: 2, BlockGas: "21000",
 		ParentBlockGasWanted: 21000, ParentBlockResultsOK: true,
 		ModuleAccounts: []model.ModuleAccountRow{
@@ -113,7 +113,7 @@ func TestBuildFeeMarketPanel(t *testing.T) {
 func TestBuildGoldenMinimal(t *testing.T) {
 	d := model.Report{
 		Moniker: "node1", Synced: true, BlockHeight: "1",
-		BondDenom: "apmt", PMTEnabled: false,
+		BondDenom: "apmt", HasPMTParams: true, PMTEnabled: false,
 	}
 	out := Build(d)
 	if !strings.Contains(out, `class="dash-heading">1. INFRASTRUCTURE</h2>`) {
@@ -130,7 +130,7 @@ func TestBuildGoldenMinimal(t *testing.T) {
 func TestContentInventory(t *testing.T) {
 	d := model.Report{
 		Moniker: "node1", Synced: true, BlockHeight: "482,160",
-		PMTEnabled: true, PMTRate: "0.1 PMT/block",
+		HasPMTParams: true, PMTEnabled: true, PMTRate: "0.1 PMT/block",
 		EVMHTTPEndpoint: "http://localhost:8545", EVMChainID: 290290,
 		ModuleAccounts: []model.ModuleAccountRow{{Name: "fee_collector", Balance: "1 PMT"}},
 		Validators:     []model.Validator{{Moniker: "node1", Operator: "cosmosvaloper1abc"}},

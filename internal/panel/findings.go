@@ -18,6 +18,8 @@ type Finding struct {
 
 // Findings evaluates all dashboard sections for warn/bad conditions.
 // Does not use the global status strip (status.go).
+// Rewards findings are included for current PMT state; the alert engine
+// seeds them on first healthy fetch so steady-state does not page.
 func Findings(d model.Report) []Finding {
 	var out []Finding
 	infraFindings(d, &out)
@@ -27,6 +29,20 @@ func Findings(d model.Report) []Finding {
 	slashingFindings(d, &out)
 	feemarketFindings(d, &out)
 	rewardsFindings(d, &out)
+	distributionFindings(d, &out)
+	return out
+}
+
+// FindingsWithoutRewards is Findings minus rewards — used by the alert engine
+// so rewards can be seeded / transition-tracked separately.
+func FindingsWithoutRewards(d model.Report) []Finding {
+	var out []Finding
+	infraFindings(d, &out)
+	evmFindings(d, &out)
+	nodeFindings(d, &out)
+	stakingFindings(d, &out)
+	slashingFindings(d, &out)
+	feemarketFindings(d, &out)
 	distributionFindings(d, &out)
 	return out
 }
@@ -77,28 +93,13 @@ func infraFindings(d model.Report, out *[]Finding) {
 }
 
 func evmFindings(d model.Report, out *[]Finding) {
-	switch evmRPCOverallStatus(d) {
-	case "DOWN":
+	// Telegram/RPC alert signal = liveness only (eth_blockNumber).
+	// Degraded probes, syncing, and block age stay UI-only.
+	if !d.EVMRPCOk {
 		appendFinding(out, "evm", "rpc_down", "bad", "RPC DOWN")
-	case "DEGRADED":
-		fail := d.RPCProbeTotal - d.RPCProbeOK
-		appendFinding(out, "evm", "rpc_degraded", "warn",
-			fmt.Sprintf("RPC DEGRADED (%d/%d probes failing)", fail, d.RPCProbeTotal))
 	}
-	if !d.EVMListening {
+	if d.HasEVMListening && !d.EVMListening {
 		appendFinding(out, "evm", "not_listening", "warn", "not listening")
-	}
-	if !d.EVMSynced {
-		appendFinding(out, "evm", "syncing", "warn", "syncing")
-	}
-	if d.EVMBlockAge != "" {
-		_, tone := evmBlockAgeKPI(d)
-		switch tone {
-		case "bad":
-			appendFinding(out, "evm", "block_age", "bad", fmt.Sprintf("block age STALE (%s)", d.EVMBlockAge))
-		case "warn":
-			appendFinding(out, "evm", "block_age", "warn", fmt.Sprintf("block age SLOW (%s)", d.EVMBlockAge))
-		}
 	}
 }
 
@@ -146,12 +147,26 @@ func feemarketFindings(d model.Report, out *[]Finding) {
 	}
 }
 
+// RewardsStateFindings returns current PMT bad-state findings for alert tracking.
+// Callers must only page uncommon transitions (enable↔disable, pool empty↔refill);
+// steady-state inflation-off / still-empty / still-disabled must not re-page.
+// Missing params (HasPMTParams false) yields no findings — fetch fail ≠ chain bad.
+func RewardsStateFindings(d model.Report) []Finding {
+	var out []Finding
+	rewardsFindings(d, &out)
+	return out
+}
+
 func rewardsFindings(d model.Report, out *[]Finding) {
-	for _, b := range rewardsSummaryBadges(d) {
-		appendFinding(out, "rewards", badgeKey(b.text), b.kind, b.text)
+	if !d.HasPMTParams {
+		return
 	}
-	if d.Inflation <= 0 {
-		appendFinding(out, "rewards", "inflation_off", "bad", "inflation off")
+	if !d.PMTEnabled {
+		appendFinding(out, "rewards", "pmt_disabled", "bad", "PMT disabled")
+		return
+	}
+	if d.PMTPoolEmpty {
+		appendFinding(out, "rewards", "pmt_not_emitting", "warn", "PMT not emitting")
 	}
 }
 

@@ -49,22 +49,38 @@ func TestFindingsInfraChainDataDisk(t *testing.T) {
 
 func TestFindingsEVM(t *testing.T) {
 	fs := Findings(model.Report{
-		EVMRPCOk: false, EVMListening: false, EVMSynced: false,
+		EVMRPCOk: false, HasEVMListening: true, EVMListening: false, EVMSynced: false,
 		EVMBlockAge: "2m", EVMBlockAgeErr: true,
 		RPCProbeOK: 4, RPCProbeTotal: 6,
 	})
 	hasFinding(t, fs, "evm", "rpc_down", "bad")
 	hasFinding(t, fs, "evm", "not_listening", "warn")
-	hasFinding(t, fs, "evm", "syncing", "warn")
-	hasFinding(t, fs, "evm", "block_age", "bad")
+	for _, f := range fs {
+		if f.Section == "evm" && (f.Key == "rpc_degraded" || f.Key == "syncing" || f.Key == "block_age") {
+			t.Fatalf("UI-only EVM condition must not alert: %+v", f)
+		}
+	}
 
 	fs = Findings(model.Report{
-		EVMRPCOk: true, EVMListening: true, EVMSynced: true,
+		EVMRPCOk: true, HasEVMListening: true, EVMListening: true, EVMSynced: true,
 		EVMBlockAge: "45s", EVMBlockAgeWarn: true,
 		RPCProbeOK: 4, RPCProbeTotal: 6,
 	})
-	hasFinding(t, fs, "evm", "rpc_degraded", "warn")
-	hasFinding(t, fs, "evm", "block_age", "warn")
+	for _, f := range fs {
+		if f.Section == "evm" {
+			t.Fatalf("degraded/slow must not alert when liveness OK: %+v", f)
+		}
+	}
+
+	fs = Findings(model.Report{
+		EVMRPCOk: false, HasEVMListening: false, EVMListening: false,
+	})
+	hasFinding(t, fs, "evm", "rpc_down", "bad")
+	for _, f := range fs {
+		if f.Key == "not_listening" {
+			t.Fatalf("listening unknown must not alert not_listening: %+v", f)
+		}
+	}
 }
 
 func TestFindingsNode(t *testing.T) {
@@ -92,12 +108,23 @@ func TestFindingsSlashing(t *testing.T) {
 }
 
 func TestFindingsRewards(t *testing.T) {
-	fs := Findings(model.Report{PMTEnabled: false, Inflation: 0})
+	fs := Findings(model.Report{HasPMTParams: true, PMTEnabled: false, Inflation: 0})
 	hasFinding(t, fs, "rewards", "pmt_disabled", "bad")
-	hasFinding(t, fs, "rewards", "inflation_off", "bad")
+	for _, f := range fs {
+		if f.Key == "inflation_off" {
+			t.Fatalf("inflation off must not page: %+v", f)
+		}
+	}
 
-	fs = Findings(model.Report{PMTEnabled: true, PMTPoolEmpty: true})
+	fs = Findings(model.Report{HasPMTParams: true, PMTEnabled: true, PMTPoolEmpty: true})
 	hasFinding(t, fs, "rewards", "pmt_not_emitting", "warn")
+
+	fs = Findings(model.Report{Inflation: 3.5}) // PMT params unknown
+	for _, f := range fs {
+		if f.Key == "pmt_disabled" || f.Key == "pmt_not_emitting" || f.Key == "inflation_off" {
+			t.Fatalf("must not alert PMT/inflation when params unknown: %+v", f)
+		}
+	}
 }
 
 func TestFindingsDistribution(t *testing.T) {
@@ -116,8 +143,8 @@ func TestFindingsDistribution(t *testing.T) {
 func TestFindingsHealthyEmpty(t *testing.T) {
 	fs := Findings(model.Report{
 		NodeRunning: true, Synced: true,
-		EVMRPCOk: true, EVMListening: true, EVMSynced: true,
-		PMTEnabled: true, Inflation: 3.5,
+		EVMRPCOk: true, HasEVMListening: true, EVMListening: true, EVMSynced: true,
+		HasPMTParams: true, PMTEnabled: true, Inflation: 3.5,
 	})
 	for _, f := range fs {
 		t.Fatalf("unexpected finding on healthy report: %+v", f)
