@@ -13,15 +13,20 @@ func TestFormatAmount(t *testing.T) {
 		want string
 	}{
 		{0, "0"},
-		{1.5e12, "1.50T"},
-		{4e8, "400.00M"},
-		{1500, "1.50K"},
+		{1.5e12, "1.5T"},
+		{4e8, "400M"},
+		{1500, "1.5K"},
 		{42.5, "42.5"},
 		{0.001, "0.001"},
 		{1e-8, "0.00000001"},
 		{1e-9, "0.000000001"},
 		{7e-18, "7e-18"},
-		{-3.2e6, "-3.20M"},
+		{-3.2e6, "-3.2M"},
+		// Near-round compact values must not snap to a cleaner neighbor.
+		{399999600, "399.9996M"},
+		{99999900, "99.9999M"},
+		{1234567, "1.234567M"},
+		{1.23e6, "1.23M"},
 	}
 	for _, tc := range tests {
 		if got := FormatAmount(tc.v); got != tc.want {
@@ -67,9 +72,17 @@ func TestFormatShares(t *testing.T) {
 func TestFormatCoinLargeInteger(t *testing.T) {
 	// 400e24 apmt → 400M PMT (must not lose precision via float64 parse of raw string).
 	got := FormatCoin("400000000000000000000000000", "apmt")
-	want := "400.00M PMT"
+	want := "400M PMT"
 	if got != want {
 		t.Errorf("FormatCoin(large apmt) = %q, want %q", got, want)
+	}
+}
+
+func TestFormatCoinNearRoundMillion(t *testing.T) {
+	got := FormatCoin("399999600000000000000000000", "apmt")
+	want := "399.9996M PMT"
+	if got != want {
+		t.Errorf("FormatCoin(near-round) = %q, want %q", got, want)
 	}
 }
 

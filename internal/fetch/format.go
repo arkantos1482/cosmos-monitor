@@ -91,7 +91,7 @@ func formatAmountAbs(v float64) string {
 		{1e3, "K"},
 	} {
 		if v >= s.div {
-			return fmt.Sprintf("%.2f%s", v/s.div, s.suf)
+			return formatCompactSI(v, s.div, s.suf)
 		}
 	}
 	if v >= 1 {
@@ -116,6 +116,27 @@ func formatAmountAbs(v float64) string {
 
 func formatSci(v float64) string {
 	return strconv.FormatFloat(v, 'g', -1, 64)
+}
+
+// formatCompactSI renders v/div with an SI suffix.
+// Default is 2 decimals (trimmed); precision rises only when %.2f would
+// round-trip to a different amount by more than ~0.5 display units
+// (e.g. 399999600 → "399.9996M", not "400M"). Cap at 6 decimals.
+func formatCompactSI(v, div float64, suf string) string {
+	scaled := v / div
+	ulp := math.Abs(math.Nextafter(v, math.Inf(1)) - v)
+	tol := math.Max(0.5, 4*ulp)
+	for dec := 2; dec <= 6; dec++ {
+		body := trimTrailingZeros(fmt.Sprintf("%.*f", dec, scaled))
+		shown, err := strconv.ParseFloat(body, 64)
+		if err != nil {
+			continue
+		}
+		if math.Abs(shown*div-v) <= tol || dec == 6 {
+			return body + suf
+		}
+	}
+	return trimTrailingZeros(fmt.Sprintf("%.2f", scaled)) + suf
 }
 
 func trimTrailingZeros(s string) string {

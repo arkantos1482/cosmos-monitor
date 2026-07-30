@@ -568,7 +568,7 @@ func FormatFeeAmount(raw, denom string) string {
 
 // FormatCoin converts a raw Cosmos amount string + on-chain denom to a
 // human-readable display string, e.g. "400000000000000000000000000" + "apmt"
-// → "400.00M PMT".
+// → "400M PMT".
 func FormatCoin(rawAmount, denom string) string {
 	displayVal, displayDenom := coinToDisplay(rawAmount, denom)
 	if displayDenom == "" {
