@@ -27,7 +27,7 @@ func chainRecipeFor(view panel.View) fetch.ChainRecipe {
 }
 
 func needsAppToml(view panel.View) bool {
-	return view == panel.ViewHome || view == panel.ViewFeemarket
+	return view == panel.ViewHome || view == panel.ViewFeemarket || view == panel.ViewEVM
 }
 
 func needsLocalBalanceEnrichment(recipe fetch.ChainRecipe) bool {
