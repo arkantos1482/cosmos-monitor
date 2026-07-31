@@ -2,12 +2,6 @@ package report
 
 import "strings"
 
-const (
-	DefaultJSONRPCAPIs       = "eth,txpool,net,debug,web3"
-	DefaultTxpoolGlobalSlots = 5120
-	DefaultTxpoolGlobalQueue = 1024
-)
-
 // EVMWSEndpoint derives a WebSocket URL from the HTTP JSON-RPC endpoint.
 func EVMWSEndpoint(httpURL string) string {
 	u := strings.Replace(httpURL, "https://", "wss://", 1)

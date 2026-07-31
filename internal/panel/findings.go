@@ -101,6 +101,9 @@ func evmFindings(d model.Report, out *[]Finding) {
 	if d.HasEVMListening && !d.EVMListening {
 		appendFinding(out, "evm", "not_listening", "warn", "not listening")
 	}
+	if strings.TrimSpace(d.JSONRPCAPIs) == "" {
+		appendFinding(out, "evm", "jsonrpc_apis_unknown", "warn", "JSON-RPC APIs unknown (app.toml)")
+	}
 }
 
 func nodeFindings(d model.Report, out *[]Finding) {

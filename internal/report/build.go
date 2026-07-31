@@ -3,6 +3,7 @@ package report
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -359,9 +360,9 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 
 	d.EVMHTTPEndpoint = evmHTTPEndpoint
 	d.EVMWSEndpoint = EVMWSEndpoint(evmHTTPEndpoint)
-	d.JSONRPCAPIs = DefaultJSONRPCAPIs
-	d.TxpoolGlobalSlots = DefaultTxpoolGlobalSlots
-	d.TxpoolGlobalQueue = DefaultTxpoolGlobalQueue
+	d.JSONRPCAPIs = appCfg.JSONRPCAPIs
+	d.TxpoolGlobalSlots = parseAppTomlUint(appCfg.TxpoolGlobalSlots)
+	d.TxpoolGlobalQueue = parseAppTomlUint(appCfg.TxpoolGlobalQueue)
 	d.EVMChainID = ev.ChainID
 	if p.EVMDenom != "" {
 		d.EVMDenom = p.EVMDenom
@@ -604,4 +605,16 @@ func sourceExchangesFromFetch(exchanges []fetch.Exchange) []model.SourceExchange
 		})
 	}
 	return out
+}
+
+func parseAppTomlUint(raw string) uint64 {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return 0
+	}
+	n, err := strconv.ParseUint(raw, 10, 64)
+	if err != nil {
+		return 0
+	}
+	return n
 }

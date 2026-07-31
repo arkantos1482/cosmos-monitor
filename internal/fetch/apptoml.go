@@ -7,14 +7,17 @@ import (
 	"strings"
 )
 
-// AppTomlGasConfig holds node-local gas acceptance settings from app.toml.
+// AppTomlGasConfig holds node-local settings from app.toml.
 type AppTomlGasConfig struct {
-	MinGasPrices      string
-	EVMMinTip         string
-	MempoolPriceLimit string
-	MaxTxGasWanted    string
-	Path              string
-	OK                bool
+	MinGasPrices        string
+	EVMMinTip           string
+	MempoolPriceLimit   string
+	MaxTxGasWanted      string
+	JSONRPCAPIs         string
+	TxpoolGlobalSlots   string
+	TxpoolGlobalQueue   string
+	Path                string
+	OK                  bool
 }
 
 var (
@@ -51,7 +54,7 @@ func FetchAppTomlGasConfig() AppTomlGasConfig {
 	defer f.Close()
 
 	var lines []string
-	inEVMMempool := false
+	section := ""
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {
 		line := strings.TrimSpace(sc.Text())
@@ -60,8 +63,7 @@ func FetchAppTomlGasConfig() AppTomlGasConfig {
 			continue
 		}
 		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
-			section := strings.Trim(line, "[]")
-			inEVMMempool = section == "evm.mempool"
+			section = strings.Trim(line, "[]")
 			continue
 		}
 		key, val, ok := parseTomlKV(line)
@@ -71,16 +73,23 @@ func FetchAppTomlGasConfig() AppTomlGasConfig {
 		switch {
 		case key == "minimum-gas-prices":
 			cfg.MinGasPrices = val
-		case key == "min-tip":
+		case section == "evm" && key == "min-tip":
 			cfg.EVMMinTip = val
-		case key == "max-tx-gas-wanted":
+		case section == "evm" && key == "max-tx-gas-wanted":
 			cfg.MaxTxGasWanted = val
-		case inEVMMempool && key == "price-limit":
+		case section == "evm.mempool" && key == "price-limit":
 			cfg.MempoolPriceLimit = val
+		case section == "evm.mempool" && key == "global-slots":
+			cfg.TxpoolGlobalSlots = val
+		case section == "evm.mempool" && key == "global-queue":
+			cfg.TxpoolGlobalQueue = val
+		case section == "json-rpc" && key == "api":
+			cfg.JSONRPCAPIs = val
 		}
 	}
 	cfg.OK = cfg.MinGasPrices != "" || cfg.EVMMinTip != "" ||
-		cfg.MempoolPriceLimit != "" || cfg.MaxTxGasWanted != ""
+		cfg.MempoolPriceLimit != "" || cfg.MaxTxGasWanted != "" || cfg.JSONRPCAPIs != "" ||
+		cfg.TxpoolGlobalSlots != "" || cfg.TxpoolGlobalQueue != ""
 	if err := sc.Err(); err != nil {
 		recordFileExchange(path, strings.Join(lines, "\n"), err)
 	} else {

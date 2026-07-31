@@ -64,7 +64,7 @@ func TestFindingsEVM(t *testing.T) {
 	fs = Findings(model.Report{
 		EVMRPCOk: true, HasEVMListening: true, EVMListening: true, EVMSynced: true,
 		EVMBlockAge: "45s", EVMBlockAgeWarn: true,
-		RPCProbeOK: 4, RPCProbeTotal: 6,
+		RPCProbeOK: 4, RPCProbeTotal: 6, JSONRPCAPIs: "eth,net,web3",
 	})
 	for _, f := range fs {
 		if f.Section == "evm" {
@@ -81,6 +81,13 @@ func TestFindingsEVM(t *testing.T) {
 			t.Fatalf("listening unknown must not alert not_listening: %+v", f)
 		}
 	}
+}
+
+func TestFindingsEVMJSONRPCAPIsUnknown(t *testing.T) {
+	fs := Findings(model.Report{
+		EVMRPCOk: true, HasEVMListening: true, EVMListening: true, EVMSynced: true,
+	})
+	hasFinding(t, fs, "evm", "jsonrpc_apis_unknown", "warn")
 }
 
 func TestFindingsNode(t *testing.T) {
@@ -144,6 +151,7 @@ func TestFindingsHealthyEmpty(t *testing.T) {
 	fs := Findings(model.Report{
 		NodeRunning: true, Synced: true,
 		EVMRPCOk: true, HasEVMListening: true, EVMListening: true, EVMSynced: true,
+		JSONRPCAPIs: "eth,txpool,net,web3",
 		HasPMTParams: true, PMTEnabled: true, Inflation: 3.5,
 	})
 	for _, f := range fs {

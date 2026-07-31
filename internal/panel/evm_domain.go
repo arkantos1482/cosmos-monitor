@@ -30,11 +30,12 @@ func evmReachabilityCardHTML(d model.Report) string {
 			status = "DEGRADED"
 			badge = "warn"
 		}
+		if strings.TrimSpace(d.JSONRPCAPIs) == "" {
+			status = "DEGRADED"
+			badge = "warn"
+		}
 	}
-	apis := d.JSONRPCAPIs
-	if apis == "" {
-		apis = report.DefaultJSONRPCAPIs
-	}
+	apis := jsonRPCAPIsLabel(d)
 	fmt.Fprintf(&b, `<div class="eco-domain eco-domain--rpc-reach">`)
 	ecoDomainCardTitle(&b, "Reachability", "JSON-RPC transport", badge, status)
 	b.WriteString(`<div class="eco-domain__rows">`)
@@ -55,7 +56,7 @@ func evmReachabilityCardHTML(d model.Report) string {
 	if wsTotal > 0 {
 		ecoDomainRow(&b, "", "WS probes", fmt.Sprintf("%d / %d ok", wsOK, wsTotal), "WebSocket JSON-RPC on :8546")
 	}
-	ecoDomainRow(&b, "", "enabled APIs", apis, "namespaces exposed by this node")
+	ecoDomainRow(&b, "", "enabled APIs", apis, jsonRPCAPIsHint(d))
 
 	ecoDomainCardClose(&b)
 	return b.String()
@@ -196,6 +197,23 @@ func rpcProbeScores(probes []model.RPCProbe) (httpOK, httpTotal, wsOK, wsTotal i
 		}
 	}
 	return
+}
+
+func jsonRPCAPIsLabel(d model.Report) string {
+	if apis := strings.TrimSpace(d.JSONRPCAPIs); apis != "" {
+		return apis
+	}
+	if path := strings.TrimSpace(d.NodeAppTomlPath); path != "" {
+		return fmt.Sprintf("missing ([json-rpc] api in %s)", path)
+	}
+	return "missing ([json-rpc] api in app.toml)"
+}
+
+func jsonRPCAPIsHint(d model.Report) string {
+	if strings.TrimSpace(d.JSONRPCAPIs) != "" {
+		return "namespaces from app.toml [json-rpc] api"
+	}
+	return "app.toml [json-rpc] api not set or unreadable"
 }
 
 func rpcProbesByTransport(probes []model.RPCProbe) (http, ws []model.RPCProbe) {

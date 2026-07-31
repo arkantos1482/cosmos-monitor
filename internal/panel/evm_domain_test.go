@@ -14,6 +14,8 @@ func TestEVMRPCHealthCards(t *testing.T) {
 		EVMHTTPEndpoint: "http://localhost:8545", EVMClient: "evmd/v1",
 		EVMDenomName: "PMT", EVMDenomSymbol: "PMT", EVMDenomDecimals: 18,
 		PendingTx: 2, QueuedTx: 1, EVMPeerCount: 0,
+		JSONRPCAPIs: "eth,txpool,net,web3",
+		TxpoolGlobalSlots: 5120, TxpoolGlobalQueue: 1024,
 		RPCProbeOK: 10, RPCProbeTotal: 10,
 		RPCProbes: []model.RPCProbe{
 			{Method: "eth_blockNumber", OK: true, Latency: "12ms"},
@@ -38,7 +40,7 @@ func TestEVMRPCHealthCards(t *testing.T) {
 		`evm-probes__group-title">WebSocket`,
 		`evm-summary__hero-label">HTTP probes`,
 		`evm-summary__hero-label">WS probes`,
-		`evm-summary__stack-line">2 pending`,
+		`evm-summary__stack-line">2 / 5120 pending`,
 		`evm-probes-section`,
 		`evm-probes__table`,
 		`class="dash-subheading">Method probes</h3>`,
@@ -67,6 +69,26 @@ func TestEVMRPCHealthCards(t *testing.T) {
 		if strings.Contains(out, absent) {
 			t.Fatalf("EVM view should not include %q", absent)
 		}
+	}
+}
+
+func TestEVMRPCAPIsMissingShowsError(t *testing.T) {
+	label := jsonRPCAPIsLabel(model.Report{
+		NodeAppTomlPath: "/home/ubuntu/.evmd/config/app.toml",
+	})
+	if !strings.Contains(label, "missing") || !strings.Contains(label, "app.toml") {
+		t.Fatalf("missing APIs should be explicit, got: %q", label)
+	}
+
+	out := evmReachabilityCardHTML(model.Report{
+		EVMRPCOk: true, RPCProbeOK: 1, RPCProbeTotal: 1,
+		NodeAppTomlPath: "/home/ubuntu/.evmd/config/app.toml",
+	})
+	if !strings.Contains(out, "enabled APIs") || !strings.Contains(out, "app.toml") {
+		t.Fatalf("reachability card should surface missing APIs: %s", out)
+	}
+	if !strings.Contains(out, `eco-domain__status badge warn`) {
+		t.Fatal("missing APIs should degrade reachability badge")
 	}
 }
 

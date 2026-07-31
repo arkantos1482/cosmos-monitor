@@ -22,7 +22,7 @@ func healthyReport() model.Report {
 	return model.Report{
 		NodeRunning: true, Synced: true,
 		EVMRPCOk: true, HasEVMListening: true, EVMListening: true, EVMSynced: true,
-		RPCProbeOK: 1, RPCProbeTotal: 1,
+		RPCProbeOK: 1, RPCProbeTotal: 1, JSONRPCAPIs: "eth,txpool,net,web3",
 		HasPMTParams: true, PMTEnabled: true, Inflation: 3.5,
 	}
 }
