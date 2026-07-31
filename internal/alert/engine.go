@@ -22,6 +22,7 @@ type Engine struct {
 
 	active   map[string]panel.Finding
 	lastFire map[string]time.Time
+	confirm  map[string]int // consecutive ticks a raw finding has been present
 
 	// rewardsSeeded is set after the first tick with HasPMTParams so a
 	// pre-existing disabled/empty pool does not page as a "transition".
@@ -35,6 +36,7 @@ func NewEngine(cfg Config, load LoadFunc, sender Sender) *Engine {
 		sender:   sender,
 		active:   map[string]panel.Finding{},
 		lastFire: map[string]time.Time{},
+		confirm:  map[string]int{},
 	}
 }
 
@@ -56,7 +58,8 @@ func (e *Engine) Run() {
 func (e *Engine) tick() {
 	d := e.load()
 	now := time.Now()
-	current := e.indexCurrentFindings(d)
+	raw := e.indexCurrentFindings(d)
+	current := e.applyConfirm(raw)
 
 	var delta []panel.Finding
 	var recoveries []panel.Finding
@@ -82,10 +85,20 @@ func (e *Engine) tick() {
 		if _, ok := current[id]; ok {
 			continue
 		}
+		if _, stillRaw := raw[id]; stillRaw {
+			// Still present in raw findings but waiting on confirm ticks —
+			// keep sticky; do not announce recovery.
+			current[id] = prev
+			continue
+		}
 		if e.cooldownReady(id, now) {
 			recoveries = append(recoveries, prev)
 			e.lastFire[id] = now
+			continue
 		}
+		// Cooldown blocks recovery announce — keep sticky so a brief clear
+		// cannot drop active and re-alert after cooldown (Telegram flap spam).
+		current[id] = prev
 	}
 
 	e.active = current
@@ -98,6 +111,35 @@ func (e *Engine) tick() {
 		msg := formatRecoveryMessage(e.nodeLabel(), f)
 		e.send(msg, "recovery")
 	}
+}
+
+// confirmTicks returns how many consecutive raw ticks a finding must persist
+// before it becomes alertable. RPC DOWN is hair-trigger on a single failed
+// eth_blockNumber poll; require two alert ticks (~60s) to absorb blips.
+func confirmTicks(f panel.Finding) int {
+	if f.Section == "evm" && f.Key == "rpc_down" {
+		return 2
+	}
+	return 1
+}
+
+func (e *Engine) applyConfirm(raw map[string]panel.Finding) map[string]panel.Finding {
+	if e.confirm == nil {
+		e.confirm = map[string]int{}
+	}
+	for id := range e.confirm {
+		if _, ok := raw[id]; !ok {
+			delete(e.confirm, id)
+		}
+	}
+	out := make(map[string]panel.Finding, len(raw))
+	for id, f := range raw {
+		e.confirm[id]++
+		if e.confirm[id] >= confirmTicks(f) {
+			out[id] = f
+		}
+	}
+	return out
 }
 
 // indexCurrentFindings builds the active finding set for this tick.

@@ -34,7 +34,7 @@ Web UI (`-web :7777`) and alerts can run together. Set `-web ""` for alert-only 
 | Section | What pages Telegram | Notes |
 |---------|---------------------|-------|
 | Infrastructure | container stopped, OOM, restarts ≥3, disk/RAM pressure | as-today |
-| EVM JSON-RPC | **liveness only**: `eth_blockNumber` failure (RPC DOWN); `net_listening` false **only if that RPC returned a value** | Degraded probes, syncing, block age stay **UI-only**. Failed blockNumber must not imply “not listening”. |
+| EVM JSON-RPC | **liveness only**: `eth_blockNumber` failure (RPC DOWN) after **2 consecutive alert ticks** (~60s); `net_listening` false **only if that RPC returned a value** | Degraded probes, syncing, block age stay **UI-only**. Failed blockNumber must not imply “not listening”. Single-poll blips do not page. |
 | Validator | catching up | as-today |
 | Staking | local jailed, tombstoned, missed blocks high | as-today |
 | Slashing | local + network slashing KPIs, headroom low | as-today |
@@ -65,7 +65,7 @@ Recovery when a condition clears (per finding):
 Infrastructure · container stopped
 ```
 
-Cooldown (default 15m) applies per section+key for both alerts and recoveries. Expect up to 4× duplicate messages across nodes when the same chain event is seen on every validator.
+Cooldown (default 15m) applies per section+key for both alerts and recoveries. While recovery is cooldown-blocked, the finding stays **sticky** in the engine so a brief clear cannot re-alert after cooldown (avoids repeating RPC DOWN with no ✅). Expect up to 4× duplicate messages across nodes when the same chain event is seen on every validator.
 
 ## node4 dev workflow
 

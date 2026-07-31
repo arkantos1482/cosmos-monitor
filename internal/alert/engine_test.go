@@ -53,6 +53,130 @@ func TestEngineCooldownSuppressesRepeatAlert(t *testing.T) {
 	}
 }
 
+// Brief RPC blip within cooldown must not page again, and must not lose the
+// active finding (otherwise Telegram gets repeating RPC DOWN with no recovery).
+func TestEngineRPCDownFlapWithinCooldownDoesNotRealert(t *testing.T) {
+	sender := &stubSender{}
+	step := 0
+	load := func() model.Report {
+		step++
+		r := healthyReport()
+		switch step {
+		case 1, 2:
+			r.EVMRPCOk = false // confirm streak → alert
+		case 3:
+			r.EVMRPCOk = true // brief recovery within cooldown
+		default:
+			r.EVMRPCOk = false // flap again after cooldown would have expired
+		}
+		return r
+	}
+	cfg := Config{
+		NodeName: "node1",
+		Interval: time.Second,
+		Cooldown: 15 * time.Minute,
+		Token:    "tok",
+		ChatID:   "123",
+	}
+	e := NewEngine(cfg, load, sender)
+	e.tick() // confirm 1
+	e.tick() // confirm 2 → alert
+	e.tick() // clear (must stay sticky; no recovery yet)
+	id := findingID(testFinding("evm", "rpc_down", "bad", "RPC DOWN"))
+	e.lastFire[id] = time.Now().Add(-16 * time.Minute) // cooldown elapsed
+	e.tick() // down again
+	e.tick() // down confirm
+	if len(sender.msgs) != 1 {
+		t.Fatalf("expected single RPC DOWN alert for flap, got %d: %v", len(sender.msgs), sender.msgs)
+	}
+	if !strings.Contains(sender.msgs[0], "RPC DOWN") {
+		t.Fatalf("expected RPC DOWN alert, got %q", sender.msgs[0])
+	}
+}
+
+func TestEngineRPCDownRequiresConfirmTicks(t *testing.T) {
+	sender := &stubSender{}
+	step := 0
+	load := func() model.Report {
+		step++
+		r := healthyReport()
+		if step == 1 {
+			r.EVMRPCOk = false // single blip
+		}
+		return r
+	}
+	cfg := Config{
+		NodeName: "node1",
+		Interval: time.Second,
+		Cooldown: 0,
+		Token:    "tok",
+		ChatID:   "123",
+	}
+	e := NewEngine(cfg, load, sender)
+	e.tick() // blip
+	e.tick() // healthy
+	if len(sender.msgs) != 0 {
+		t.Fatalf("single-tick RPC DOWN must not page, got %d: %v", len(sender.msgs), sender.msgs)
+	}
+}
+
+func TestEngineRPCDownAlertsAfterConfirmTicks(t *testing.T) {
+	sender := &stubSender{}
+	load := func() model.Report {
+		r := healthyReport()
+		r.EVMRPCOk = false
+		return r
+	}
+	cfg := Config{
+		NodeName: "node1",
+		Interval: time.Second,
+		Cooldown: 0,
+		Token:    "tok",
+		ChatID:   "123",
+	}
+	e := NewEngine(cfg, load, sender)
+	e.tick()
+	if len(sender.msgs) != 0 {
+		t.Fatalf("first tick must wait for confirm, got %d: %v", len(sender.msgs), sender.msgs)
+	}
+	e.tick()
+	if len(sender.msgs) != 1 || !strings.Contains(sender.msgs[0], "RPC DOWN") {
+		t.Fatalf("second consecutive tick should page RPC DOWN, got %v", sender.msgs)
+	}
+}
+
+func TestEngineRPCDownRecoveryAfterCooldown(t *testing.T) {
+	sender := &stubSender{}
+	step := 0
+	load := func() model.Report {
+		step++
+		r := healthyReport()
+		if step <= 2 {
+			r.EVMRPCOk = false
+		}
+		return r
+	}
+	cfg := Config{
+		NodeName: "node1",
+		Interval: time.Second,
+		Cooldown: 15 * time.Minute,
+		Token:    "tok",
+		ChatID:   "123",
+	}
+	e := NewEngine(cfg, load, sender)
+	e.tick()
+	e.tick() // alert
+	id := findingID(testFinding("evm", "rpc_down", "bad", "RPC DOWN"))
+	e.lastFire[id] = time.Now().Add(-16 * time.Minute)
+	e.tick() // clear + cooldown ready → recovery
+	if len(sender.msgs) != 2 {
+		t.Fatalf("expected alert + recovery, got %d: %v", len(sender.msgs), sender.msgs)
+	}
+	if !strings.Contains(sender.msgs[1], "resolved") || !strings.Contains(sender.msgs[1], "RPC DOWN") {
+		t.Fatalf("expected RPC DOWN recovery, got %q", sender.msgs[1])
+	}
+}
+
 func TestEngineRecoveryAfterClear(t *testing.T) {
 	sender := &stubSender{}
 	step := 0
@@ -122,7 +246,7 @@ func TestEngineAlertMessageDeltaOnly(t *testing.T) {
 		r := healthyReport()
 		r.NodeRunning = false // steady infra finding
 		if step >= 2 {
-			r.EVMRPCOk = false // new finding on tick 2
+			r.EVMRPCOk = false // new finding starting tick 2 (needs confirm)
 		}
 		return r
 	}
@@ -134,8 +258,9 @@ func TestEngineAlertMessageDeltaOnly(t *testing.T) {
 		ChatID:   "123",
 	}
 	e := NewEngine(cfg, load, sender)
-	e.tick()
-	e.tick()
+	e.tick() // infra
+	e.tick() // rpc confirm 1
+	e.tick() // rpc confirm 2 → delta alert
 	if len(sender.msgs) != 2 {
 		t.Fatalf("expected 2 alerts, got %d", len(sender.msgs))
 	}
@@ -291,6 +416,7 @@ func TestEngineNoNotListeningWhenListeningUnknown(t *testing.T) {
 	}
 	e := NewEngine(cfg, load, sender)
 	e.tick()
+	e.tick() // rpc_down confirm
 	if len(sender.msgs) != 1 {
 		t.Fatalf("expected RPC DOWN only, got %d: %v", len(sender.msgs), sender.msgs)
 	}
