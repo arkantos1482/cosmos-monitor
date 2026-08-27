@@ -98,6 +98,11 @@ body::after {
   align-items: start;
   position: relative;
   z-index: 1;
+  min-width: 0;
+}
+
+.dash-shell > * {
+  min-width: 0;
 }
 
 .dash-content {
@@ -105,35 +110,6 @@ body::after {
   display: flex;
   flex-direction: column;
   gap: 0;
-}
-
-@media (max-width: 860px) {
-  .dash-shell {
-    grid-template-columns: 1fr;
-  }
-
-  .dash-nav {
-    position: static;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    gap: 0.35rem;
-    padding: 0.55rem;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-  }
-
-  .dash-nav__title {
-    display: none;
-  }
-
-  .dash-nav__link {
-    flex: 0 0 auto;
-    white-space: nowrap;
-    padding: 0.38rem 0.65rem;
-    font-size: 0.78rem;
-  }
-
 }
 
 .dash-nav {
@@ -231,6 +207,61 @@ body::after {
 .dash-nav__link--governance { --nav-accent: var(--accent-governance); }
 .dash-nav__link--evm { --nav-accent: var(--accent-evm); }
 .dash-nav__link--home { --nav-accent: var(--accent); }
+
+/* Compact horizontal nav below 1200px so a MetaMask side panel still leaves a usable column. */
+@media (max-width: 1200px) {
+  .dash-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .dash-nav {
+    position: static;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 0.35rem;
+    padding: 0.55rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .dash-nav__title {
+    display: none;
+  }
+
+  .dash-nav__link {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 0.38rem 0.65rem;
+    font-size: 0.78rem;
+  }
+}
+
+.dash-page--wallet .dash-shell {
+  grid-template-columns: 1fr;
+}
+
+.dash-page--wallet .dash-nav {
+  position: static;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 0.35rem;
+  padding: 0.55rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.dash-page--wallet .dash-nav__title {
+  display: none;
+}
+
+.dash-page--wallet .dash-nav__link {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: 0.38rem 0.65rem;
+  font-size: 0.78rem;
+}
 
 .dash-header {
   display: flex;
@@ -3884,7 +3915,8 @@ code {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  max-width: 42rem;
+  max-width: 100%;
+  min-width: 0;
   margin-top: 0.5rem;
 }
 .delegate-app__status {
@@ -3900,6 +3932,7 @@ code {
   gap: 0.75rem;
   align-items: baseline;
   font-size: var(--text-sm);
+  min-width: 0;
 }
 .delegate-app__label {
   color: var(--muted);
@@ -3911,6 +3944,8 @@ code {
 .delegate-app__mono {
   font-family: var(--mono);
   font-size: var(--text-sm);
+  min-width: 0;
+  overflow-wrap: anywhere;
   word-break: break-all;
 }
 .delegate-field {
@@ -3956,6 +3991,10 @@ code {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0.5rem 0.65rem;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-all;
 }
 .delegate-input:focus {
   outline: none;

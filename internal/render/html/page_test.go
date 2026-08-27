@@ -28,6 +28,7 @@ func TestFullPageHTMXShell(t *testing.T) {
 		`htmx.org@4.0.0-beta4`,
 		`htmx.config.implicitInheritance = true`,
 		`hx-boost="true"`,
+		`class="dash-page"`,
 		`htmx.org`,
 		`--accent-rewards`,
 	} {
@@ -47,6 +48,7 @@ func TestFullPageHTMXShell(t *testing.T) {
 		`hx-target="#data"`,
 		`dash-nav__link--economics`,
 		`href="/s/economics"`,
+		`class="dash-page dash-page--wallet"`,
 	} {
 		if strings.Contains(out, bad) {
 			t.Fatalf("page should not contain %q", bad)
@@ -111,6 +113,7 @@ func TestFullPageDelegateHasNoPoll(t *testing.T) {
 		`wallet`,
 		`ethers@6`,
 		`pmtop — node1 · Delegate`,
+		`class="dash-page dash-page--wallet"`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("delegate page missing %q", want)

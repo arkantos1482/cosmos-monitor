@@ -14,7 +14,7 @@ htmx.config.noSwap = [204, 304, '4xx', '5xx'];
 </script>
 <style>{{.CSS}}</style>
 </head>
-<body hx-boost="true">
+<body class="dash-page{{if .WalletPage}} dash-page--wallet{{end}}" hx-boost="true">
 <header class="dash-header">
 <div class="dash-header__brand">
 <span class="dash-header__mark" aria-hidden="true"></span>
