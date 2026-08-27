@@ -168,7 +168,7 @@ func writeStaking(w Writer, d model.Report) {
 
 	w.Section("1. STAKING")
 	writeEmbeddedSectionIntro(w, "Local validator accounts and stake; network bonded pool, module balances, and validator set.")
-	w.WriteHTML(`<p class="dash-callout dash-callout--note note"><a href="/delegate">Delegate PMT with MetaMask</a> — this page stays a read-only monitor.</p>`)
+	w.WriteHTML(`<p class="dash-callout dash-callout--note note"><a href="/delegate" hx-boost="false">Delegate PMT with MetaMask</a> — this page stays a read-only monitor.</p>`)
 	writeStakingSummary(w, d, SummaryEmbedded)
 
 	w.Subsection("This validator")

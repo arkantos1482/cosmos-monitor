@@ -27,6 +27,10 @@ func TestBuildOverviewStack(t *testing.T) {
 	out := BuildView(ViewHome, d)
 	for _, want := range []string{
 		`class="dash-overview"`,
+		`class="dash-overview__delegate"`,
+		`href="/delegate"`,
+		`hx-boost="false"`,
+		`Open Delegate`,
 		`dash-overview__group--runtime`,
 		`dash-overview__group--validator`,
 		`dash-overview__group--economics`,

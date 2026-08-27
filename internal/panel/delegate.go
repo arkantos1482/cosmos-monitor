@@ -41,7 +41,7 @@ func writeDelegate(w Writer, d model.Report) {
 	_ = d
 	rpc := html.EscapeString(publicEVM(w))
 	w.Section("DELEGATE")
-	writeSectionLead(w, "Connect MetaMask and delegate native PMT. Our four validators are in the list; you can paste any other valoper. You stay a delegator; we run the nodes. Unbonding (later) takes 21 days.")
+	writeSectionLead(w, "Connect MetaMask and delegate native PMT to a validator. Pick node1–node4, or choose Another validator and paste a valoper. Unbonding later takes 21 days.")
 
 	w.WriteHTML(`<div id="delegate-app" class="delegate-app"` +
 		fmt.Sprintf(` data-chain-id="%d" data-precompile="%s" data-rpc="%s"`, EVMChainID, StakingPrecompile, rpc) +
@@ -58,17 +58,27 @@ func writeDelegate(w Writer, d model.Report) {
 	w.WriteHTML(`<button type="button" class="delegate-btn" id="delegate-connect">Connect MetaMask</button>`)
 	w.WriteHTML(`</div>`)
 
-	w.WriteHTML(`<label class="delegate-field"><span>Validator</span>`)
-	w.WriteHTML(`<select id="delegate-valoper-select" class="delegate-input">`)
+	w.WriteHTML(`<fieldset class="delegate-picker" id="delegate-picker">`)
+	w.WriteHTML(`<legend>Validator</legend>`)
+	w.WriteHTML(`<p class="delegate-picker__hint">The dropdown and valoper below are the same choice. Pick a node, or choose Another validator to paste.</p>`)
+	w.WriteHTML(`<label class="delegate-field"><span>Choose</span>`)
+	w.WriteHTML(`<select id="delegate-valoper-select" class="delegate-input" aria-controls="delegate-preset-wrap delegate-custom-wrap">`)
 	for _, v := range OperatorValidators {
-		w.WriteHTML(fmt.Sprintf(`<option value="%s">%s — %s</option>`,
-			html.EscapeString(v.Valoper), html.EscapeString(v.Label), html.EscapeString(v.Valoper)))
+		w.WriteHTML(fmt.Sprintf(`<option value="%s">%s</option>`,
+			html.EscapeString(v.Valoper), html.EscapeString(v.Label)))
 	}
-	w.WriteHTML(`<option value="custom">Other — paste valoper</option>`)
+	w.WriteHTML(`<option value="custom">Another validator</option>`)
 	w.WriteHTML(`</select></label>`)
-	w.WriteHTML(`<label class="delegate-field" id="delegate-custom-wrap" hidden><span>Custom valoper</span>`)
+	first := OperatorValidators[0].Valoper
+	w.WriteHTML(`<div class="delegate-field" id="delegate-preset-wrap">`)
+	w.WriteHTML(`<span>Valoper</span>`)
+	w.WriteHTML(fmt.Sprintf(`<output id="delegate-preset-valoper" class="delegate-input delegate-input--readonly" for="delegate-valoper-select">%s</output>`, html.EscapeString(first)))
+	w.WriteHTML(`</div>`)
+	w.WriteHTML(`<label class="delegate-field" id="delegate-custom-wrap" hidden>`)
+	w.WriteHTML(`<span>Valoper</span>`)
 	w.WriteHTML(`<input id="delegate-valoper-custom" class="delegate-input" type="text" spellcheck="false" placeholder="cosmosvaloper1…" autocomplete="off"/>`)
 	w.WriteHTML(`</label>`)
+	w.WriteHTML(`</fieldset>`)
 
 	w.WriteHTML(`<label class="delegate-field"><span>Amount (PMT)</span>`)
 	w.WriteHTML(`<input id="delegate-amount" class="delegate-input" type="text" inputmode="decimal" placeholder="you choose" autocomplete="off"/>`)

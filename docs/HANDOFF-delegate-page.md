@@ -11,13 +11,13 @@
 
 Add a **new dashboard page** where a user connects MetaMask (or any injected EVM wallet) and **delegates native PMT** via the staking precompile.
 
-Ease staking: dropdown of **our four operator valopers**, or paste **any** `cosmosvaloper1…`. One **Delegate** click = one tx. Do **not** prescribe amounts. Do **not** add “evenly across 4.” No Remix.
+Ease staking: dropdown of **node1–node4 valopers**, or paste **any** `cosmosvaloper1…`. One **Delegate** click = one tx. Do **not** prescribe amounts. Do **not** add “evenly across 4.” No Remix.
 
-This is for the **client restake** after they received unlocked tokens (handover Phase E). Contractor still operates the four nodes. The user becomes a **Delegator**, not a validator.
+This is for the **client restake** after they received unlocked tokens (handover Phase E). The four operator validators are this network’s nodes. The user becomes a **Delegator**, not a validator.
 
 **Do not replace** the existing read-only **Staking** monitor at `/s/staking` (bonded set, VP, this-validator KPIs). Add a **separate** page.
 
-**Suggested route / nav label:** `/delegate` (not under `/s/` — that shell 5s-polls `#data`). Nav item **Delegate** in Economics, after Staking. Button on `/s/staking` pointing here.
+**Suggested route:** `/delegate` (not under `/s/` — that shell 5s-polls `#data`). **No sidebar item.** Discoverability is a button on **Overview** plus the link on `/s/staking`. Links to `/delegate` must `hx-boost="false"` so wallet scripts load.
 
 ---
 
@@ -143,7 +143,7 @@ Alerts (`-alert`) score **sections**. Do not map Delegate into warn/bad unless y
 
 ## Implementation sketch (agent should follow)
 
-1. `panel.ViewDelegate = "delegate"`; nav `{ViewDelegate, "Delegate", "/delegate", NavScopeEconomics}` **after** Staking. Link from `/s/staking`.
+1. `panel.ViewDelegate = "delegate"`. Do **not** add a sidebar Nav item. Overview CTA + link from `/s/staking`, both `hx-boost="false"`.
 2. `ParseView` / `writeView` / `navSlug` / `navIcons` / `chainRecipeFor`: Delegate uses a **minimal** fetch (status bar only).
 3. `writeDelegate(w, d)`: server-render chrome (lead, dropdown of four valopers + other, precompile, chain id, public RPC). Empty “staked” filled by JS.
 4. Embed `delegate.js` + styles in `theme.css`. Look like pmtop.
@@ -183,7 +183,7 @@ Do **not** print mnemonics from `tools/ops/deploy/nodes/manifest.json`.
 
 ## Copy (UI)
 
-Short lead: *Connect MetaMask and delegate native PMT. Our four validators are in the list; you can paste any other valoper. You stay a delegator; we run the nodes. Unbonding (later) takes 21 days.*
+Short lead: *Connect MetaMask and delegate native PMT to a validator. Pick node1–node4, or choose Another validator and paste a valoper. Unbonding later takes 21 days.*
 
 ---
 
@@ -197,7 +197,7 @@ Implement a Delegate page on pmtop from this handoff:
 Workspace: /home/abbas/workspace/cosmos-evm-old
 App: tools/ops/pmtop (Go+HTMX submodule arkantos1482/cosmos-monitor). NOT pmt-monitor/Next.js.
 
-Add NEW Delegate page (nav "Delegate"). Do NOT replace read-only /s/staking.
+Add NEW Delegate page (Overview button, not a sidebar item). Do NOT replace read-only /s/staking.
 One MetaMask delegate() per click; dropdown of four operator valopers + paste any valoper.
 Do not prescribe amounts. No Remix. No 4-tx even split.
 Precompile 0x…0800, chain 290290, 18 decimals. Server never signs.

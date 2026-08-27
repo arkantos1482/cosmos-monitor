@@ -60,7 +60,6 @@ var Nav = []NavItem{
 	{ViewEVM, "EVM JSON-RPC", "/s/evm", NavScopeRuntime},
 	{ViewNode, "Validator", "/s/node", NavScopeValidator},
 	{ViewStaking, "Staking", "/s/staking", NavScopeEconomics},
-	{ViewDelegate, "Delegate", "/delegate", NavScopeEconomics},
 	{ViewSlashing, "Slashing", "/s/slashing", NavScopeEconomics},
 	{ViewFeemarket, "Fee market", "/s/feemarket", NavScopeEconomics},
 	{ViewRewards, "Rewards", "/s/rewards", NavScopeEconomics},

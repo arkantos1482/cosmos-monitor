@@ -54,10 +54,10 @@ func TestFullPageHTMXShell(t *testing.T) {
 	}
 }
 
-func TestNavContainsDelegate(t *testing.T) {
+func TestNavOmitsDelegate(t *testing.T) {
 	out := navHTML(panel.ViewHome)
-	if !strings.Contains(out, `href="/delegate"`) || !strings.Contains(out, `Delegate`) {
-		t.Fatal("nav should include Delegate at /delegate")
+	if strings.Contains(out, `href="/delegate"`) || strings.Contains(out, `dash-nav__link--delegate`) {
+		t.Fatal("sidebar should not list Delegate; entry is the overview CTA")
 	}
 	if strings.Contains(out, `href="/s/delegate"`) {
 		t.Fatal("Delegate must not live under /s/")
@@ -105,14 +105,12 @@ func TestFullPageDelegateHasNoPoll(t *testing.T) {
 	status := panel.RenderStatusStrip(model.Report{Moniker: "node1", Synced: true, BlockHeight: "1"})
 	out := FullPage("node1", panel.ViewDelegate, status, panel.BuildView(panel.ViewDelegate, model.Report{}))
 	for _, want := range []string{
-		`href="/delegate"`,
-		`dash-nav__link--delegate`,
-		`dash-nav__link--active`,
 		`id="delegate-app"`,
 		panel.StakingPrecompile,
 		`290290`,
 		`wallet`,
 		`ethers@6`,
+		`pmtop — node1 · Delegate`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("delegate page missing %q", want)

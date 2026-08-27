@@ -18,7 +18,10 @@
     staked: document.getElementById("delegate-staked"),
     chain: document.getElementById("delegate-chain"),
     connect: document.getElementById("delegate-connect"),
+    picker: document.getElementById("delegate-picker"),
     select: document.getElementById("delegate-valoper-select"),
+    presetWrap: document.getElementById("delegate-preset-wrap"),
+    preset: document.getElementById("delegate-preset-valoper"),
     customWrap: document.getElementById("delegate-custom-wrap"),
     custom: document.getElementById("delegate-valoper-custom"),
     amount: document.getElementById("delegate-amount"),
@@ -48,7 +51,20 @@
   }
 
   function syncCustom() {
-    el.customWrap.hidden = el.select.value !== "custom";
+    const custom = el.select.value === "custom";
+    if (el.picker) {
+      el.picker.classList.toggle("delegate-picker--custom", custom);
+    }
+    if (el.presetWrap) {
+      el.presetWrap.hidden = custom;
+    }
+    el.customWrap.hidden = !custom;
+    if (!custom && el.preset) {
+      el.preset.textContent = el.select.value;
+    }
+    if (custom && el.custom) {
+      el.custom.focus();
+    }
   }
 
   async function ensureChain() {

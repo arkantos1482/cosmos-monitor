@@ -9,6 +9,7 @@ import (
 
 func writeOverview(w Writer, d model.Report) {
 	w.WriteHTML(`<div class="dash-overview">`)
+	writeDelegateCTA(w)
 
 	writeOverviewGroup(w, d, NavScopeRuntime, []struct {
 		slug string
@@ -57,4 +58,11 @@ func writeOverviewGroup(w Writer, d model.Report, scope NavScope, items []struct
 		item.fn(w, d, SummaryOverviewClickable)
 	}
 	w.WriteHTML(`</div></div>`)
+}
+
+func writeDelegateCTA(w Writer) {
+	w.WriteHTML(`<a class="dash-overview__delegate" href="/delegate" hx-boost="false">`)
+	w.WriteHTML(`<span class="dash-overview__delegate-copy"><strong>Delegate PMT</strong> Connect MetaMask and bond native PMT to a validator.</span>`)
+	w.WriteHTML(`<span class="dash-overview__delegate-go">Open Delegate</span>`)
+	w.WriteHTML(`</a>`)
 }
