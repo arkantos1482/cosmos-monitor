@@ -25,11 +25,10 @@ func TestFullPageHTMXShell(t *testing.T) {
 		`hx-get="/s/rewards"`,
 		`hx-trigger="every 5s"`,
 		`hx-swap="innerMorph settle:0.15s focus-scroll:false"`,
-		`htmx.org@4.0.0-beta4`,
-		`htmx.config.implicitInheritance = true`,
+		`src="/static/htmx.min.js"`,
+		`src="/static/htmx-init.js"`,
 		`hx-boost="true"`,
 		`class="dash-page"`,
-		`htmx.org`,
 		`--accent-rewards`,
 	} {
 		if !strings.Contains(out, want) {
@@ -37,6 +36,10 @@ func TestFullPageHTMXShell(t *testing.T) {
 		}
 	}
 	for _, bad := range []string{
+		`unpkg.com`,
+		`jsdelivr`,
+		`cdn.jsdelivr.net`,
+		`htmx.org@`,
 		`syncNavActive`,
 		`scheduleAutoRefresh`,
 		`location.reload`,
@@ -114,7 +117,8 @@ func TestFullPageDelegateHasNoPoll(t *testing.T) {
 		panel.StakingPrecompile,
 		`290290`,
 		`wallet`,
-		`ethers@6`,
+		`src="/static/ethers.umd.min.js"`,
+		`src="/static/delegate.js"`,
 		`pmtop — node1 · Delegate`,
 		`class="dash-page dash-page--wallet"`,
 		`max-width: 1024px`,
@@ -132,5 +136,10 @@ func TestFullPageDelegateHasNoPoll(t *testing.T) {
 	}
 	if strings.Contains(out, `live · 5s`) {
 		t.Fatal("delegate page must not claim a 5s live refresh")
+	}
+	for _, bad := range []string{`unpkg.com`, `jsdelivr`, `cdn.jsdelivr.net`, `ethers@6`} {
+		if strings.Contains(out, bad) {
+			t.Fatalf("delegate page must not load CDN scripts (%q)", bad)
+		}
 	}
 }

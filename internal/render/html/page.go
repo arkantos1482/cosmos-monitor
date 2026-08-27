@@ -20,6 +20,15 @@ var themeCSS string
 //go:embed static/delegate.js
 var delegateJS string
 
+//go:embed static/htmx-init.js
+var htmxInitJS string
+
+//go:embed static/vendor/htmx.min.js
+var htmxJS string
+
+//go:embed static/vendor/ethers.umd.min.js
+var ethersJS string
+
 var layoutTmpl = template.Must(template.New("layout").Parse(layoutHTML))
 
 type pageData struct {
@@ -32,7 +41,6 @@ type pageData struct {
 	CSS        template.CSS
 	LivePoll   bool
 	WalletPage bool
-	DelegateJS template.JS
 }
 
 var navIcons = map[panel.View]string{
@@ -147,7 +155,6 @@ func FullPage(moniker string, active panel.View, statusStrip, fragment string) s
 		CSS:        template.CSS(themeCSS),
 		LivePoll:   !wallet,
 		WalletPage: wallet,
-		DelegateJS: template.JS(delegateJS),
 	})
 	return buf.String()
 }
