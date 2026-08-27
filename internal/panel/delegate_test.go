@@ -31,6 +31,8 @@ func TestBuildViewDelegate(t *testing.T) {
 		"disabled",
 		"id=\"delegate-error\"",
 		"id=\"delegate-error-submit\"",
+		"id=\"delegate-status\"",
+		"id=\"delegate-status-connect\"",
 		"Leave liquid PMT for gas",
 		"Pick node1",
 	} {

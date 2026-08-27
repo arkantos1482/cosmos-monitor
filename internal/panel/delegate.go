@@ -57,6 +57,7 @@ func writeDelegate(w Writer, d model.Report) {
 	w.WriteHTML(`<div class="delegate-app__actions">`)
 	w.WriteHTML(`<button type="button" class="delegate-btn" id="delegate-connect">Connect MetaMask</button>`)
 	w.WriteHTML(`</div>`)
+	w.WriteHTML(`<p id="delegate-status-connect" class="delegate-app__status-msg" hidden role="status"></p>`)
 	w.WriteHTML(`<p id="delegate-error" class="delegate-app__error" hidden role="alert"></p>`)
 
 	w.WriteHTML(`<fieldset class="delegate-picker" id="delegate-picker">`)
@@ -83,6 +84,7 @@ func writeDelegate(w Writer, d model.Report) {
 	w.WriteHTML(`<div class="delegate-app__actions">`)
 	w.WriteHTML(`<button type="button" class="delegate-btn delegate-btn--primary" id="delegate-submit">Delegate</button>`)
 	w.WriteHTML(`</div>`)
+	w.WriteHTML(`<p id="delegate-status" class="delegate-app__status-msg" hidden role="status"></p>`)
 	w.WriteHTML(`<p id="delegate-error-submit" class="delegate-app__error" hidden role="alert"></p>`)
 	w.WriteHTML(`<p id="delegate-tx" class="delegate-app__tx" hidden></p>`)
 

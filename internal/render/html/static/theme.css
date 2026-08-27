@@ -4136,6 +4136,27 @@ code {
 .delegate-btn:hover {
   border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
 }
+.delegate-btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+.delegate-btn:disabled:hover {
+  border-color: var(--border);
+}
+.delegate-app__status-msg {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+.delegate-app__status-msg--pending {
+  color: var(--warn);
+}
+.delegate-app__status-msg--ok {
+  color: var(--ok);
+}
+.delegate-app__status-msg[hidden] {
+  display: none;
+}
 .delegate-app__error {
   color: var(--fg);
   font-size: var(--text-sm);

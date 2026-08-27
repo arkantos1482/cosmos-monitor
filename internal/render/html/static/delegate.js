@@ -25,11 +25,15 @@
     submit: document.getElementById("delegate-submit"),
     error: document.getElementById("delegate-error"),
     errorSubmit: document.getElementById("delegate-error-submit"),
+    status: document.getElementById("delegate-status"),
+    statusConnect: document.getElementById("delegate-status-connect"),
     tx: document.getElementById("delegate-tx"),
   };
 
   let provider;
   let signer;
+  let inflight = false;
+  let connected = false;
 
   function showError(msg, near) {
     const text = msg || "";
@@ -52,9 +56,33 @@
     }
   }
 
+  function setStatus(node, kind, text) {
+    if (!node) return;
+    node.hidden = !text;
+    node.textContent = text || "";
+    node.classList.toggle("delegate-app__status-msg--pending", kind === "pending");
+    node.classList.toggle("delegate-app__status-msg--ok", kind === "ok");
+  }
+
   function showTx(hash) {
     el.tx.hidden = !hash;
     el.tx.textContent = hash ? "tx " + hash : "";
+  }
+
+  function connectLabel() {
+    return connected ? "Switch / reconnect" : "Connect MetaMask";
+  }
+
+  function setInflight(on) {
+    inflight = on;
+    el.connect.disabled = on;
+    el.submit.disabled = on;
+    el.connect.setAttribute("aria-busy", on ? "true" : "false");
+    el.submit.setAttribute("aria-busy", on ? "true" : "false");
+    if (!on) {
+      el.connect.textContent = connectLabel();
+      el.submit.textContent = "Delegate";
+    }
   }
 
   function valoper() {
@@ -150,7 +178,9 @@
   }
 
   async function connect() {
+    if (inflight) return;
     showError("");
+    setStatus(el.statusConnect, "", "");
     if (typeof ethers === "undefined") {
       showError("ethers failed to load (CDN). Reload the page.");
       return;
@@ -159,21 +189,30 @@
       showError("No injected wallet. Install MetaMask or Rabby.");
       return;
     }
+    setInflight(true);
+    el.connect.textContent = "Connecting…";
+    setStatus(el.statusConnect, "pending", "Waiting for wallet…");
     try {
       await ensureChain();
       provider = new ethers.BrowserProvider(window.ethereum, "any");
       await provider.send("eth_requestAccounts", []);
       signer = await provider.getSigner();
-      el.connect.textContent = "Switch / reconnect";
+      connected = true;
+      setStatus(el.statusConnect, "ok", "Connected.");
       await refresh();
     } catch (e) {
+      setStatus(el.statusConnect, "", "");
       showError(e && e.message ? e.message : String(e));
+    } finally {
+      setInflight(false);
     }
   }
 
   async function delegate() {
+    if (inflight) return;
     showError("");
     showTx("");
+    setStatus(el.status, "", "");
     if (!signer) {
       showError("Connect a wallet first.", "submit");
       return;
@@ -199,6 +238,9 @@
       showError("Amount must be greater than 0.", "submit");
       return;
     }
+    setInflight(true);
+    el.submit.textContent = "Waiting for wallet…";
+    setStatus(el.status, "pending", "Approve the transaction in your wallet. Do not click Delegate again.");
     try {
       await ensureChain();
       const addr = await signer.getAddress();
@@ -211,11 +253,17 @@
       }
       const tx = await c.delegate(addr, v, wei, { gasLimit: gas });
       showTx(tx.hash);
+      el.submit.textContent = "Confirming…";
+      setStatus(el.status, "pending", "Submitted. Waiting for confirmation…");
       await tx.wait();
+      setStatus(el.status, "ok", "Delegated. Balance and stake below are refreshed.");
       await refresh();
     } catch (e) {
+      setStatus(el.status, "", "");
       const msg = e && e.shortMessage ? e.shortMessage : (e && e.message ? e.message : String(e));
       showError(msg, "submit");
+    } finally {
+      setInflight(false);
     }
   }
 
@@ -228,8 +276,8 @@
   el.valoper.addEventListener("input", matchSelectToValoper);
   el.valoper.addEventListener("change", refresh);
   if (window.ethereum) {
-    window.ethereum.on("accountsChanged", function () { connect(); });
-    window.ethereum.on("chainChanged", function () { connect(); });
+    window.ethereum.on("accountsChanged", function () { if (!inflight) connect(); });
+    window.ethereum.on("chainChanged", function () { if (!inflight) connect(); });
   }
   fillValoperFromSelect();
 })();
