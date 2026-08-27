@@ -3961,6 +3961,11 @@ code {
   outline: none;
   border-color: color-mix(in srgb, var(--accent-delegate) 55%, var(--border));
 }
+.delegate-input:disabled {
+  opacity: 1;
+  color: var(--muted);
+  cursor: not-allowed;
+}
 .delegate-app__actions {
   display: flex;
   gap: 0.5rem;

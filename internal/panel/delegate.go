@@ -61,7 +61,7 @@ func writeDelegate(w Writer, d model.Report) {
 
 	w.WriteHTML(`<fieldset class="delegate-picker" id="delegate-picker">`)
 	w.WriteHTML(`<legend>Validator</legend>`)
-	w.WriteHTML(`<p class="delegate-picker__hint">Pick a node to fill the valoper, or choose Another validator and paste.</p>`)
+	w.WriteHTML(`<p class="delegate-picker__hint">Pick a node to fill the valoper. Choose Another validator to paste a different one.</p>`)
 	w.WriteHTML(`<label class="delegate-field"><span>Choose</span>`)
 	w.WriteHTML(`<select id="delegate-valoper-select" class="delegate-input">`)
 	for _, v := range OperatorValidators {
@@ -71,7 +71,7 @@ func writeDelegate(w Writer, d model.Report) {
 	w.WriteHTML(`<option value="custom">Another validator</option>`)
 	w.WriteHTML(`</select></label>`)
 	w.WriteHTML(`<label class="delegate-field"><span>Valoper</span>`)
-	w.WriteHTML(fmt.Sprintf(`<input id="delegate-valoper" class="delegate-input" type="text" spellcheck="false" placeholder="cosmosvaloper1…" autocomplete="off" value="%s"/>`,
+	w.WriteHTML(fmt.Sprintf(`<input id="delegate-valoper" class="delegate-input" type="text" spellcheck="false" placeholder="cosmosvaloper1…" autocomplete="off" disabled value="%s"/>`,
 		html.EscapeString(OperatorValidators[0].Valoper)))
 	w.WriteHTML(`</label>`)
 	w.WriteHTML(`</fieldset>`)

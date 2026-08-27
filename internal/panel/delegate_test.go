@@ -28,6 +28,7 @@ func TestBuildViewDelegate(t *testing.T) {
 		"Another validator",
 		"id=\"delegate-picker\"",
 		"id=\"delegate-valoper\"",
+		"disabled",
 		"id=\"delegate-error\"",
 		"id=\"delegate-error-submit\"",
 		"Leave liquid PMT for gas",

@@ -33,16 +33,22 @@
 
   function showError(msg, near) {
     const text = msg || "";
-    [el.error, el.errorSubmit].forEach(function (node) {
+    function setSlot(node, value) {
       if (!node) return;
-      node.hidden = !text;
-      node.textContent = text;
-    });
-    if (text) {
-      const target = near === "submit" && el.errorSubmit ? el.errorSubmit : el.error;
-      if (target && target.scrollIntoView) {
-        target.scrollIntoView({ block: "nearest", behavior: "smooth" });
-      }
+      node.hidden = !value;
+      node.textContent = value;
+    }
+    if (!text) {
+      setSlot(el.error, "");
+      setSlot(el.errorSubmit, "");
+      return;
+    }
+    const connectSlot = near !== "submit";
+    setSlot(el.error, connectSlot ? text : "");
+    setSlot(el.errorSubmit, connectSlot ? "" : text);
+    const target = connectSlot ? el.error : el.errorSubmit;
+    if (target && target.scrollIntoView) {
+      target.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
   }
 
@@ -56,15 +62,22 @@
   }
 
   function fillValoperFromSelect() {
-    if (el.select.value !== "custom") {
-      el.valoper.value = el.select.value;
-    }
+    const custom = el.select.value === "custom";
     if (el.picker) {
-      el.picker.classList.toggle("delegate-picker--custom", el.select.value === "custom");
+      el.picker.classList.toggle("delegate-picker--custom", custom);
     }
+    if (custom) {
+      el.valoper.disabled = false;
+      el.valoper.value = "";
+      el.valoper.focus();
+      return;
+    }
+    el.valoper.value = el.select.value;
+    el.valoper.disabled = true;
   }
 
   function matchSelectToValoper() {
+    if (el.valoper.disabled) return;
     const v = valoper();
     let found = "custom";
     for (let i = 0; i < el.select.options.length; i++) {
@@ -75,8 +88,10 @@
       }
     }
     el.select.value = found;
-    if (el.picker) {
-      el.picker.classList.toggle("delegate-picker--custom", found === "custom");
+    if (found !== "custom") {
+      fillValoperFromSelect();
+    } else if (el.picker) {
+      el.picker.classList.toggle("delegate-picker--custom", true);
     }
   }
 
