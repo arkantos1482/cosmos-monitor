@@ -208,8 +208,33 @@ body::after {
 .dash-nav__link--evm { --nav-accent: var(--accent-evm); }
 .dash-nav__link--home { --nav-accent: var(--accent); }
 
-/* Compact horizontal nav below 1200px so a MetaMask side panel still leaves a usable column. */
-@media (max-width: 1200px) {
+/* Compact: Overview + Sections disclosure. Group labels stay inside the panel. */
+.dash-nav__more-check {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.dash-nav__more {
+  display: none;
+}
+
+.dash-nav__more-check:focus-visible + .dash-nav__more {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.dash-nav__sections {
+  display: contents;
+}
+
+@media (max-width: 860px) {
   .dash-shell {
     grid-template-columns: 1fr;
   }
@@ -217,16 +242,56 @@ body::after {
   .dash-nav {
     position: static;
     flex-direction: row;
-    flex-wrap: nowrap;
-    overflow-x: auto;
+    flex-wrap: wrap;
+    align-items: center;
     gap: 0.35rem;
     padding: 0.55rem;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
   }
 
   .dash-nav__title {
     display: none;
+  }
+
+  .dash-nav__more {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-left: auto;
+    padding: 0.38rem 0.65rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--fg);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .dash-nav__more::after {
+    content: "▾";
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  .dash-nav__more-check:checked + .dash-nav__more::after {
+    content: "▴";
+  }
+
+  .dash-nav__sections {
+    display: none;
+  }
+
+  .dash-nav__more-check:checked ~ .dash-nav__sections {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    flex: 1 1 100%;
+    width: 100%;
+    margin-top: 0.15rem;
+    padding-top: 0.45rem;
+    border-top: 1px solid var(--border);
   }
 
   .dash-nav__link {
@@ -237,30 +302,74 @@ body::after {
   }
 }
 
-.dash-page--wallet .dash-shell {
-  grid-template-columns: 1fr;
-}
+/* Wallet: keep the 220px sidebar on a full laptop window. Stack only when the
+   leftover column is tight (MetaMask side panel). Same compact nav as 860px. */
+@media (max-width: 1024px) {
+  .dash-page--wallet .dash-shell {
+    grid-template-columns: 1fr;
+  }
 
-.dash-page--wallet .dash-nav {
-  position: static;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  gap: 0.35rem;
-  padding: 0.55rem;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-}
+  .dash-page--wallet .dash-nav {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.55rem;
+  }
 
-.dash-page--wallet .dash-nav__title {
-  display: none;
-}
+  .dash-page--wallet .dash-nav__title {
+    display: none;
+  }
 
-.dash-page--wallet .dash-nav__link {
-  flex: 0 0 auto;
-  white-space: nowrap;
-  padding: 0.38rem 0.65rem;
-  font-size: 0.78rem;
+  .dash-page--wallet .dash-nav__more {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-left: auto;
+    padding: 0.38rem 0.65rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--fg);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .dash-page--wallet .dash-nav__more::after {
+    content: "▾";
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  .dash-page--wallet .dash-nav__more-check:checked + .dash-nav__more::after {
+    content: "▴";
+  }
+
+  .dash-page--wallet .dash-nav__sections {
+    display: none;
+  }
+
+  .dash-page--wallet .dash-nav__more-check:checked ~ .dash-nav__sections {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    flex: 1 1 100%;
+    width: 100%;
+    margin-top: 0.15rem;
+    padding-top: 0.45rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .dash-page--wallet .dash-nav__link {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 0.38rem 0.65rem;
+    font-size: 0.78rem;
+  }
 }
 
 .dash-header {

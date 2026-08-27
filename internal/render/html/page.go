@@ -93,6 +93,9 @@ func navHTML(active panel.View) string {
 			break
 		}
 	}
+	fmt.Fprint(&b, `<input type="checkbox" id="dash-nav-more" class="dash-nav__more-check"/>`)
+	fmt.Fprint(&b, `<label for="dash-nav-more" class="dash-nav__more">Sections</label>`)
+	fmt.Fprint(&b, `<div class="dash-nav__sections">`)
 	var lastScope panel.NavScope
 	for _, item := range panel.Nav {
 		if item.Scope == "" {
@@ -104,7 +107,7 @@ func navHTML(active panel.View) string {
 		}
 		writeNavLink(&b, item, active)
 	}
-	fmt.Fprint(&b, `</nav>`)
+	fmt.Fprint(&b, `</div></nav>`)
 	return b.String()
 }
 

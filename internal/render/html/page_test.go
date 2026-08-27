@@ -77,6 +77,9 @@ func TestNavLinksPlainHref(t *testing.T) {
 	if strings.Contains(out, `hx-get=`) || strings.Contains(out, `hx-target=`) {
 		t.Fatal("nav links should rely on body hx-boost, not per-link HTMX attrs")
 	}
+	if !strings.Contains(out, `class="dash-nav__more"`) || !strings.Contains(out, `class="dash-nav__sections"`) {
+		t.Fatal("nav should wrap section links in a compact Sections disclosure")
+	}
 }
 
 func TestNavGroupOrder(t *testing.T) {
@@ -114,10 +117,15 @@ func TestFullPageDelegateHasNoPoll(t *testing.T) {
 		`ethers@6`,
 		`pmtop — node1 · Delegate`,
 		`class="dash-page dash-page--wallet"`,
+		`max-width: 1024px`,
+		`max-width: 860px`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("delegate page missing %q", want)
 		}
+	}
+	if strings.Contains(out, `max-width: 1200px`) {
+		t.Fatal("layout must not collapse the fleet sidebar at 1200px")
 	}
 	if strings.Contains(out, `hx-trigger="every 5s"`) {
 		t.Fatal("delegate page must not poll #data every 5s")
