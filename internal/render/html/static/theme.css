@@ -14,6 +14,7 @@
   --accent-infra: #5eb3ff;
   --accent-node: #5ee4a8;
   --accent-staking: #a78bfa;
+  --accent-delegate: #c4b5fd;
   --accent-slashing: #f87171;
   --accent-validators: #c4b5fd;
   --accent-local: #f0abfc;
@@ -221,6 +222,7 @@ body::after {
 .dash-nav__link--infra { --nav-accent: var(--accent-infra); }
 .dash-nav__link--node { --nav-accent: var(--accent-node); }
 .dash-nav__link--staking { --nav-accent: var(--accent-staking); }
+.dash-nav__link--delegate { --nav-accent: var(--accent-delegate); }
 .dash-nav__link--slashing { --nav-accent: var(--accent-slashing); }
 .dash-nav__link--validators { --nav-accent: var(--accent-validators); }
 .dash-nav__link--local { --nav-accent: var(--accent-local); }
@@ -1794,6 +1796,7 @@ body::after {
 .dash-section--infra { --section-accent: var(--accent-infra); }
 .dash-section--node { --section-accent: var(--accent-node); }
 .dash-section--staking { --section-accent: var(--accent-staking); }
+.dash-section--delegate { --section-accent: var(--accent-delegate); }
 .dash-section--slashing { --section-accent: var(--accent-slashing); }
 .dash-section--validators { --section-accent: var(--accent-validators); }
 .dash-section--local { --section-accent: var(--accent-local); }
@@ -3832,4 +3835,101 @@ code {
   font-weight: 500;
   font-feature-settings: "tnum" 1, "zero" 1;
   color: var(--accent);
+}
+
+/* Delegate wallet page (no 5s poll) */
+.delegate-app {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 42rem;
+  margin-top: 0.5rem;
+}
+.delegate-app__status {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.7rem 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.delegate-app__row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+  font-size: var(--text-sm);
+}
+.delegate-app__label {
+  color: var(--muted);
+  min-width: 6.5rem;
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+.delegate-app__mono {
+  font-family: var(--mono);
+  font-size: var(--text-sm);
+  word-break: break-all;
+}
+.delegate-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.delegate-input {
+  font-family: var(--mono);
+  font-size: var(--text-sm);
+  color: var(--fg);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+}
+.delegate-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent-delegate) 55%, var(--border));
+}
+.delegate-app__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.delegate-btn {
+  font-family: var(--font);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.45rem 0.85rem;
+  cursor: pointer;
+}
+.delegate-btn--primary {
+  background: color-mix(in srgb, var(--accent-delegate) 22%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent-delegate) 40%, var(--border));
+}
+.delegate-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+.delegate-app__error {
+  color: var(--bad);
+  font-size: var(--text-sm);
+}
+.delegate-app__tx {
+  font-family: var(--mono);
+  font-size: var(--text-xs);
+  color: var(--accent-2);
+  word-break: break-all;
+}
+.delegate-hints {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+.delegate-hints li + li {
+  margin-top: 0.2rem;
 }

@@ -54,6 +54,16 @@ func TestFullPageHTMXShell(t *testing.T) {
 	}
 }
 
+func TestNavContainsDelegate(t *testing.T) {
+	out := navHTML(panel.ViewHome)
+	if !strings.Contains(out, `href="/delegate"`) || !strings.Contains(out, `Delegate`) {
+		t.Fatal("nav should include Delegate at /delegate")
+	}
+	if strings.Contains(out, `href="/s/delegate"`) {
+		t.Fatal("Delegate must not live under /s/")
+	}
+}
+
 func TestNavLinksPlainHref(t *testing.T) {
 	out := navHTML(panel.ViewInfra)
 	if !strings.Contains(out, `href="/s/infra"`) || !strings.Contains(out, `dash-nav__link--active`) {
@@ -85,5 +95,33 @@ func TestDataURL(t *testing.T) {
 	}
 	if dataURL(panel.ViewRewards) != "/s/rewards" {
 		t.Fatal("rewards data URL should be /s/rewards")
+	}
+	if dataURL(panel.ViewDelegate) != "/delegate" {
+		t.Fatal("delegate data URL should be /delegate")
+	}
+}
+
+func TestFullPageDelegateHasNoPoll(t *testing.T) {
+	status := panel.RenderStatusStrip(model.Report{Moniker: "node1", Synced: true, BlockHeight: "1"})
+	out := FullPage("node1", panel.ViewDelegate, status, panel.BuildView(panel.ViewDelegate, model.Report{}))
+	for _, want := range []string{
+		`href="/delegate"`,
+		`dash-nav__link--delegate`,
+		`dash-nav__link--active`,
+		`id="delegate-app"`,
+		panel.StakingPrecompile,
+		`290290`,
+		`wallet`,
+		`ethers@6`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("delegate page missing %q", want)
+		}
+	}
+	if strings.Contains(out, `hx-trigger="every 5s"`) {
+		t.Fatal("delegate page must not poll #data every 5s")
+	}
+	if strings.Contains(out, `live · 5s`) {
+		t.Fatal("delegate page must not claim a 5s live refresh")
 	}
 }

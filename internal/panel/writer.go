@@ -208,6 +208,8 @@ func sectionSlug(title string) string {
 		return "node"
 	case strings.Contains(upper, "SLASHING"):
 		return "slashing"
+	case strings.Contains(upper, "DELEGATE"):
+		return "delegate"
 	case strings.Contains(upper, "STAKING"):
 		return "staking"
 	case strings.Contains(upper, "DISTRIBUTION"):

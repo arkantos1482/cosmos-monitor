@@ -10,6 +10,7 @@ const (
 	ViewInfra      View = "infra"
 	ViewNode       View = "node"
 	ViewStaking    View = "staking"
+	ViewDelegate   View = "delegate"
 	ViewSlashing   View = "slashing"
 	ViewRewards       View = "rewards"
 	ViewDistribution  View = "distribution"
@@ -59,6 +60,7 @@ var Nav = []NavItem{
 	{ViewEVM, "EVM JSON-RPC", "/s/evm", NavScopeRuntime},
 	{ViewNode, "Validator", "/s/node", NavScopeValidator},
 	{ViewStaking, "Staking", "/s/staking", NavScopeEconomics},
+	{ViewDelegate, "Delegate", "/delegate", NavScopeEconomics},
 	{ViewSlashing, "Slashing", "/s/slashing", NavScopeEconomics},
 	{ViewFeemarket, "Fee market", "/s/feemarket", NavScopeEconomics},
 	{ViewRewards, "Rewards", "/s/rewards", NavScopeEconomics},
@@ -84,7 +86,7 @@ func ParseView(s string) View {
 		return ViewNode
 	case "economics": // legacy path — merged into rewards
 		return ViewRewards
-	case ViewHome, ViewInfra, ViewNode, ViewStaking, ViewSlashing, ViewRewards, ViewDistribution, ViewFeemarket, ViewGovernance, ViewEVM:
+	case ViewHome, ViewInfra, ViewNode, ViewStaking, ViewDelegate, ViewSlashing, ViewRewards, ViewDistribution, ViewFeemarket, ViewGovernance, ViewEVM:
 		return View(s)
 	default:
 		return ViewHome
@@ -99,6 +101,8 @@ func writeView(w Writer, v View, d model.Report) {
 		writeNode(w, d)
 	case ViewStaking:
 		writeStaking(w, d)
+	case ViewDelegate:
+		writeDelegate(w, d)
 	case ViewSlashing:
 		writeSlashing(w, d)
 	case ViewRewards:

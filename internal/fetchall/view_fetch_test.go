@@ -16,4 +16,7 @@ func TestNeedsAppTomlIncludesEVM(t *testing.T) {
 	if needsAppToml(panel.ViewStaking) {
 		t.Fatal("staking should not fetch app.toml")
 	}
+	if needsAppToml(panel.ViewDelegate) {
+		t.Fatal("delegate should not fetch app.toml")
+	}
 }

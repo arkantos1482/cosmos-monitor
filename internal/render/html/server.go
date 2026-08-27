@@ -24,7 +24,19 @@ func Start(addr string, evmEndpoint string, render RenderFunc, opts panel.Option
 			http.Redirect(w, r, "/", http.StatusFound)
 			return
 		}
+		if v == panel.ViewDelegate {
+			http.Redirect(w, r, "/delegate", http.StatusFound)
+			return
+		}
 		serveView(w, r, v, render, opts)
+	})
+
+	http.HandleFunc("/delegate", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/delegate" {
+			http.NotFound(w, r)
+			return
+		}
+		serveView(w, r, panel.ViewDelegate, render, opts)
 	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

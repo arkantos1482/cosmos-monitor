@@ -20,17 +20,21 @@ htmx.config.noSwap = [204, 304, '4xx', '5xx'];
 <span class="dash-header__mark" aria-hidden="true"></span>
 <h1>PMT operations</h1>
 </div>
-<span class="meta">{{.Moniker}} · {{.PageTitle}} · <span class="meta__live">live · 5s</span></span>
+<span class="meta">{{.Moniker}} · {{.PageTitle}} · {{if .LivePoll}}<span class="meta__live">live · 5s</span>{{else}}<span class="meta__live">wallet</span>{{end}}</span>
 </header>
 {{.Status}}
 <div class="dash-shell">
 {{.Nav}}
 <div class="dash-content">
-<main class="dash-main" id="data"
+<main class="dash-main" id="data"{{if .LivePoll}}
   hx-get="{{.DataURL}}"
   hx-trigger="every 5s"
-  hx-swap="innerMorph settle:0.15s focus-scroll:false">{{.Content}}</main>
+  hx-swap="innerMorph settle:0.15s focus-scroll:false"{{end}}>{{.Content}}</main>
 </div>
 </div>
+{{if .WalletPage}}
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
+<script>{{.DelegateJS}}</script>
+{{end}}
 </body>
 </html>

@@ -11,6 +11,8 @@ func chainRecipeFor(view panel.View) fetch.ChainRecipe {
 		return fetch.ChainRecipeNode
 	case panel.ViewStaking:
 		return fetch.ChainRecipeStaking
+	case panel.ViewDelegate:
+		return fetch.ChainRecipe{}
 	case panel.ViewSlashing:
 		return fetch.ChainRecipeSlashing
 	case panel.ViewRewards:
