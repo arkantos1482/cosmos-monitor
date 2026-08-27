@@ -20,22 +20,30 @@
     connect: document.getElementById("delegate-connect"),
     picker: document.getElementById("delegate-picker"),
     select: document.getElementById("delegate-valoper-select"),
-    presetWrap: document.getElementById("delegate-preset-wrap"),
-    preset: document.getElementById("delegate-preset-valoper"),
-    customWrap: document.getElementById("delegate-custom-wrap"),
-    custom: document.getElementById("delegate-valoper-custom"),
+    valoper: document.getElementById("delegate-valoper"),
     amount: document.getElementById("delegate-amount"),
     submit: document.getElementById("delegate-submit"),
     error: document.getElementById("delegate-error"),
+    errorSubmit: document.getElementById("delegate-error-submit"),
     tx: document.getElementById("delegate-tx"),
   };
 
   let provider;
   let signer;
 
-  function showError(msg) {
-    el.error.hidden = !msg;
-    el.error.textContent = msg || "";
+  function showError(msg, near) {
+    const text = msg || "";
+    [el.error, el.errorSubmit].forEach(function (node) {
+      if (!node) return;
+      node.hidden = !text;
+      node.textContent = text;
+    });
+    if (text) {
+      const target = near === "submit" && el.errorSubmit ? el.errorSubmit : el.error;
+      if (target && target.scrollIntoView) {
+        target.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+    }
   }
 
   function showTx(hash) {
@@ -44,26 +52,31 @@
   }
 
   function valoper() {
-    if (el.select.value === "custom") {
-      return (el.custom.value || "").trim();
-    }
-    return el.select.value;
+    return (el.valoper.value || "").trim();
   }
 
-  function syncCustom() {
-    const custom = el.select.value === "custom";
+  function fillValoperFromSelect() {
+    if (el.select.value !== "custom") {
+      el.valoper.value = el.select.value;
+    }
     if (el.picker) {
-      el.picker.classList.toggle("delegate-picker--custom", custom);
+      el.picker.classList.toggle("delegate-picker--custom", el.select.value === "custom");
     }
-    if (el.presetWrap) {
-      el.presetWrap.hidden = custom;
+  }
+
+  function matchSelectToValoper() {
+    const v = valoper();
+    let found = "custom";
+    for (let i = 0; i < el.select.options.length; i++) {
+      const opt = el.select.options[i];
+      if (opt.value !== "custom" && opt.value === v) {
+        found = opt.value;
+        break;
+      }
     }
-    el.customWrap.hidden = !custom;
-    if (!custom && el.preset) {
-      el.preset.textContent = el.select.value;
-    }
-    if (custom && el.custom) {
-      el.custom.focus();
+    el.select.value = found;
+    if (el.picker) {
+      el.picker.classList.toggle("delegate-picker--custom", found === "custom");
     }
   }
 
@@ -147,28 +160,28 @@
     showError("");
     showTx("");
     if (!signer) {
-      showError("Connect a wallet first.");
+      showError("Connect a wallet first.", "submit");
       return;
     }
     const v = valoper();
     if (!v.startsWith("cosmosvaloper1") || v.startsWith("0x")) {
-      showError("Validator must be a cosmosvaloper1… string, not 0x.");
+      showError("Validator must be a cosmosvaloper1… string, not 0x.", "submit");
       return;
     }
     const amt = (el.amount.value || "").trim();
     if (!amt) {
-      showError("Enter an amount in PMT.");
+      showError("Enter an amount in PMT.", "submit");
       return;
     }
     let wei;
     try {
       wei = ethers.parseEther(amt);
     } catch (e) {
-      showError("Amount is not a valid PMT number (18 decimals).");
+      showError("Amount is not a valid PMT number (18 decimals).", "submit");
       return;
     }
     if (wei <= 0n) {
-      showError("Amount must be greater than 0.");
+      showError("Amount must be greater than 0.", "submit");
       return;
     }
     try {
@@ -187,20 +200,21 @@
       await refresh();
     } catch (e) {
       const msg = e && e.shortMessage ? e.shortMessage : (e && e.message ? e.message : String(e));
-      showError(msg);
+      showError(msg, "submit");
     }
   }
 
   el.connect.addEventListener("click", connect);
   el.submit.addEventListener("click", delegate);
   el.select.addEventListener("change", function () {
-    syncCustom();
+    fillValoperFromSelect();
     refresh();
   });
-  el.custom.addEventListener("change", refresh);
+  el.valoper.addEventListener("input", matchSelectToValoper);
+  el.valoper.addEventListener("change", refresh);
   if (window.ethereum) {
     window.ethereum.on("accountsChanged", function () { connect(); });
     window.ethereum.on("chainChanged", function () { connect(); });
   }
-  syncCustom();
+  fillValoperFromSelect();
 })();

@@ -57,26 +57,22 @@ func writeDelegate(w Writer, d model.Report) {
 	w.WriteHTML(`<div class="delegate-app__actions">`)
 	w.WriteHTML(`<button type="button" class="delegate-btn" id="delegate-connect">Connect MetaMask</button>`)
 	w.WriteHTML(`</div>`)
+	w.WriteHTML(`<p id="delegate-error" class="delegate-app__error" hidden role="alert"></p>`)
 
 	w.WriteHTML(`<fieldset class="delegate-picker" id="delegate-picker">`)
 	w.WriteHTML(`<legend>Validator</legend>`)
-	w.WriteHTML(`<p class="delegate-picker__hint">The dropdown and valoper below are the same choice. Pick a node, or choose Another validator to paste.</p>`)
+	w.WriteHTML(`<p class="delegate-picker__hint">Pick a node to fill the valoper, or choose Another validator and paste.</p>`)
 	w.WriteHTML(`<label class="delegate-field"><span>Choose</span>`)
-	w.WriteHTML(`<select id="delegate-valoper-select" class="delegate-input" aria-controls="delegate-preset-wrap delegate-custom-wrap">`)
+	w.WriteHTML(`<select id="delegate-valoper-select" class="delegate-input">`)
 	for _, v := range OperatorValidators {
 		w.WriteHTML(fmt.Sprintf(`<option value="%s">%s</option>`,
 			html.EscapeString(v.Valoper), html.EscapeString(v.Label)))
 	}
 	w.WriteHTML(`<option value="custom">Another validator</option>`)
 	w.WriteHTML(`</select></label>`)
-	first := OperatorValidators[0].Valoper
-	w.WriteHTML(`<div class="delegate-field" id="delegate-preset-wrap">`)
-	w.WriteHTML(`<span>Valoper</span>`)
-	w.WriteHTML(fmt.Sprintf(`<output id="delegate-preset-valoper" class="delegate-input delegate-input--readonly" for="delegate-valoper-select">%s</output>`, html.EscapeString(first)))
-	w.WriteHTML(`</div>`)
-	w.WriteHTML(`<label class="delegate-field" id="delegate-custom-wrap" hidden>`)
-	w.WriteHTML(`<span>Valoper</span>`)
-	w.WriteHTML(`<input id="delegate-valoper-custom" class="delegate-input" type="text" spellcheck="false" placeholder="cosmosvaloper1…" autocomplete="off"/>`)
+	w.WriteHTML(`<label class="delegate-field"><span>Valoper</span>`)
+	w.WriteHTML(fmt.Sprintf(`<input id="delegate-valoper" class="delegate-input" type="text" spellcheck="false" placeholder="cosmosvaloper1…" autocomplete="off" value="%s"/>`,
+		html.EscapeString(OperatorValidators[0].Valoper)))
 	w.WriteHTML(`</label>`)
 	w.WriteHTML(`</fieldset>`)
 
@@ -87,7 +83,7 @@ func writeDelegate(w Writer, d model.Report) {
 	w.WriteHTML(`<div class="delegate-app__actions">`)
 	w.WriteHTML(`<button type="button" class="delegate-btn delegate-btn--primary" id="delegate-submit">Delegate</button>`)
 	w.WriteHTML(`</div>`)
-	w.WriteHTML(`<p id="delegate-error" class="delegate-app__error" hidden></p>`)
+	w.WriteHTML(`<p id="delegate-error-submit" class="delegate-app__error" hidden role="alert"></p>`)
 	w.WriteHTML(`<p id="delegate-tx" class="delegate-app__tx" hidden></p>`)
 
 	w.WriteHTML(`<ul class="delegate-hints">`)

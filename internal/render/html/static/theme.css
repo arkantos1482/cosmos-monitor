@@ -3961,13 +3961,6 @@ code {
   outline: none;
   border-color: color-mix(in srgb, var(--accent-delegate) 55%, var(--border));
 }
-.delegate-input--readonly {
-  display: block;
-  margin: 0;
-  word-break: break-all;
-  line-height: 1.45;
-  user-select: all;
-}
 .delegate-app__actions {
   display: flex;
   gap: 0.5rem;
@@ -3991,8 +3984,17 @@ code {
   border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
 }
 .delegate-app__error {
-  color: var(--bad);
+  color: var(--fg);
   font-size: var(--text-sm);
+  line-height: 1.45;
+  margin: 0;
+  padding: 0.65rem 0.8rem;
+  background: color-mix(in srgb, var(--bad) 16%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--bad) 45%, var(--border));
+  border-radius: 8px;
+}
+.delegate-app__error[hidden] {
+  display: none;
 }
 .delegate-app__tx {
   font-family: var(--mono);

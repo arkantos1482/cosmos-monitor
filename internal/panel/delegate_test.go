@@ -27,8 +27,9 @@ func TestBuildViewDelegate(t *testing.T) {
 		"cosmosvaloper1vmr9wxpldngnh0tvpr8h2pk2aycts3v7z8pdxh",
 		"Another validator",
 		"id=\"delegate-picker\"",
-		"id=\"delegate-preset-wrap\"",
-		"id=\"delegate-custom-wrap\"",
+		"id=\"delegate-valoper\"",
+		"id=\"delegate-error\"",
+		"id=\"delegate-error-submit\"",
 		"Leave liquid PMT for gas",
 		"Pick node1",
 	} {
@@ -40,6 +41,9 @@ func TestBuildViewDelegate(t *testing.T) {
 		"Our four",
 		"we run the nodes",
 		"Other — paste valoper",
+		"id=\"delegate-preset-wrap\"",
+		"id=\"delegate-custom-wrap\"",
+		"delegate-preset-valoper",
 	} {
 		if strings.Contains(out, bad) {
 			t.Fatalf("delegate view should not contain %q", bad)
