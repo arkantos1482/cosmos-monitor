@@ -19,6 +19,7 @@ func TestBuildViewDelegate(t *testing.T) {
 		StakingPrecompile,
 		"290290",
 		"https://node1.pmtchain.com",
+		"https://pmtscan.com",
 		"id=\"delegate-app\"",
 		"Connect MetaMask",
 		"cosmosvaloper1akkvh0ahmve830rj4mhkdnqs49kzw23cl98zp4",

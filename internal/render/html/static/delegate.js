@@ -6,6 +6,7 @@
   const chainHex = "0x" + chainId.toString(16);
   const precompile = app.dataset.precompile;
   const rpc = app.dataset.rpc;
+  const explorer = (app.dataset.explorer || "https://pmtscan.com").replace(/\/$/, "");
   const fallbacks = (app.dataset.rpcFallbacks || "").split(",").map((s) => s.trim()).filter(Boolean);
   const abi = [
     "function delegate(address delegatorAddress, string validatorAddress, uint256 amount) returns (bool)",
@@ -142,6 +143,7 @@
             chainName: "PMT",
             nativeCurrency: { name: "PMT", symbol: "PMT", decimals: 18 },
             rpcUrls: [rpc].concat(fallbacks),
+            blockExplorerUrls: [explorer],
           }],
         });
       } else {
@@ -177,6 +179,30 @@
     }
   }
 
+  async function attachSigner() {
+    provider = new ethers.BrowserProvider(window.ethereum, "any");
+    signer = await provider.getSigner();
+    connected = true;
+    el.connect.textContent = connectLabel();
+  }
+
+  // Silent: already permitted + already on 290290. Do not switch/add chain here
+  // (that would pop MetaMask on every visit while the user is on another network).
+  async function trySilentConnect() {
+    if (typeof ethers === "undefined" || !window.ethereum) return;
+    try {
+      const accounts = await window.ethereum.request({ method: "eth_accounts" });
+      if (!accounts || !accounts.length) return;
+      const current = await window.ethereum.request({ method: "eth_chainId" });
+      if ((current || "").toLowerCase() !== chainHex.toLowerCase()) return;
+      await attachSigner();
+      setStatus(el.statusConnect, "ok", "Connected.");
+      await refresh();
+    } catch (e) {
+      // Stay disconnected; Connect still works.
+    }
+  }
+
   async function connect() {
     if (inflight) return;
     showError("");
@@ -194,10 +220,8 @@
     setStatus(el.statusConnect, "pending", "Waiting for wallet…");
     try {
       await ensureChain();
-      provider = new ethers.BrowserProvider(window.ethereum, "any");
-      await provider.send("eth_requestAccounts", []);
-      signer = await provider.getSigner();
-      connected = true;
+      await window.ethereum.request({ method: "eth_requestAccounts" });
+      await attachSigner();
       setStatus(el.statusConnect, "ok", "Connected.");
       await refresh();
     } catch (e) {
@@ -280,4 +304,5 @@
     window.ethereum.on("chainChanged", function () { if (!inflight) connect(); });
   }
   fillValoperFromSelect();
+  trySilentConnect();
 })();

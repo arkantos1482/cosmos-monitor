@@ -51,7 +51,8 @@ v1 nice-to-have (do if cheap): tx hash links / copy; “switch to PMT” CTA.
 | Wallet RPC (browser) | Public **HTTPS** from [`public-endpoints.md`](../../deploy/docs/public-endpoints.md). Not `localhost`, not `http://ec2-…:8545`. |
 
 **Primary wallet RPC:** `https://node1.pmtchain.com`  
-Fallbacks: `https://node2.pmtchain.com`, `https://node3.pmtchain.com`, `https://node4.pmtchain.com`.
+Fallbacks: `https://node2.pmtchain.com`, `https://node3.pmtchain.com`, `https://node4.pmtchain.com`.  
+**Explorer:** `https://pmtscan.com` (`blockExplorerUrls` on add-chain).
 
 Public pmtop (same file): `https://node-admin-1.pmtchain.com/` … `node-admin-4`.
 

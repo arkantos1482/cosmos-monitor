@@ -11,6 +11,7 @@ import (
 const (
 	StakingPrecompile = "0x0000000000000000000000000000000000000800"
 	DefaultPublicEVM  = "https://node1.pmtchain.com"
+	PublicExplorer    = "https://pmtscan.com"
 	EVMChainID        = 290290
 )
 
@@ -44,7 +45,8 @@ func writeDelegate(w Writer, d model.Report) {
 	writeSectionLead(w, "Connect MetaMask and delegate native PMT to a validator. Pick node1–node4, or choose Another validator and paste a valoper. Unbonding later takes 21 days.")
 
 	w.WriteHTML(`<div id="delegate-app" class="delegate-app"` +
-		fmt.Sprintf(` data-chain-id="%d" data-precompile="%s" data-rpc="%s"`, EVMChainID, StakingPrecompile, rpc) +
+		fmt.Sprintf(` data-chain-id="%d" data-precompile="%s" data-rpc="%s" data-explorer="%s"`,
+			EVMChainID, StakingPrecompile, rpc, PublicExplorer) +
 		` data-rpc-fallbacks="https://node2.pmtchain.com,https://node3.pmtchain.com,https://node4.pmtchain.com">`)
 
 	w.WriteHTML(`<div class="delegate-app__status">`)
