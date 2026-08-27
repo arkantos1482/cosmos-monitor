@@ -45,6 +45,10 @@ func TestBuildViewDelegate(t *testing.T) {
 		"id=\"delegate-preset-wrap\"",
 		"id=\"delegate-custom-wrap\"",
 		"delegate-preset-valoper",
+		"18 decimals",
+		"6-decimal",
+		"limit 500000",
+		"Cosmos id",
 	} {
 		if strings.Contains(out, bad) {
 			t.Fatalf("delegate view should not contain %q", bad)

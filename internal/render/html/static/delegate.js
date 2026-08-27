@@ -192,7 +192,7 @@
     try {
       wei = ethers.parseEther(amt);
     } catch (e) {
-      showError("Amount is not a valid PMT number (18 decimals).", "submit");
+      showError("Amount is not a valid PMT number.", "submit");
       return;
     }
     if (wei <= 0n) {
