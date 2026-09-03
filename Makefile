@@ -17,6 +17,8 @@ REMOTE_DEV_FLAGS   := -web $(REMOTE_DEV_WEB) -show-sources
 DEPLOY_SECRETS := ../deploy/secrets.yml
 TELEGRAM_TOKEN := $(shell grep '^telegram_bot_token:' $(DEPLOY_SECRETS) 2>/dev/null | sed 's/.*: *"\(.*\)".*/\1/')
 TELEGRAM_CHAT_ID := $(shell grep '^telegram_chat_id:' $(DEPLOY_SECRETS) 2>/dev/null | sed 's/.*: *"\(.*\)".*/\1/')
+AUTH_USER := $(shell grep '^monitor_basic_auth_user:' $(DEPLOY_SECRETS) 2>/dev/null | sed 's/.*: *//;s/"//g')
+AUTH_PASS := $(shell grep '^monitor_basic_auth_password:' $(DEPLOY_SECRETS) 2>/dev/null | sed 's/.*: *//;s/"//g')
 
 BINARY := pmtop
 
@@ -81,8 +83,13 @@ remote-start: ## atomic remote pmtop — start in tmux on node4
 		 sleep 1; \
 		 pgrep -a pmtop || (echo "failed to start" && exit 1)'
 
-remote-start-dev: ## atomic remote pmtop — start dev UI on :7778 with -show-sources
-	$(MAKE) remote-start REMOTE_PMTOP_FLAGS='$(REMOTE_DEV_FLAGS)'
+remote-start-dev: ## atomic remote pmtop — start dev UI on :7778 with -show-sources and HTML login
+	@test -n "$(AUTH_USER)" || (echo "missing monitor_basic_auth_user in $(DEPLOY_SECRETS)" && exit 1)
+	@test -n "$(AUTH_PASS)" || (echo "missing monitor_basic_auth_password in $(DEPLOY_SECRETS)" && exit 1)
+	$(SSH_NODE4) \
+		'tmux new-session -d -s pmtop "DATA_PATH=/home/ubuntu/.evmd PMTOP_BASIC_AUTH_USER=$(AUTH_USER) PMTOP_BASIC_AUTH_PASSWORD=$(AUTH_PASS) $(REMOTE_PMTOP) $(REMOTE_DEV_FLAGS)"; \
+		 sleep 1; \
+		 pgrep -a pmtop || (echo "failed to start" && exit 1)'
 
 # Start pmtop with Telegram alerts. Reads telegram_bot_token / telegram_chat_id from
 # tools/ops/deploy/secrets.yml locally and injects via SSH env on node4.
@@ -96,9 +103,15 @@ remote-start-alert: ## atomic remote pmtop — dev :7778 with -alert -node-name=
 		 sleep 1; \
 		 pgrep -a pmtop || (echo "failed to start" && exit 1)'
 
-remote-verify: ## atomic remote pmtop — curl node4 dev :7778 fee market summary
+remote-verify: ## atomic remote pmtop — login then curl node4 dev :7778 fee market summary
+	@test -n "$(AUTH_USER)" || (echo "missing monitor_basic_auth_user in $(DEPLOY_SECRETS)" && exit 1)
 	@$(SSH_NODE4) \
-		'curl -sf http://localhost:7778/s/feemarket | grep -q "fm-summary" && echo "OK: dev fee market summary present" \
+		'rm -f /tmp/pmtop-dev-cookie; \
+		 code=$$(curl -s -o /dev/null -w "%{http_code}" -c /tmp/pmtop-dev-cookie \
+		   -X POST -d "username=$(AUTH_USER)&password=$(AUTH_PASS)" http://localhost:7778/login); \
+		 test "$$code" = "303" || (echo "FAIL: login HTTP $$code want 303" && exit 1); \
+		 curl -sf -b /tmp/pmtop-dev-cookie http://localhost:7778/s/feemarket | grep -q "fm-summary" \
+		   && echo "OK: dev fee market summary present" \
 		 || (echo "FAIL: dev fee market summary not found" && exit 1)'
 
 remote-run: ## atomic remote pmtop — foreground on node4 :7777

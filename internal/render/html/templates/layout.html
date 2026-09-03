@@ -21,6 +21,11 @@ htmx.config.noSwap = [204, 304, '4xx', '5xx'];
 <h1>PMT operations</h1>
 </div>
 <span class="meta">{{.Moniker}} · {{.PageTitle}} · {{if .LivePoll}}<span class="meta__live">live · 5s</span>{{else}}<span class="meta__live">wallet</span>{{end}}</span>
+{{if .ShowLogout}}
+<form method="post" action="/logout" class="dash-logout" hx-boost="false">
+<button type="submit">Log out</button>
+</form>
+{{end}}
 </header>
 {{.Status}}
 <div class="dash-shell">

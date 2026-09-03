@@ -28,6 +28,8 @@ func main() {
 	alertInterval := flag.Duration("alert-interval", 30*time.Second, "alert poll interval")
 	alertDryRun := flag.Bool("alert-dry-run", false, "log alert messages without sending to Telegram")
 	nodeName := flag.String("node-name", "", "node label in alert messages (default: hostname)")
+	authUser := flag.String("auth-user", os.Getenv("PMTOP_BASIC_AUTH_USER"), "HTTP basic auth user (or PMTOP_BASIC_AUTH_USER); empty disables")
+	authPass := flag.String("auth-pass", os.Getenv("PMTOP_BASIC_AUTH_PASSWORD"), "HTTP basic auth password (or PMTOP_BASIC_AUTH_PASSWORD)")
 	flag.Parse()
 
 	opts := panel.Options{ShowSources: showSourcesEnabled(*showSources), PublicEVM: *evmPublic}
@@ -57,7 +59,7 @@ func main() {
 	}
 
 	if *webAddr != "" {
-		html.Start(*webAddr, *evm, load, opts)
+		html.Start(*webAddr, *evm, load, opts, html.Auth{User: *authUser, Pass: *authPass})
 	}
 }
 
