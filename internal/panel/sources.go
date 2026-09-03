@@ -170,7 +170,6 @@ func viewExchangeMatchers(v View) []func(model.SourceExchange) bool {
 	case ViewInfra:
 		return []func(model.SourceExchange) bool{
 			kindMatch("file", "fs"),
-			urlContains("containers/"),
 		}
 	case ViewNode:
 		return []func(model.SourceExchange) bool{
@@ -254,8 +253,6 @@ func exchangeLabel(e model.SourceExchange) string {
 		return "READ " + e.URL
 	case "fs":
 		return "statfs " + e.URL
-	case "docker":
-		return "docker " + e.Method + " " + shortenURL(e.URL)
 	default:
 		return e.Method + " " + shortenURL(e.URL)
 	}
@@ -341,8 +338,6 @@ func exchangeEndpointParts(e model.SourceExchange) (verb, path string) {
 		return "READ", e.URL
 	case "fs":
 		return "statfs", e.URL
-	case "docker":
-		return "docker " + e.Method, shortenURL(e.URL)
 	default:
 		return e.Method, shortenURL(e.URL)
 	}

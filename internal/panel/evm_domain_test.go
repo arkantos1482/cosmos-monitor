@@ -73,19 +73,19 @@ func TestEVMRPCHealthCards(t *testing.T) {
 }
 
 func TestEVMRPCAPIsMissingShowsError(t *testing.T) {
-	label := jsonRPCAPIsLabel(model.Report{
-		NodeAppTomlPath: "/home/ubuntu/.evmd/config/app.toml",
-	})
+	label := jsonRPCAPIsLabel(model.Report{})
 	if !strings.Contains(label, "missing") || !strings.Contains(label, "app.toml") {
 		t.Fatalf("missing APIs should be explicit, got: %q", label)
 	}
 
 	out := evmReachabilityCardHTML(model.Report{
 		EVMRPCOk: true, RPCProbeOK: 1, RPCProbeTotal: 1,
-		NodeAppTomlPath: "/home/ubuntu/.evmd/config/app.toml",
 	})
 	if !strings.Contains(out, "enabled APIs") || !strings.Contains(out, "app.toml") {
 		t.Fatalf("reachability card should surface missing APIs: %s", out)
+	}
+	if strings.Contains(out, ".evmd") || strings.Contains(out, "/home/") {
+		t.Fatalf("must not show host config path: %s", out)
 	}
 	if !strings.Contains(out, `eco-domain__status badge warn`) {
 		t.Fatal("missing APIs should degrade reachability badge")

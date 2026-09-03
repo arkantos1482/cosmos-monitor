@@ -9,7 +9,7 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/panel"
 )
 
-func TestMergeStatusOverlayFillsMissingEVMAndDocker(t *testing.T) {
+func TestMergeStatusOverlayFillsMissingEVM(t *testing.T) {
 	view := Snapshots{
 		Chain: fetch.ChainSnapshot{
 			BlockHeight: 100,
@@ -18,11 +18,10 @@ func TestMergeStatusOverlayFillsMissingEVMAndDocker(t *testing.T) {
 		},
 	}
 	bar := Snapshots{
-		Chain:  fetch.ChainSnapshot{BlockHeight: 101, PeerCount: 4},
-		EVM:    fetch.EVMSnapshot{PeerCount: 2},
-		Docker: fetch.DockerSnapshot{Running: true},
+		Chain: fetch.ChainSnapshot{BlockHeight: 101, PeerCount: 4},
+		EVM:   fetch.EVMSnapshot{PeerCount: 2},
 	}
-	got := mergeStatusOverlay(view, bar, model.StatusAvailability{ChainOK: true, EVMOK: true, DockerOK: true})
+	got := mergeStatusOverlay(view, bar, model.StatusAvailability{ChainOK: true, EVMOK: true})
 
 	if got.Chain.BlockHeight != 101 {
 		t.Fatalf("height = %d, want 101", got.Chain.BlockHeight)
@@ -32,9 +31,6 @@ func TestMergeStatusOverlayFillsMissingEVMAndDocker(t *testing.T) {
 	}
 	if got.EVM.PeerCount != 2 {
 		t.Fatalf("evm peers = %d, want 2", got.EVM.PeerCount)
-	}
-	if !got.Docker.Running {
-		t.Fatal("expected docker running")
 	}
 	if got.Chain.Moniker != "node1" {
 		t.Fatalf("moniker = %q, want node1", got.Chain.Moniker)
@@ -46,28 +42,27 @@ func TestMergeStatusOverlaySkipsFailedBarSources(t *testing.T) {
 		Chain: fetch.ChainSnapshot{BlockHeight: 50, PeerCount: 1},
 	}
 	bar := Snapshots{
-		EVM:    fetch.EVMSnapshot{PeerCount: 9},
-		Docker: fetch.DockerSnapshot{Running: true},
+		EVM: fetch.EVMSnapshot{PeerCount: 9},
 	}
-	got := mergeStatusOverlay(view, bar, model.StatusAvailability{ChainOK: false, EVMOK: false, DockerOK: false})
+	got := mergeStatusOverlay(view, bar, model.StatusAvailability{ChainOK: false, EVMOK: false})
 
 	if got.Chain.BlockHeight != 50 || got.Chain.PeerCount != 1 {
 		t.Fatalf("view chain changed: %+v", got.Chain)
 	}
-	if got.EVM.PeerCount != 0 || got.Docker.Running {
-		t.Fatalf("unexpected overlay from failed bar: evm=%d docker=%v", got.EVM.PeerCount, got.Docker.Running)
+	if got.EVM.PeerCount != 0 {
+		t.Fatalf("unexpected overlay from failed bar: evm=%d", got.EVM.PeerCount)
 	}
 }
 
 func TestStatusBarCacheHit(t *testing.T) {
 	statusBarCache.mu.Lock()
-	statusBarCache.key = statusBarCacheKey{view: panel.ViewNode, rpc: "r", rest: "s", evm: "e", container: "c"}
+	statusBarCache.key = statusBarCacheKey{view: panel.ViewNode, rpc: "r", rest: "s", evm: "e"}
 	statusBarCache.snap = Snapshots{Chain: fetch.ChainSnapshot{BlockHeight: 42}}
 	statusBarCache.bar = model.StatusAvailability{ChainOK: true}
 	statusBarCache.at = time.Now()
 	statusBarCache.mu.Unlock()
 
-	snap, bar := fetchStatusBar(panel.ViewNode, "r", "s", "e", "c")
+	snap, bar := fetchStatusBar(panel.ViewNode, "r", "s", "e")
 	if snap.Chain.BlockHeight != 42 || !bar.ChainOK {
 		t.Fatalf("cache miss: %+v %+v", snap, bar)
 	}

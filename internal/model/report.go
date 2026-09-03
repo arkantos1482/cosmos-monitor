@@ -2,9 +2,8 @@ package model
 
 // StatusAvailability records which status-strip data sources succeeded.
 type StatusAvailability struct {
-	ChainOK  bool
-	EVMOK    bool
-	DockerOK bool
+	ChainOK bool
+	EVMOK   bool
 }
 
 // Report holds pre-formatted dashboard data for HTML panel output.
@@ -18,7 +17,6 @@ type Report struct {
 	// Status-strip source availability (false → render "—" instead of zero/false defaults).
 	HasChainStatus bool
 	HasEVMPeers    bool
-	HasNodeStatus  bool
 
 	NodeID             string
 	AppVersion         string
@@ -43,21 +41,10 @@ type Report struct {
 	DiskUsed, DiskTotal  string
 	DiskAvail            string
 	DiskPct              int
-	DataPath             string
+	HasChainDataDisk     bool
 	DataDiskUsed         string
 	DataDiskTotal        string
 	DataDiskPct          int
-
-	NodeRunning   bool
-	NodeImage     string
-	NodeOOMKilled bool
-	NodeCPU       string
-	NodeMemUsed   string
-	NodeMemTotal  string
-	NodeMemPct    int
-	NodeUptime    string
-	NodeStartedAt string
-	Restarts      int
 
 	Validators      []Validator
 	BondedCount     int
@@ -120,7 +107,6 @@ type Report struct {
 	NodeEVMMinTip            string
 	NodeMempoolPriceLimit    string
 	NodeMaxTxGasWanted       string
-	NodeAppTomlPath          string
 	Elasticity               int64
 	BaseFeeChangeDenominator int64
 	ParentBlockGasUsed       uint64

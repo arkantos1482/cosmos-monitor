@@ -44,7 +44,6 @@ pmtop --dump          # HTML fragment to stdout, then exit
 | `-rpc` | `http://localhost:26657` | CometBFT RPC |
 | `-rest` | `http://localhost:1317` | Cosmos REST |
 | `-evm` | `http://localhost:8545` | EVM JSON-RPC |
-| `-container` | `evmd-node` | Docker container name |
 | `-web` | `:7777` | Web listen address; empty disables (requires `-dump`) |
 | `-auth-user` / `-auth-pass` | env `PMTOP_BASIC_AUTH_*` | HTML login (cookie session) on every page including `/delegate`. Empty user or password disables the gate. |
 | `-dump` | `false` | Fetch once, print HTML fragment, exit |

@@ -10,8 +10,8 @@ import (
 )
 
 type statusBarCacheKey struct {
-	view                        panel.View
-	rpc, rest, evm, container string
+	view              panel.View
+	rpc, rest, evm string
 }
 
 var statusBarCache struct {
@@ -22,8 +22,8 @@ var statusBarCache struct {
 	at   time.Time
 }
 
-func fetchStatusBar(view panel.View, rpc, rest, evm, container string) (Snapshots, model.StatusAvailability) {
-	key := statusBarCacheKey{view: view, rpc: rpc, rest: rest, evm: evm, container: container}
+func fetchStatusBar(view panel.View, rpc, rest, evm string) (Snapshots, model.StatusAvailability) {
+	key := statusBarCacheKey{view: view, rpc: rpc, rest: rest, evm: evm}
 	skipEVMPeer := view == panel.ViewHome || view == panel.ViewEVM
 
 	statusBarCache.mu.Lock()
@@ -40,13 +40,11 @@ func fetchStatusBar(view panel.View, rpc, rest, evm, container string) (Snapshot
 	var (
 		chain  fetch.ChainSnapshot
 		evSnap fetch.EVMSnapshot
-		docker fetch.DockerSnapshot
 		p      fetch.ChainParams
 		wg     sync.WaitGroup
 	)
-	wg.Add(2)
+	wg.Add(1)
 	go func() { defer wg.Done(); chain = fetch.FetchChainStatus(rpc, rest) }()
-	go func() { defer wg.Done(); docker = fetch.FetchDockerRunning(container) }()
 	if view != panel.ViewEVM {
 		wg.Add(1)
 		go func() { defer wg.Done(); p = paramsForView(view, rest) }()
@@ -58,11 +56,10 @@ func fetchStatusBar(view panel.View, rpc, rest, evm, container string) (Snapshot
 	wg.Wait()
 	chain.Params = p
 
-	snap := Snapshots{Chain: chain, EVM: evSnap, Docker: docker}
+	snap := Snapshots{Chain: chain, EVM: evSnap}
 	bar := model.StatusAvailability{
-		ChainOK:  chain.Err == nil,
-		EVMOK:    !skipEVMPeer && evSnap.Err == nil,
-		DockerOK: docker.Err == nil,
+		ChainOK: chain.Err == nil,
+		EVMOK:   !skipEVMPeer && evSnap.Err == nil,
 	}
 
 	statusBarCache.mu.Lock()
@@ -93,9 +90,6 @@ func mergeStatusOverlay(view, bar Snapshots, barOK model.StatusAvailability) Sna
 	}
 	if barOK.EVMOK {
 		view.EVM.PeerCount = bar.EVM.PeerCount
-	}
-	if barOK.DockerOK {
-		view.Docker.Running = bar.Docker.Running
 	}
 	return view
 }

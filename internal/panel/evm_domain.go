@@ -203,9 +203,6 @@ func jsonRPCAPIsLabel(d model.Report) string {
 	if apis := strings.TrimSpace(d.JSONRPCAPIs); apis != "" {
 		return apis
 	}
-	if path := strings.TrimSpace(d.NodeAppTomlPath); path != "" {
-		return fmt.Sprintf("missing ([json-rpc] api in %s)", path)
-	}
 	return "missing ([json-rpc] api in app.toml)"
 }
 

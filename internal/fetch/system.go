@@ -20,8 +20,8 @@ var diskRoot = func() string {
 	return "/"
 }()
 
-// dataRoot is an optional chain-data directory for disk stats (e.g. ~/.evmd).
-// Set DATA_PATH when the validator home is on a path worth monitoring separately.
+// dataRoot is an optional chain-data directory for disk stats (validator home).
+// Set DATA_PATH when that filesystem should be gauged separately from root.
 var dataRoot = strings.TrimSpace(os.Getenv("DATA_PATH"))
 
 // SystemSnapshot holds OS-level metrics.
@@ -142,7 +142,7 @@ func recordFileExchange(path, content string, err error) {
 	ex := Exchange{
 		Kind:    "file",
 		Method:  "READ",
-		URL:     path,
+		URL:     tracePathLabel(path),
 		Request: "(none)",
 		OK:      err == nil,
 	}
@@ -158,7 +158,7 @@ func recordFSExchange(path string, stat syscall.Statfs_t, err error) {
 	ex := Exchange{
 		Kind:    "fs",
 		Method:  "statfs",
-		URL:     path,
+		URL:     tracePathLabel(path),
 		Request: "(none)",
 		OK:      err == nil,
 	}
@@ -170,4 +170,31 @@ func recordFSExchange(path string, stat syscall.Statfs_t, err error) {
 			stat.Blocks, stat.Bfree, stat.Bavail, stat.Bsize))
 	}
 	recordTrace(ex)
+}
+
+// tracePathLabel is the path shown in Data sources. Host validator-home
+// locations must not appear in the UI.
+func tracePathLabel(path string) string {
+	if path == "" {
+		return ""
+	}
+	if strings.HasPrefix(path, "/proc/") {
+		return path
+	}
+	if path == "/" || path == diskRoot {
+		if path == "/" || diskRoot == "/" {
+			return "/"
+		}
+		return "root-disk"
+	}
+	if dataRoot != "" && path == dataRoot {
+		return "chain-data"
+	}
+	if strings.HasSuffix(path, "/app.toml") || path == "app.toml" {
+		return "app.toml"
+	}
+	if strings.Contains(path, ".evmd") {
+		return "chain-data"
+	}
+	return path
 }

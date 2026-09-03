@@ -260,9 +260,9 @@ func TestHintDeferredToSectionBottom(t *testing.T) {
 	w.Section("1. TEST")
 	w.Subsection("Metrics")
 	w.SourceLog([]model.SourceExchange{{
-		Kind: "docker", Method: "GET",
-		URL: "http://localhost/containers/evmd-node/json",
-		Request: "(none)", Response: `{"State":{"Running":true}}`, OK: true, Latency: "1ms",
+		Kind: "fs", Method: "statfs",
+		URL: "chain-data",
+		Request: "(none)", Response: `blocks=1`, OK: true, Latency: "1ms",
 	}})
 	w.Row("status", "running")
 	w.flush()

@@ -64,17 +64,3 @@ func FetchEVMPeerCount(endpoint string) EVMSnapshot {
 	}
 	return snap
 }
-
-// FetchDockerRunning loads only container running state for the status strip.
-func FetchDockerRunning(container string) DockerSnapshot {
-	client := newDockerClient()
-	snap := DockerSnapshot{}
-
-	var insp dockerInspect
-	if err := doDockerJSON(client, fmt.Sprintf("http://localhost/containers/%s/json", container), &insp); err != nil {
-		snap.Err = err
-		return snap
-	}
-	snap.Running = insp.State.Running
-	return snap
-}

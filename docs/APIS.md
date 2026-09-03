@@ -121,24 +121,6 @@ All calls use `POST` with body `{"jsonrpc":"2.0","method":"<method>","params":[]
 
 ---
 
-## Docker socket — `unix:///var/run/docker.sock` (GET, HTTP)
-
-Base URL: `http://localhost` (dialed over the socket).
-
-| Endpoint | Used for | Key fields |
-|----------|----------|------------|
-| `GET /containers/{name}/stats?stream=false` | CPU%, RAM usage/limit | `cpu_stats.cpu_usage.total_usage`, `precpu_stats.cpu_usage.total_usage`, `cpu_stats.system_cpu_usage`, `precpu_stats.system_cpu_usage`, `cpu_stats.online_cpus`, `memory_stats.{usage,limit}` |
-| `GET /containers/{name}/json` | running state, image, restarts, uptime, OOM | `Config.Image`, `State.{Running,StartedAt,OOMKilled}`, `RestartCount` |
-
-CPU% formula:
-```
-cpuDelta = cpu_stats.cpu_usage.total_usage - precpu_stats.cpu_usage.total_usage
-sysDelta  = cpu_stats.system_cpu_usage      - precpu_stats.system_cpu_usage
-cpuPercent = (cpuDelta / sysDelta) * numCPUs * 100
-```
-
----
-
 ## /proc filesystem — local reads (no HTTP)
 
 | File | Used for | Fields parsed |
@@ -148,7 +130,7 @@ cpuPercent = (cpuDelta / sysDelta) * numCPUs * 100
 
 Disk: `syscall.Statfs(DISK_PATH or "/")` → total, used, and available bytes (`Bavail`).
 
-Optional `DATA_PATH` (e.g. `/home/ubuntu/.evmd`): separate `statfs` on the validator data directory for chain-data disk pressure.
+Optional `DATA_PATH`: separate `statfs` on the validator data directory for chain-data disk pressure. The UI labels this **chain data** and does not show the host path.
 
 ---
 

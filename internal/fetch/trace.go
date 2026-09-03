@@ -9,7 +9,7 @@ const maxExchangeResponseBytes = 12_000
 
 // Exchange records one raw data-source call (HTTP, JSON-RPC, file, or fs).
 type Exchange struct {
-	Kind     string // http, jsonrpc, file, fs, docker
+	Kind     string // http, jsonrpc, file, fs
 	Method   string
 	URL      string
 	Request  string

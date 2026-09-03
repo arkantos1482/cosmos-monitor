@@ -10,7 +10,7 @@ import (
 func TestBuildOverviewStack(t *testing.T) {
 	d := model.Report{
 		Moniker: "node1", Synced: true, BlockHeight: "100",
-		NodeRunning: true, BondedCount: 4, HasPMTParams: true, PMTEnabled: true,
+		BondedCount: 4, HasPMTParams: true, PMTEnabled: true,
 		EVMChainID: 290290, EVMSynced: true, EVMRPCOk: true,
 		MemPct: 42, DiskPct: 55, Load1: 0.5,
 		RPCProbeOK: 4, RPCProbeTotal: 4,
@@ -197,7 +197,7 @@ func TestBuildViewSingleSection(t *testing.T) {
 func TestOverviewDataSourcesProvenance(t *testing.T) {
 	d := model.Report{
 		Moniker: "node1", Synced: true, BlockHeight: "100",
-		NodeRunning: true, BondedCount: 4, HasPMTParams: true, PMTEnabled: true,
+		BondedCount: 4, HasPMTParams: true, PMTEnabled: true,
 		Exchanges: []model.SourceExchange{
 			{
 				Kind: "http", Method: "GET",

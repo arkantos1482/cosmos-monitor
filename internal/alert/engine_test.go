@@ -20,7 +20,7 @@ func (s *stubSender) Send(text string) error {
 
 func healthyReport() model.Report {
 	return model.Report{
-		NodeRunning: true, Synced: true,
+		Synced: true,
 		EVMRPCOk: true, HasEVMListening: true, EVMListening: true, EVMSynced: true,
 		RPCProbeOK: 1, RPCProbeTotal: 1, JSONRPCAPIs: "eth,txpool,net,web3",
 		HasPMTParams: true, PMTEnabled: true, Inflation: 3.5,
@@ -35,7 +35,7 @@ func TestEngineCooldownSuppressesRepeatAlert(t *testing.T) {
 	sender := &stubSender{}
 	load := func() model.Report {
 		r := healthyReport()
-		r.NodeRunning = false
+		r.MemPct = 95
 		return r
 	}
 	cfg := Config{
@@ -184,7 +184,7 @@ func TestEngineRecoveryAfterClear(t *testing.T) {
 		step++
 		r := healthyReport()
 		if step == 1 {
-			r.NodeRunning = false
+			r.MemPct = 95
 		}
 		return r
 	}
@@ -204,7 +204,7 @@ func TestEngineRecoveryAfterClear(t *testing.T) {
 	if !strings.Contains(sender.msgs[1], "resolved") {
 		t.Fatalf("expected recovery message, got %q", sender.msgs[1])
 	}
-	if !strings.Contains(sender.msgs[1], "container stopped") {
+	if !strings.Contains(sender.msgs[1], "host RAM") {
 		t.Fatalf("recovery should name cleared finding, got %q", sender.msgs[1])
 	}
 }
@@ -244,7 +244,7 @@ func TestEngineAlertMessageDeltaOnly(t *testing.T) {
 	load := func() model.Report {
 		step++
 		r := healthyReport()
-		r.NodeRunning = false // steady infra finding
+		r.MemPct = 95 // steady infra finding
 		if step >= 2 {
 			r.EVMRPCOk = false // new finding starting tick 2 (needs confirm)
 		}
@@ -264,10 +264,10 @@ func TestEngineAlertMessageDeltaOnly(t *testing.T) {
 	if len(sender.msgs) != 2 {
 		t.Fatalf("expected 2 alerts, got %d", len(sender.msgs))
 	}
-	if !strings.Contains(sender.msgs[0], "container stopped") {
+	if !strings.Contains(sender.msgs[0], "host RAM") {
 		t.Fatalf("first alert should be infra: %q", sender.msgs[0])
 	}
-	if strings.Contains(sender.msgs[1], "container stopped") {
+	if strings.Contains(sender.msgs[1], "host RAM") {
 		t.Fatalf("second alert must be delta-only (no dump of active infra): %q", sender.msgs[1])
 	}
 	if !strings.Contains(sender.msgs[1], "RPC DOWN") {
@@ -430,14 +430,14 @@ func TestEngineNoNotListeningWhenListeningUnknown(t *testing.T) {
 
 func TestFormatAlertMessage(t *testing.T) {
 	active := map[string]panel.Finding{
-		findingID(testFinding("infra", "container_stopped", "bad", "container stopped")): testFinding("infra", "container_stopped", "bad", "container stopped"),
+		findingID(testFinding("infra", "host_ram", "bad", "host RAM 95%")): testFinding("infra", "host_ram", "bad", "host RAM 95%"),
 		findingID(testFinding("evm", "rpc_down", "bad", "RPC DOWN")):                     testFinding("evm", "rpc_down", "bad", "RPC DOWN"),
 	}
 	msg := formatAlertMessage("node4", active, model.Report{BlockHeight: "1842032", TimeSinceBlock: "12s"})
 	for _, want := range []string{
 		"🚨 PMT — node4",
 		"Infrastructure · bad",
-		"container stopped",
+		"host RAM 95%",
 		"EVM JSON-RPC · bad",
 		"RPC DOWN",
 		"Height 1842032 · 12s ago",
@@ -449,11 +449,11 @@ func TestFormatAlertMessage(t *testing.T) {
 }
 
 func TestFormatRecoveryMessage(t *testing.T) {
-	msg := formatRecoveryMessage("node4", testFinding("infra", "container_stopped", "bad", "container stopped"))
+	msg := formatRecoveryMessage("node4", testFinding("infra", "host_ram", "bad", "host RAM 95%"))
 	if !strings.Contains(msg, "✅ PMT — node4 resolved") {
 		t.Fatalf("unexpected recovery header: %q", msg)
 	}
-	if !strings.Contains(msg, "Infrastructure · container stopped") {
+	if !strings.Contains(msg, "Infrastructure · host RAM 95%") {
 		t.Fatalf("unexpected recovery body: %q", msg)
 	}
 }

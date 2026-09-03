@@ -20,7 +20,6 @@ func main() {
 	rest := flag.String("rest", "http://localhost:1317", "Cosmos REST/LCD endpoint")
 	evm := flag.String("evm", "http://localhost:8545", "EVM JSON-RPC endpoint")
 	evmPublic := flag.String("evm-public", panel.DefaultPublicEVM, "public HTTPS JSON-RPC for MetaMask (Delegate page)")
-	container := flag.String("container", "evmd-node", "Docker container name")
 	webAddr := flag.String("web", ":7777", "address to serve web UI (e.g. :7777); empty disables")
 	dump := flag.Bool("dump", false, "fetch once, print HTML fragment to stdout, and exit")
 	showSources := flag.Bool("show-sources", false, "show collapsible raw endpoint request/response traces (dev only)")
@@ -35,8 +34,8 @@ func main() {
 	opts := panel.Options{ShowSources: showSourcesEnabled(*showSources), PublicEVM: *evmPublic}
 
 	load := func(v panel.View) model.Report {
-		sn := fetchall.LoadFor(v, *rpc, *rest, *evm, *container)
-		return report.Build(sn.Chain, sn.EVM, sn.System, sn.Docker, *evm, sn.Status, sn.AppToml, sn.Exchanges)
+		sn := fetchall.LoadFor(v, *rpc, *rest, *evm)
+		return report.Build(sn.Chain, sn.EVM, sn.System, *evm, sn.Status, sn.AppToml, sn.Exchanges)
 	}
 	loadHome := func() model.Report { return load(panel.ViewHome) }
 

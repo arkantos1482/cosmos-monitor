@@ -54,7 +54,7 @@ func nodeSummaryRows(d model.Report) []struct{ label, val string } {
 	if d.BlockInterval != "" {
 		rows = append(rows, struct{ label, val string }{"interval", d.BlockInterval})
 	}
-	if d.HasNodeStatus || d.PeerCount > 0 {
+	if d.HasChainStatus || d.PeerCount > 0 {
 		rows = append(rows, struct{ label, val string }{"peers", fmt.Sprintf("%d P2P", d.PeerCount)})
 	}
 	return rows

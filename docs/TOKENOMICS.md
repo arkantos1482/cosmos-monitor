@@ -108,6 +108,6 @@ When the PMT pool is empty, outstanding rewards reflect **tx fees only**.
 | Validator jailed | 🔴 HIGH | Check signing, restart node if needed |
 | Validator tombstoned | 🔴 CRITICAL | Permanent — must replace validator |
 | MissedBlocks > threshold | 🟡 WARN | Network/node instability |
-| Container stopped | 🔴 HIGH | `docker start evmd-node` on the relevant node |
+| Disk pressure | 🔴 HIGH | Host or chain-data filesystem filling up |
 | CatchingUp = true | 🟡 WARN | Node is replaying blocks, not yet live |
 | Bonded < 4/4 | 🔴 HIGH | One or more validators unbonded or jailed |

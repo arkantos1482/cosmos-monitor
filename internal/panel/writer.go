@@ -786,7 +786,6 @@ func inlineHTML(s string) string {
 //   module x/bank            on-chain module / keeper state
 //   proc /proc/loadavg       host procfs
 //   fs statfs /              host filesystem
-//   docker GET /containers/… Docker Engine API (unix socket)
 //   config app.toml […]      local node config
 //   derived (…)              computed in pmtop or cross-panel
 //   ledger                   Block reward ledger / economics overview

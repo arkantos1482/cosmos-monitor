@@ -32,7 +32,7 @@ REMOTE_PMTOP_STOP = tmux kill-session -t pmtop 2>/dev/null || true; \
 		echo "stopped pmtop process(es)"; \
 	else echo "no pmtop process"; fi
 
-# On NODE4_HOST (localhost from SSH): CometBFT :26657, REST :1317, EVM :8545, docker socket.
+# On NODE4_HOST (localhost from SSH): CometBFT :26657, REST :1317, EVM :8545.
 # pmtop source: https://github.com/arkantos1482/cosmos-monitor
 
 .DEFAULT_GOAL := help

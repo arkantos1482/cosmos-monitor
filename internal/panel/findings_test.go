@@ -29,20 +29,15 @@ func hasFinding(t *testing.T, fs []Finding, section, key, severity string) {
 
 func TestFindingsInfra(t *testing.T) {
 	fs := Findings(model.Report{
-		NodeRunning: false, NodeOOMKilled: true, Restarts: 4,
-		MemPct: 80, DiskPct: 92, NodeMemPct: 91,
+		MemPct: 80, DiskPct: 92,
 	})
-	hasFinding(t, fs, "infra", "container_stopped", "bad")
-	hasFinding(t, fs, "infra", "oom_killed", "bad")
-	hasFinding(t, fs, "infra", "restarts", "warn")
 	hasFinding(t, fs, "infra", "host_ram", "warn")
 	hasFinding(t, fs, "infra", "disk", "bad")
-	hasFinding(t, fs, "infra", "container_mem", "bad")
 }
 
 func TestFindingsInfraChainDataDisk(t *testing.T) {
 	fs := Findings(model.Report{
-		NodeRunning: true, DataPath: "/data", DataDiskPct: 78, DiskPct: 10,
+		HasChainDataDisk: true, DataDiskPct: 78, DiskPct: 10,
 	})
 	hasFinding(t, fs, "infra", "disk", "warn")
 }
@@ -149,7 +144,7 @@ func TestFindingsDistribution(t *testing.T) {
 
 func TestFindingsHealthyEmpty(t *testing.T) {
 	fs := Findings(model.Report{
-		NodeRunning: true, Synced: true,
+		Synced: true,
 		EVMRPCOk: true, HasEVMListening: true, EVMListening: true, EVMSynced: true,
 		JSONRPCAPIs: "eth,txpool,net,web3",
 		HasPMTParams: true, PMTEnabled: true, Inflation: 3.5,

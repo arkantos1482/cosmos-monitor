@@ -14,7 +14,6 @@ type Snapshots struct {
 	Chain     fetch.ChainSnapshot
 	EVM       fetch.EVMSnapshot
 	System    fetch.SystemSnapshot
-	Docker    fetch.DockerSnapshot
 	AppToml   fetch.AppTomlGasConfig
 	Exchanges []fetch.Exchange
 	Status    model.StatusAvailability
@@ -27,8 +26,8 @@ const (
 )
 
 type viewCacheKey struct {
-	view                        panel.View
-	rpc, rest, evm, container string
+	view              panel.View
+	rpc, rest, evm string
 }
 
 type cachedSnapshot struct {
@@ -45,13 +44,13 @@ var cache struct {
 }
 
 // Load fetches all sources (full dashboard refresh).
-func Load(rpc, rest, evm, container string) Snapshots {
-	return LoadFor(panel.ViewHome, rpc, rest, evm, container)
+func Load(rpc, rest, evm string) Snapshots {
+	return LoadFor(panel.ViewHome, rpc, rest, evm)
 }
 
 // LoadFor fetches what the active section needs (view-scoped, short-lived cache).
-func LoadFor(view panel.View, rpc, rest, evm, container string) Snapshots {
-	key := viewCacheKey{view: view, rpc: rpc, rest: rest, evm: evm, container: container}
+func LoadFor(view panel.View, rpc, rest, evm string) Snapshots {
+	key := viewCacheKey{view: view, rpc: rpc, rest: rest, evm: evm}
 
 	cache.mu.Lock()
 	if entry, ok := cache.byView[key]; ok && time.Since(entry.at) < snapshotTTL {
@@ -62,8 +61,8 @@ func LoadFor(view panel.View, rpc, rest, evm, container string) Snapshots {
 	cache.mu.Unlock()
 
 	fetch.BeginTrace()
-	viewSnap := fetchForView(view, rpc, rest, evm, container)
-	barSnap, barOK := fetchStatusBar(view, rpc, rest, evm, container)
+	viewSnap := fetchForView(view, rpc, rest, evm)
+	barSnap, barOK := fetchStatusBar(view, rpc, rest, evm)
 	if needsAppToml(view) {
 		viewSnap.AppToml = fetch.FetchAppTomlGasConfig()
 	}
@@ -132,17 +131,10 @@ func paramsForView(view panel.View, rest string) fetch.ChainParams {
 	return cachedParams(rest)
 }
 
-func fetchForView(view panel.View, rpc, rest, evm, container string) Snapshots {
+func fetchForView(view panel.View, rpc, rest, evm string) Snapshots {
 	switch view {
 	case panel.ViewInfra:
-		var sys fetch.SystemSnapshot
-		var docker fetch.DockerSnapshot
-		var wg sync.WaitGroup
-		wg.Add(2)
-		go func() { defer wg.Done(); sys = fetch.FetchSystem() }()
-		go func() { defer wg.Done(); docker = fetch.FetchDocker(container) }()
-		wg.Wait()
-		return Snapshots{System: sys, Docker: docker}
+		return Snapshots{System: fetch.FetchSystem()}
 
 	case panel.ViewEVM:
 		var evSnap fetch.EVMSnapshot
@@ -158,13 +150,11 @@ func fetchForView(view panel.View, rpc, rest, evm, container string) Snapshots {
 	chainOpts := chainRecipeFor(view)
 	needEVM := view == panel.ViewHome
 	needSys := view == panel.ViewHome
-	needDocker := view == panel.ViewHome
 
 	var (
 		chain  fetch.ChainSnapshot
 		evSnap fetch.EVMSnapshot
 		sys    fetch.SystemSnapshot
-		docker fetch.DockerSnapshot
 		p      fetch.ChainParams
 		wg     sync.WaitGroup
 	)
@@ -179,16 +169,12 @@ func fetchForView(view panel.View, rpc, rest, evm, container string) Snapshots {
 		wg.Add(1)
 		go func() { defer wg.Done(); sys = fetch.FetchSystem() }()
 	}
-	if needDocker {
-		wg.Add(1)
-		go func() { defer wg.Done(); docker = fetch.FetchDocker(container) }()
-	}
 	wg.Wait()
 	chain.Params = p
 	if needsLocalBalanceEnrichment(chainOpts) {
 		enrichLocalStakingBalances(rest, &chain)
 	}
-	return Snapshots{Chain: chain, EVM: evSnap, System: sys, Docker: docker}
+	return Snapshots{Chain: chain, EVM: evSnap, System: sys}
 }
 
 func enrichLocalStakingBalances(rest string, chain *fetch.ChainSnapshot) {

@@ -66,18 +66,6 @@ func writeStatusPills(w Writer, d model.Report) {
 	}
 	writeStatusPill(w, "Peers", peers, "")
 
-	if d.HasNodeStatus {
-		nodeStatus := "stopped"
-		nodeCls := "badge--bad"
-		if d.NodeRunning {
-			nodeStatus = "running"
-			nodeCls = "badge--ok"
-		}
-		writeStatusPillBadge(w, "Node", nodeStatus, nodeCls)
-	} else {
-		writeStatusPill(w, "Node", "—", "")
-	}
-
 	baseFee := d.BaseFee
 	if !d.HasChainStatus || baseFee == "" {
 		baseFee = "—"

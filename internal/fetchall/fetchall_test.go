@@ -9,7 +9,7 @@ import (
 )
 
 func TestLoadForReturnsViewScopedSnapshots(t *testing.T) {
-	infra := LoadFor(panel.ViewInfra, "http://127.0.0.1:1", "http://127.0.0.1:1", "http://127.0.0.1:1", "none")
+	infra := LoadFor(panel.ViewInfra, "http://127.0.0.1:1", "http://127.0.0.1:1", "http://127.0.0.1:1")
 	if infra.Chain.BlockHeight != 0 {
 		t.Fatal("infra view should not fetch chain block height")
 	}
@@ -17,15 +17,15 @@ func TestLoadForReturnsViewScopedSnapshots(t *testing.T) {
 
 func TestLoadForCachesPerView(t *testing.T) {
 	const dead = "http://127.0.0.1:1"
-	key := viewCacheKey{view: panel.ViewInfra, rpc: dead, rest: dead, evm: dead, container: "none"}
+	key := viewCacheKey{view: panel.ViewInfra, rpc: dead, rest: dead, evm: dead}
 
-	LoadFor(panel.ViewInfra, dead, dead, dead, "none")
+	LoadFor(panel.ViewInfra, dead, dead, dead)
 	cache.mu.Lock()
 	at1 := cache.byView[key].at
 	cache.mu.Unlock()
 
 	time.Sleep(10 * time.Millisecond)
-	LoadFor(panel.ViewInfra, dead, dead, dead, "none")
+	LoadFor(panel.ViewInfra, dead, dead, dead)
 	cache.mu.Lock()
 	at2 := cache.byView[key].at
 	cache.mu.Unlock()
@@ -33,7 +33,7 @@ func TestLoadForCachesPerView(t *testing.T) {
 		t.Fatal("second LoadFor within TTL should reuse cached snapshot")
 	}
 
-	LoadFor(panel.ViewEVM, dead, dead, dead, "none")
+	LoadFor(panel.ViewEVM, dead, dead, dead)
 	cache.mu.Lock()
 	n := len(cache.byView)
 	cache.mu.Unlock()
@@ -44,14 +44,14 @@ func TestLoadForCachesPerView(t *testing.T) {
 
 func TestLoadForCacheExpires(t *testing.T) {
 	const dead = "http://127.0.0.1:1"
-	key := viewCacheKey{view: panel.ViewInfra, rpc: dead, rest: dead, evm: dead, container: "none"}
+	key := viewCacheKey{view: panel.ViewInfra, rpc: dead, rest: dead, evm: dead}
 	cache.mu.Lock()
 	cache.byView = map[viewCacheKey]cachedSnapshot{
 		key: {snap: Snapshots{System: fetch.SystemSnapshot{LoadAvg1: 999.99}}, at: time.Now().Add(-snapshotTTL)},
 	}
 	cache.mu.Unlock()
 
-	snap := LoadFor(panel.ViewInfra, dead, dead, dead, "none")
+	snap := LoadFor(panel.ViewInfra, dead, dead, dead)
 	if snap.System.LoadAvg1 == 999.99 {
 		t.Fatal("expired cache entry should be refreshed")
 	}

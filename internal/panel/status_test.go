@@ -14,11 +14,8 @@ func TestStatusStripUnknownPeersAndNode(t *testing.T) {
 	if !strings.Contains(out, ">Peers</span><span class=\"dash-status__value\">—</span>") {
 		t.Fatalf("expected unknown peers dash, got: %s", out)
 	}
-	if !strings.Contains(out, ">Node</span><span class=\"dash-status__value\">—</span>") {
-		t.Fatalf("expected unknown node dash, got: %s", out)
-	}
-	if strings.Contains(out, "badge--bad") {
-		t.Fatalf("should not show stopped badge when node status unknown: %s", out)
+	if strings.Contains(out, ">Node</span>") {
+		t.Fatalf("node pill should be gone: %s", out)
 	}
 }
 
@@ -26,12 +23,10 @@ func TestStatusStripLiveValues(t *testing.T) {
 	out := RenderStatusStrip(model.Report{
 		HasChainStatus: true,
 		HasEVMPeers:    true,
-		HasNodeStatus:  true,
 		Synced:         true,
 		BlockHeight:    "100",
 		PeerCount:      3,
 		EVMPeerCount:   1,
-		NodeRunning:    true,
 		BaseFee:        "7 apmt",
 		HasPMTParams:   true,
 		PMTEnabled:     true,
@@ -41,7 +36,6 @@ func TestStatusStripLiveValues(t *testing.T) {
 		">100<",
 		">synced<",
 		">Peers</span><span class=\"dash-status__value\">3</span>",
-		">running<",
 		"7 apmt",
 		">enabled<",
 	} {

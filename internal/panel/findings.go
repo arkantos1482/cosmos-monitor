@@ -72,23 +72,11 @@ func severityFromBadgeClass(cls string) string {
 
 func infraFindings(d model.Report, out *[]Finding) {
 	s := loadInfraState(d)
-	if !d.NodeRunning {
-		appendFinding(out, "infra", "container_stopped", "bad", "container stopped")
-	}
-	if d.NodeOOMKilled {
-		appendFinding(out, "infra", "oom_killed", "bad", "OOM killed")
-	}
-	if d.Restarts >= 3 {
-		appendFinding(out, "infra", "restarts", "warn", fmt.Sprintf("%d restarts", d.Restarts))
-	}
 	if tone := infraMeterTone(d.MemPct); tone != "" {
 		appendFinding(out, "infra", "host_ram", tone, fmt.Sprintf("host RAM %d%%", d.MemPct))
 	}
 	if tone := infraMeterTone(s.chainDiskPct); tone != "" {
 		appendFinding(out, "infra", "disk", tone, fmt.Sprintf("%s %d%%", s.chainDiskLabel, s.chainDiskPct))
-	}
-	if tone := infraMeterTone(d.NodeMemPct); tone != "" {
-		appendFinding(out, "infra", "container_mem", tone, fmt.Sprintf("container RAM %d%%", d.NodeMemPct))
 	}
 }
 

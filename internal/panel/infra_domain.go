@@ -10,8 +10,6 @@ import (
 )
 
 type infraState struct {
-	imageShort     string
-	containerBadge summaryBadge
 	alerts         []summaryBadge
 	chainDiskLabel string
 	chainDiskPct   int
@@ -20,45 +18,21 @@ type infraState struct {
 
 func loadInfraState(d model.Report) infraState {
 	s := infraState{
-		imageShort:     infraImageShort(d.NodeImage),
 		chainDiskLabel: "root disk",
 		chainDiskPct:   d.DiskPct,
 	}
-	if d.NodeRunning {
-		s.containerBadge = summaryBadge{"running", "ok"}
-	} else {
-		s.containerBadge = summaryBadge{"stopped", "bad"}
-	}
-	if d.NodeOOMKilled {
-		s.alerts = append(s.alerts, summaryBadge{"OOM killed", "bad"})
-	}
-	if d.Restarts > 0 {
-		kind := ""
-		if d.Restarts >= 3 {
-			kind = "warn"
-		}
-		s.alerts = append(s.alerts, summaryBadge{fmt.Sprintf("%d restarts", d.Restarts), kind})
-	}
-	if d.DataPath != "" && d.DataDiskPct > 0 {
+	if d.HasChainDataDisk {
 		s.chainDiskLabel = "chain data"
 		s.chainDiskPct = d.DataDiskPct
 	}
+	if tone := infraMeterTone(d.MemPct); tone != "" {
+		s.alerts = append(s.alerts, summaryBadge{fmt.Sprintf("RAM %d%%", d.MemPct), tone})
+	}
+	if tone := infraMeterTone(s.chainDiskPct); tone != "" {
+		s.alerts = append(s.alerts, summaryBadge{fmt.Sprintf("%s %d%%", s.chainDiskLabel, s.chainDiskPct), tone})
+	}
 	s.loadDetail = infraLoadDetail(d)
 	return s
-}
-
-func infraImageShort(image string) string {
-	image = strings.TrimSpace(image)
-	if image == "" {
-		return ""
-	}
-	if i := strings.LastIndex(image, "/"); i >= 0 {
-		image = image[i+1:]
-	}
-	if i := strings.Index(image, "@sha256:"); i >= 0 {
-		image = image[:i]
-	}
-	return image
 }
 
 func infraLoadDetail(d model.Report) string {
@@ -121,9 +95,6 @@ func infraHostMetersHTML(d model.Report, s infraState) string {
 func diskDetailForLabel(d model.Report, label string) string {
 	switch label {
 	case "chain data":
-		if d.DataPath != "" {
-			return fmt.Sprintf("%s used of %s  (%s)", d.DataDiskUsed, d.DataDiskTotal, d.DataPath)
-		}
 		return fmt.Sprintf("%s used of %s", d.DataDiskUsed, d.DataDiskTotal)
 	default:
 		return fmt.Sprintf("%s used · %s free of %s", d.DiskUsed, orDash(d.DiskAvail), d.DiskTotal)
@@ -135,82 +106,6 @@ func infraStatHTML(label, detail string) string {
 		`<div class="infra-stat"><span class="infra-stat__label">%s</span>`+
 			`<span class="infra-stat__value">%s</span></div>`,
 		html.EscapeString(label), html.EscapeString(detail))
-}
-
-func infraContainerCardHTML(d model.Report, s infraState) string {
-	statusCls := "badge--ok"
-	statusLabel := "running"
-	if !d.NodeRunning {
-		statusCls = "badge--bad"
-		statusLabel = "stopped"
-	}
-	var b strings.Builder
-	fmt.Fprintf(&b, `<div class="eco-domain eco-domain--infra">`)
-	ecoDomainCardTitle(&b, "evmd-node", "Docker container", statusCls, statusLabel)
-	b.WriteString(`<div class="eco-domain__rows">`)
-	if s.imageShort != "" {
-		ecoDomainRow(&b, "", "image", s.imageShort, "deployed container image")
-	}
-	if d.NodeCPU != "" && d.NodeCPU != "0.0%" {
-		ecoDomainRow(&b, "", "cpu", d.NodeCPU, "container CPU vs host")
-	}
-	memVal := fmt.Sprintf("%s / %s", d.NodeMemUsed, d.NodeMemTotal)
-	if d.NodeMemPct > 0 {
-		memVal = fmt.Sprintf("%s  (%d%% of limit)", memVal, d.NodeMemPct)
-	}
-	ecoDomainRow(&b, infraContainerRowClass(d.NodeMemPct), "memory", memVal, "cgroup memory limit")
-	if d.NodeUptime != "" {
-		ecoDomainRow(&b, "", "uptime", d.NodeUptime, "since last start")
-	}
-	if d.NodeStartedAt != "" {
-		ecoDomainRow(&b, "", "started at", d.NodeStartedAt, "container start timestamp")
-	}
-	if d.Restarts > 0 {
-		ecoDomainRow(&b, infraRestartRowClass(d.Restarts), "restarts", fmt.Sprintf("%d", d.Restarts), "Docker restart count")
-	}
-	if d.NodeOOMKilled {
-		ecoDomainRow(&b, "eco-domain__row--warn", "oom killed", "yes", "last exit was OOM")
-	}
-	if d.DataPath != "" {
-		ecoDomainRow(&b, "", "data path", d.DataPath, "validator home on host")
-	}
-	b.WriteString(`</div></div>`)
-	return b.String()
-}
-
-func infraContainerRowClass(memPct int) string {
-	switch infraMeterTone(memPct) {
-	case "bad":
-		return "eco-domain__row--warn"
-	case "warn":
-		return "eco-domain__row--warn"
-	default:
-		return ""
-	}
-}
-
-func infraRestartRowClass(n int) string {
-	if n >= 3 {
-		return "eco-domain__row--warn"
-	}
-	return ""
-}
-
-func infraSummaryFootHTML(d model.Report) string {
-	var parts []string
-	if d.NodeUptime != "" {
-		parts = append(parts, fmt.Sprintf("up <strong>%s</strong>", html.EscapeString(d.NodeUptime)))
-	}
-	if d.NodeCPU != "" && d.NodeCPU != "0.0%" {
-		parts = append(parts, fmt.Sprintf("CPU <strong>%s</strong>", html.EscapeString(d.NodeCPU)))
-	}
-	if d.NodeMemPct > 0 {
-		parts = append(parts, fmt.Sprintf("container RAM <strong>%d%%</strong>", d.NodeMemPct))
-	}
-	if len(parts) == 0 {
-		return ""
-	}
-	return strings.Join(parts, " · ")
 }
 
 func infraLoadPerCore(d model.Report) float64 {

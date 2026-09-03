@@ -17,10 +17,3 @@ func TestFetchEVMPeerCountEmptyRPC(t *testing.T) {
 		t.Fatal("expected error for unreachable EVM RPC")
 	}
 }
-
-func TestFetchDockerRunningMissingContainer(t *testing.T) {
-	snap := FetchDockerRunning("nonexistent-pmtop-test-container")
-	if snap.Err == nil {
-		t.Fatal("expected error for missing container")
-	}
-}

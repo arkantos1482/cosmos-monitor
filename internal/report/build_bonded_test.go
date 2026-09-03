@@ -8,7 +8,7 @@ import (
 )
 
 func buildBondedReport(chain fetch.ChainSnapshot) model.Report {
-	return Build(chain, fetch.EVMSnapshot{}, fetch.SystemSnapshot{}, fetch.DockerSnapshot{}, "", model.StatusAvailability{}, fetch.AppTomlGasConfig{}, nil)
+	return Build(chain, fetch.EVMSnapshot{}, fetch.SystemSnapshot{}, "", model.StatusAvailability{}, fetch.AppTomlGasConfig{}, nil)
 }
 
 func TestBondedPctFromTotalSupply(t *testing.T) {

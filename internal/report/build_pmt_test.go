@@ -8,7 +8,7 @@ import (
 )
 
 func TestBuildPMTParamsMissingNotDisabled(t *testing.T) {
-	d := Build(fetch.ChainSnapshot{}, fetch.EVMSnapshot{}, fetch.SystemSnapshot{}, fetch.DockerSnapshot{},
+	d := Build(fetch.ChainSnapshot{}, fetch.EVMSnapshot{}, fetch.SystemSnapshot{},
 		"", model.StatusAvailability{ChainOK: true}, fetch.AppTomlGasConfig{}, nil)
 	if d.HasPMTParams {
 		t.Fatal("expected HasPMTParams false")
@@ -33,7 +33,7 @@ func TestBuildPMTEnabledPoolEmpty(t *testing.T) {
 			PMTRewardsPoolBalanceAmt: "0",
 			BondDenom:                "apmt",
 		},
-	}, fetch.EVMSnapshot{}, fetch.SystemSnapshot{}, fetch.DockerSnapshot{},
+	}, fetch.EVMSnapshot{}, fetch.SystemSnapshot{},
 		"", model.StatusAvailability{ChainOK: true}, fetch.AppTomlGasConfig{}, nil)
 	if !d.HasPMTParams || !d.PMTEnabled || !d.PMTPoolEmpty {
 		t.Fatalf("got Has=%v Enabled=%v Empty=%v", d.HasPMTParams, d.PMTEnabled, d.PMTPoolEmpty)

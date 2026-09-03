@@ -11,7 +11,7 @@ import (
 	"github.com/arkantos1482/cosmos-monitor/internal/model"
 )
 
-func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, docker fetch.DockerSnapshot, evmHTTPEndpoint string, status model.StatusAvailability, appCfg fetch.AppTomlGasConfig, exchanges []fetch.Exchange) model.Report {
+func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnapshot, evmHTTPEndpoint string, status model.StatusAvailability, appCfg fetch.AppTomlGasConfig, exchanges []fetch.Exchange) model.Report {
 	p := chain.Params
 	d := model.Report{}
 	d.Exchanges = sourceExchangesFromFetch(exchanges)
@@ -19,7 +19,6 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 	d.Moniker = chain.Moniker
 	d.HasChainStatus = status.ChainOK
 	d.HasEVMPeers = status.EVMOK
-	d.HasNodeStatus = status.DockerOK
 	d.Synced = !chain.CatchingUp
 	d.BlockHeight = FormatInt(chain.BlockHeight)
 	d.TimeUTC = time.Now().UTC().Format("15:04:05") + " UTC"
@@ -69,25 +68,10 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 	d.DiskAvail = FormatBytes(sys.DiskAvail)
 	d.DiskPct = int(float64(sys.DiskUsed) / float64(max(sys.DiskTotal, uint64(1))) * 100)
 	if sys.DataPath != "" && sys.DataTotal > 0 {
-		d.DataPath = sys.DataPath
+		d.HasChainDataDisk = true
 		d.DataDiskUsed = FormatBytes(sys.DataUsed)
 		d.DataDiskTotal = FormatBytes(sys.DataTotal)
 		d.DataDiskPct = int(float64(sys.DataUsed) / float64(max(sys.DataTotal, uint64(1))) * 100)
-	}
-
-	d.NodeRunning = docker.Running
-	d.NodeImage = docker.Image
-	d.NodeOOMKilled = docker.OOMKilled
-	d.NodeCPU = fmt.Sprintf("%.1f%%", docker.CPUPercent)
-	d.NodeMemUsed = FormatBytes(docker.MemUsage)
-	d.NodeMemTotal = FormatBytes(docker.MemLimit)
-	if docker.MemLimit > 0 {
-		d.NodeMemPct = int(float64(docker.MemUsage) / float64(docker.MemLimit) * 100)
-	}
-	d.Restarts = docker.RestartCount
-	if !docker.StartedAt.IsZero() {
-		d.NodeUptime = FormatDurFull(time.Since(docker.StartedAt))
-		d.NodeStartedAt = docker.StartedAt.UTC().Format("2006-01-02 15:04:05 UTC")
 	}
 
 	maxMissed := int64(0)
@@ -344,10 +328,7 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 	if chain.MaxBlockBytes > 0 {
 		d.MaxBlockBytes = chain.MaxBlockBytes
 	}
-	d.NodeAppTomlPath = appCfg.Path
-	if appCfg.MinGasPrices != "" {
-		d.NodeMinGasPrices = appCfg.MinGasPrices
-	}
+	d.NodeMinGasPrices = appCfg.MinGasPrices
 	if appCfg.EVMMinTip != "" {
 		d.NodeEVMMinTip = appCfg.EVMMinTip
 	}
