@@ -535,7 +535,8 @@ func convertDenom(v float64, denom string) (float64, string) {
 }
 
 // FormatFeeAmount formats base fee or gas price for compact display.
-// Handles integer atto/wei strings, long decimal zeros from REST, and pre-formatted values.
+// Integer atto amounts may convert to PMT when the display value is ≥ 1e-6.
+// LegacyDec strings (per-gas prices) stay in the on-chain denom (apmt).
 func FormatFeeAmount(raw, denom string) string {
 	if raw == "" || raw == "0" {
 		return "0"
@@ -557,11 +558,13 @@ func FormatFeeAmount(raw, denom string) string {
 		}
 		return FormatCoin(raw, denom)
 	}
-	if v >= 1 {
-		return FormatCoin(fmt.Sprintf("%.0f", v), denom)
-	}
+	// LegacyDec / per-gas prices are already in `denom` (apmt). Relabeling
+	// with displayDenom (PMT) without dividing by 1e18 overstates by 10^18.
 	if denom != "" {
-		return FormatAmountUnit(v, displayDenom(denom))
+		if v >= 1 && v == float64(int64(v)) && v < 1e15 {
+			return strconv.FormatInt(int64(v), 10) + " " + denom
+		}
+		return FormatAmountUnit(v, denom)
 	}
 	return FormatAmount(v)
 }

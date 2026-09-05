@@ -312,9 +312,9 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 	d.BaseFeeChangeDenominator = p.BaseFeeChangeDenominator
 	if p.MinGasPriceRaw != "" {
 		d.MinGasPriceRaw = p.MinGasPriceRaw
-	}
-	if p.MinGasPrice > 0 {
-		d.MinGasPrice = fetch.FormatAmountUnit(p.MinGasPrice, denom)
+		d.MinGasPrice = fetch.FormatFeeAmount(p.MinGasPriceRaw, feeDenom)
+	} else if p.MinGasPrice > 0 {
+		d.MinGasPrice = fetch.FormatFeeAmount(fmt.Sprintf("%g", p.MinGasPrice), feeDenom)
 	}
 	if p.MinGasMultiplier > 0 {
 		d.MinGasMultiplier = fmt.Sprintf("%.4g", p.MinGasMultiplier)

@@ -51,7 +51,7 @@ func TestStatusStripPMTPoolEmpty(t *testing.T) {
 		HasPMTParams:   true,
 		PMTEnabled:     true,
 		PMTPoolEmpty:   true,
-		BaseFee:        "7e-18 PMT",
+		BaseFee:        "7e-18 apmt",
 		TimeUTC:        "12:00:00 UTC",
 	})
 	if !strings.Contains(out, ">pool empty<") {

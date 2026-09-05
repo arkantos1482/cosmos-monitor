@@ -61,12 +61,12 @@ func TestTransferCost(t *testing.T) {
 }
 
 func TestTransferCostTinyBaseFee(t *testing.T) {
-	// 7 apmt base fee → 7e-18 PMT; 21k gas → 1.47e-13 PMT
+	// Store 7e-18 apmt/gas × 21k = 1.47e-13 apmt (not PMT).
 	got := TransferCost("0.000000000000000007", "apmt")
-	if got == "" || got == "—" || got == "0" || got == "0 PMT" {
+	if got == "" || got == "—" || got == "0" || got == "0 PMT" || strings.Contains(got, "PMT") {
 		t.Fatalf("transfer cost: %q", got)
 	}
-	if !strings.Contains(got, "1.47e-13") {
-		t.Fatalf("transfer cost = %q, want 1.47e-13 PMT", got)
+	if !strings.Contains(got, "1.47e-13") || !strings.Contains(got, "apmt") {
+		t.Fatalf("transfer cost = %q, want 1.47e-13 apmt", got)
 	}
 }
