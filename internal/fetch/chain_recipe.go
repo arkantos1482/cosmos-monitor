@@ -19,20 +19,20 @@ const (
 
 // ChainRecipe declares which chain data a dashboard section needs.
 type ChainRecipe struct {
-	CometExtended    bool // net_info, mempool, block interval, RPC validator priorities
-	ConsensusParams  bool
-	ValidatorScope   ValidatorScope
-	StakingPool      bool
-	SigningInfos     bool
-	Supply           bool
-	MintData         bool // inflation + annual provisions
-	CommunityPool    bool
-	FeemarketLive    bool // base_fee, block_gas, block_results
-	ModuleBalances   bool
+	CometExtended      bool // net_info, mempool, block interval, RPC validator priorities
+	ConsensusParams    bool
+	ValidatorScope     ValidatorScope
+	StakingPool        bool
+	SigningInfos       bool
+	Supply             bool
+	MintData           bool // inflation + annual provisions
+	CommunityPool      bool
+	FeemarketLive      bool // base_fee, block_gas, block_results
+	ModuleBalances     bool
 	ModuleAccountNames []string // nil = all tracked module accounts
-	Governance       bool
-	ValidatorRewards bool
-	LocalStaking     bool // local delegations (balance enrichment is separate)
+	Governance         bool
+	ValidatorRewards   bool
+	LocalStaking       bool // local delegations (balance enrichment is separate)
 }
 
 // ChainRecipeFull fetches everything needed for the overview page.
@@ -370,18 +370,16 @@ func fetchFeemarketLive(rpc, rest string, snap *ChainSnapshot) {
 }
 
 func fetchGovernanceProposals(rest string, snap *ChainSnapshot) {
-	var votingProps, depositProps proposalsResp
-	doJSON(fmt.Sprintf("%s/cosmos/gov/v1beta1/proposals?proposal_status=2", rest), &votingProps)
-	doJSON(fmt.Sprintf("%s/cosmos/gov/v1beta1/proposals?proposal_status=1", rest), &depositProps)
-	if len(votingProps.Proposals)+len(depositProps.Proposals) == 0 {
-		doJSON(fmt.Sprintf("%s/cosmos/gov/v1/proposals?proposal_status=2", rest), &votingProps)
-		doJSON(fmt.Sprintf("%s/cosmos/gov/v1/proposals?proposal_status=1", rest), &depositProps)
-	}
-	for _, p := range votingProps.Proposals {
-		snap.VotingProposals = append(snap.VotingProposals, parseProposal(p))
-	}
-	for _, p := range depositProps.Proposals {
-		snap.DepositProposals = append(snap.DepositProposals, parseProposal(p))
+	for _, p := range loadProposals(rest) {
+		info := parseProposal(p)
+		switch proposalStatusKind(info.Status) {
+		case "voting":
+			snap.VotingProposals = append(snap.VotingProposals, info)
+		case "deposit":
+			snap.DepositProposals = append(snap.DepositProposals, info)
+		default:
+			snap.RecentProposals = append(snap.RecentProposals, info)
+		}
 	}
 	if len(snap.VotingProposals) > 0 {
 		tallies := make([]ProposalTally, len(snap.VotingProposals))
@@ -396,11 +394,9 @@ func fetchGovernanceProposals(rest string, snap *ChainSnapshot) {
 					tallyURL = fmt.Sprintf("%s/cosmos/gov/v1/proposals/%d/tally", rest, id)
 					_ = doJSON(tallyURL, &tr)
 				}
-				if tr.Tally.Yes != "" || tr.Tally.No != "" || tr.Tally.Abstain != "" || tr.Tally.NoWithVeto != "" {
-					tallies[idx] = ProposalTally{
-						Yes: tr.Tally.Yes, No: tr.Tally.No,
-						Abstain: tr.Tally.Abstain, NoWithVeto: tr.Tally.NoWithVeto,
-					}
+				tally := parseTally(tr)
+				if tally.populated() {
+					tallies[idx] = tally
 				}
 			}(i, vp.ID)
 		}
@@ -409,6 +405,27 @@ func fetchGovernanceProposals(rest string, snap *ChainSnapshot) {
 			snap.VotingProposals[i].Tally = tallies[i]
 		}
 	}
+}
+
+func loadProposals(rest string) []rawProposal {
+	for _, url := range []string{
+		fmt.Sprintf("%s/cosmos/gov/v1/proposals?pagination.limit=20&pagination.reverse=true", rest),
+		fmt.Sprintf("%s/cosmos/gov/v1beta1/proposals?pagination.limit=20&pagination.reverse=true", rest),
+	} {
+		var resp proposalsResp
+		if err := doJSON(url, &resp); err == nil && len(resp.Proposals) > 0 {
+			return resp.Proposals
+		}
+	}
+	var votingProps, depositProps proposalsResp
+	doJSON(fmt.Sprintf("%s/cosmos/gov/v1beta1/proposals?proposal_status=2", rest), &votingProps)
+	doJSON(fmt.Sprintf("%s/cosmos/gov/v1beta1/proposals?proposal_status=1", rest), &depositProps)
+	if len(votingProps.Proposals)+len(depositProps.Proposals) == 0 {
+		doJSON(fmt.Sprintf("%s/cosmos/gov/v1/proposals?proposal_status=2", rest), &votingProps)
+		doJSON(fmt.Sprintf("%s/cosmos/gov/v1/proposals?proposal_status=1", rest), &depositProps)
+	}
+	out := append([]rawProposal{}, votingProps.Proposals...)
+	return append(out, depositProps.Proposals...)
 }
 
 func fetchGovernanceExtras(rest string, snap *ChainSnapshot) {

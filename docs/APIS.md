@@ -39,10 +39,12 @@ All endpoints are polled from the node itself (localhost). Endpoints that return
 | `GET /cosmos/distribution/v1beta1/params` | community tax | `params.community_tax` |
 | `GET /cosmos/distribution/v1beta1/validators/{valoper}/outstanding_rewards` | per-validator rewards | `rewards.rewards[].{denom,amount}` |
 | `GET /cosmos/distribution/v1beta1/validators/{valoper}/commission` | per-validator commission | `commission.commission[].{denom,amount}` |
-| `GET /cosmos/gov/v1beta1/proposals?proposal_status=2` | voting-period proposals | `proposals[].{proposal_id,content.title,status,voting_end_time,deposit_end_time}` |
-| `GET /cosmos/gov/v1beta1/proposals?proposal_status=1` | deposit-period proposals | same |
-| `GET /cosmos/gov/v1/proposals?proposal_status=2` | (v1 fallback) | `proposals[].{id,title,status,voting_end_time,deposit_end_time}` |
-| `GET /cosmos/gov/v1beta1/params/voting` | voting period | `voting_params.voting_period` |
+| `GET /cosmos/gov/v1/proposals?pagination.limit=20&pagination.reverse=true` | recent proposals (preferred) | `proposals[].{id,title,summary,expedited,status,messages,@type,voting_end_time}` |
+| `GET /cosmos/gov/v1beta1/proposals?pagination.limit=20&pagination.reverse=true` | fallback list | `proposals[].{proposal_id,content.title,content.@type,status,voting_end_time}` |
+| `GET /cosmos/gov/v1beta1/proposals?proposal_status=2` | voting-period fallback | same |
+| `GET /cosmos/gov/v1beta1/proposals?proposal_status=1` | deposit-period fallback | same |
+| `GET /cosmos/gov/v1/params/voting` | voting + expedited period | `params.{voting_period,expedited_voting_period}` |
+| `GET /cosmos/gov/v1beta1/params/voting` | voting period fallback | `voting_params.voting_period` |
 | `GET /cosmos/gov/v1beta1/params/tallying` | quorum, threshold | `tally_params.{quorum,threshold}` |
 | `GET /cosmos/upgrade/v1beta1/current_plan` | pending upgrade | `plan.{name,height}` (null if none) |
 | `GET /cosmos/auth/v1beta1/params` | auth params (unused currently) | `params.{max_memo_characters,tx_sig_limit}` |

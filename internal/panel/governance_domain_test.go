@@ -22,7 +22,8 @@ func governanceChunk(t *testing.T, out string) string {
 
 func TestGovernanceDomainCards(t *testing.T) {
 	d := model.Report{
-		VotingPeriod: "2 weeks", Quorum: 33.4, Threshold: 50, VetoThreshold: 33.4,
+		VotingPeriod: "2 weeks", ExpeditedVotingPeriod: "1d 0h",
+		Quorum: 33.4, Threshold: 50, VetoThreshold: 33.4,
 		Proposals:        []model.Proposal{{ID: 1, Title: "test"}},
 		DepositProposals: []model.Proposal{{ID: 2}},
 		UpgradeName:      "v2", UpgradeHeight: "1000", BlocksLeft: "500",
@@ -41,6 +42,7 @@ func TestGovernanceDomainCards(t *testing.T) {
 		`class="eco-acct__addr">0xabc`,
 		"enable_erc20",
 		"gov",
+		"expedited voting period",
 	} {
 		if !strings.Contains(chunk, want) {
 			t.Fatalf("governance missing %q", want)
@@ -49,6 +51,34 @@ func TestGovernanceDomainCards(t *testing.T) {
 	for _, gone := range []string{"Voting Params", "Subsection(\"Upgrade\")"} {
 		if strings.Contains(chunk, gone) {
 			t.Fatalf("governance should not contain flat %q subsection", gone)
+		}
+	}
+}
+
+func TestGovernanceShowsProposalBody(t *testing.T) {
+	d := model.Report{
+		Proposals: []model.Proposal{{
+			ID: 2, Title: "Set expedited voting period to 1 hour",
+			Summary:  "Copy live x/gov params and set only expedited_voting_period from 24h to 1h.",
+			Messages: "MsgUpdateParams", Expedited: true, End: "2026-09-18 12:16 UTC",
+			TallyYes: "1", HasTally: true,
+		}},
+		RecentProposals: []model.Proposal{{
+			ID: 1, Title: "Set feemarket min_gas_price to 1 apmt per gas",
+			Status: "passed", End: "2026-09-16",
+		}},
+	}
+	chunk := governanceChunk(t, Build(d))
+	for _, want := range []string{
+		"Set expedited voting period to 1 hour",
+		"Copy live x/gov params and set only expedited_voting_period",
+		"expedited",
+		"MsgUpdateParams",
+		"Recent Proposals",
+		"Set feemarket min_gas_price to 1 apmt per gas",
+	} {
+		if !strings.Contains(chunk, want) {
+			t.Fatalf("governance missing %q", want)
 		}
 	}
 }

@@ -54,29 +54,29 @@ type Report struct {
 
 	Local LocalValidator
 
-	BondDenom        string
-	TotalSupply      string
-	BondedAmt        string
-	BondedPct        float64 // bonded ÷ total supply (share staked)
-	MintBondedPct    float64 // bonded ÷ (bonded+not_bonded) — ratio x/mint uses
-	GoalBonded       float64
-	NotBonded        string
-	UnbondingTime    string
-	MaxValidators    int64
-	Inflation        float64
-	AnnualProvisions string
-	CommunityPool    string
-	CommunityTax         string
-	CommunityTaxZero     bool
-	CommunityTaxPct      float64
-	WithdrawAddrEnabled  bool
-	BlocksPerYear    string
+	BondDenom           string
+	TotalSupply         string
+	BondedAmt           string
+	BondedPct           float64 // bonded ÷ total supply (share staked)
+	MintBondedPct       float64 // bonded ÷ (bonded+not_bonded) — ratio x/mint uses
+	GoalBonded          float64
+	NotBonded           string
+	UnbondingTime       string
+	MaxValidators       int64
+	Inflation           float64
+	AnnualProvisions    string
+	CommunityPool       string
+	CommunityTax        string
+	CommunityTaxZero    bool
+	CommunityTaxPct     float64
+	WithdrawAddrEnabled bool
+	BlocksPerYear       string
 	TotalOutstanding    string
 	UnclaimedDelegator  string // sum of validator outstanding_rewards (delegator share)
 	UnclaimedCommission string // sum of accumulated validator commission
 
-	ModuleAccounts   []ModuleAccountRow
-	LastBlockFees    string // parent block gas_used × base_fee (estimate)
+	ModuleAccounts    []ModuleAccountRow
+	LastBlockFees     string // parent block gas_used × base_fee (estimate)
 	InflationPerBlock string
 	InflationPerDay   string
 
@@ -114,14 +114,14 @@ type Report struct {
 	ParentBlockGasWanted     uint64
 	ParentBlockResultsOK     bool
 
-	SlashWindow          string
-	MinSigned            float64
-	SlashMaxMissed       int64
-	DowntimeJail         string
-	SlashDowntime        string
-	SlashDTInactive      bool
-	SlashDS              string
-	SlashDSInactive      bool
+	SlashWindow     string
+	MinSigned       float64
+	SlashMaxMissed  int64
+	DowntimeJail    string
+	SlashDowntime   string
+	SlashDTInactive bool
+	SlashDS         string
+	SlashDSInactive bool
 
 	EVMHTTPEndpoint   string
 	EVMWSEndpoint     string
@@ -137,36 +137,38 @@ type Report struct {
 	EVMRPCOk          bool
 	// HasEVMListening is true when net_listening RPC returned a value.
 	// When false, EVMListening is unknown — do not treat as "not listening".
-	HasEVMListening   bool
-	EVMListening      bool
-	EVMBlockAge       string
-	EVMBlockAgeWarn   bool
-	EVMBlockAgeErr    bool
-	EVMSynced         bool
-	EVMBlock          string
-	PendingTx         uint64
-	QueuedTx          uint64
-	RPCProbes         []RPCProbe
-	RPCProbeOK        int
-	RPCProbeTotal     int
-	Precompiles       []string
-	HistoryWindow     string
-	HardforkLondon    string
-	HardforkShanghai  string
-	HardforkCancun    string
-	ERC20Enabled      bool
+	HasEVMListening  bool
+	EVMListening     bool
+	EVMBlockAge      string
+	EVMBlockAgeWarn  bool
+	EVMBlockAgeErr   bool
+	EVMSynced        bool
+	EVMBlock         string
+	PendingTx        uint64
+	QueuedTx         uint64
+	RPCProbes        []RPCProbe
+	RPCProbeOK       int
+	RPCProbeTotal    int
+	Precompiles      []string
+	HistoryWindow    string
+	HardforkLondon   string
+	HardforkShanghai string
+	HardforkCancun   string
+	ERC20Enabled     bool
 
-	VotingPeriod     string
-	Quorum           float64
-	Threshold        float64
-	VetoThreshold    float64
-	Proposals        []Proposal
-	DepositProposals []Proposal
-	UpgradeName      string
-	UpgradeHeight    string
-	BlocksLeft       string
-	IBCClients       int
-	TokenPairs       []TokenPair
+	VotingPeriod          string
+	ExpeditedVotingPeriod string
+	Quorum                float64
+	Threshold             float64
+	VetoThreshold         float64
+	Proposals             []Proposal
+	DepositProposals      []Proposal
+	RecentProposals       []Proposal
+	UpgradeName           string
+	UpgradeHeight         string
+	BlocksLeft            string
+	IBCClients            int
+	TokenPairs            []TokenPair
 
 	// Exchanges holds raw request/response traces from the last fetch (dev data sources).
 	Exchanges []SourceExchange
@@ -185,18 +187,18 @@ type SourceExchange struct {
 }
 
 type Validator struct {
-	Moniker         string
-	Operator        string
-	NodeID          string
-	ConsensusAddr   string
-	ConsensusBech32 string
-	P2PDial         string
-	P2PConnected    bool
-	VPFloat         float64
-	CommissionFloat float64
-	Missed          int64
-	MissedHigh      bool
-	Status          string
+	Moniker          string
+	Operator         string
+	NodeID           string
+	ConsensusAddr    string
+	ConsensusBech32  string
+	P2PDial          string
+	P2PConnected     bool
+	VPFloat          float64
+	CommissionFloat  float64
+	Missed           int64
+	MissedHigh       bool
+	Status           string
 	Jailed           bool
 	Tombstoned       bool
 	IsLocal          bool
@@ -237,10 +239,10 @@ type LocalValidator struct {
 	SigningStatus    string
 	IsNextProposer   bool
 	ProposerPriority int64
-	Outstanding       string
-	CommissionEarned  string
-	LiquidBalance     string
-	DelegatorCount    int
+	Outstanding      string
+	CommissionEarned string
+	LiquidBalance    string
+	DelegatorCount   int
 	// Unbonding* is stake leaving this validator (sum of unbonding_delegations).
 	UnbondingAmt      string
 	UnbondingEntries  int
@@ -260,6 +262,10 @@ type RPCProbe struct {
 type Proposal struct {
 	ID           uint64
 	Title        string
+	Summary      string
+	Messages     string
+	Status       string
+	Expedited    bool
 	End          string
 	TallyYes     string
 	TallyNo      string

@@ -197,23 +197,29 @@ Sorted by voting power % descending. One row per validator:
 | Field | Detail |
 |-------|--------|
 | voting period | duration |
+| expedited voting period | duration for expedited proposals |
 | quorum | minimum participation % |
 | threshold | pass threshold % |
 | veto threshold | veto threshold % `[gap]` |
 
 ### Active Proposals (voting period)
-One row per proposal:
+One card per proposal:
 
 | Field | Detail |
 |-------|--------|
 | ID | proposal ID |
-| title | proposal title |
-| status | VOTING_PERIOD / DEPOSIT_PERIOD |
-| voting ends | date |
+| title | proposal title (gov v1) |
+| summary | proposal body / description |
+| messages | short message type names |
+| expedited | badge when the proposal is expedited |
+| voting ends | datetime UTC |
 | tally | yes / no / veto / abstain counts `[gap]` |
 
 ### Deposit-Period Proposals
 Same fields, deposit_end shown instead of voting_end.
+
+### Recent Proposals
+Brief table of the latest passed / rejected / failed proposals (ID, title, status, kind, end date).
 
 ---
 

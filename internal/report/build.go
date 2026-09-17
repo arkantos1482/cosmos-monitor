@@ -383,35 +383,28 @@ func Build(chain fetch.ChainSnapshot, ev fetch.EVMSnapshot, sys fetch.SystemSnap
 			Method:    probe.Method,
 			Transport: probe.Transport,
 			OK:        probe.OK,
-			Latency:  fmt.Sprintf("%.0fms", float64(probe.Latency)/float64(time.Millisecond)),
-			Error:    probe.Error,
-			Request:  probe.Request,
-			Response: probe.Response,
+			Latency:   fmt.Sprintf("%.0fms", float64(probe.Latency)/float64(time.Millisecond)),
+			Error:     probe.Error,
+			Request:   probe.Request,
+			Response:  probe.Response,
 		})
 	}
 
 	d.VotingPeriod = FormatDurFull(p.VotingPeriod)
+	if p.ExpeditedVotingPeriod > 0 {
+		d.ExpeditedVotingPeriod = FormatDurFull(p.ExpeditedVotingPeriod)
+	}
 	d.Quorum = p.Quorum * 100
 	d.Threshold = p.Threshold * 100
 	d.VetoThreshold = p.VetoThreshold * 100
 	for _, pr := range chain.VotingProposals {
-		d.Proposals = append(d.Proposals, model.Proposal{
-			ID:           uint64(pr.ID),
-			Title:        pr.Title,
-			End:          pr.VotingEnd.Format("2006-01-02"),
-			TallyYes:     pr.Tally.Yes,
-			TallyNo:      pr.Tally.No,
-			TallyAbstain: pr.Tally.Abstain,
-			TallyVeto:    pr.Tally.NoWithVeto,
-			HasTally:     pr.Tally.Yes != "" || pr.Tally.No != "" || pr.Tally.Abstain != "" || pr.Tally.NoWithVeto != "",
-		})
+		d.Proposals = append(d.Proposals, modelProposal(pr, true))
 	}
 	for _, pr := range chain.DepositProposals {
-		d.DepositProposals = append(d.DepositProposals, model.Proposal{
-			ID:    uint64(pr.ID),
-			Title: pr.Title,
-			End:   pr.DepositEnd.Format("2006-01-02"),
-		})
+		d.DepositProposals = append(d.DepositProposals, modelProposal(pr, false))
+	}
+	for _, pr := range chain.RecentProposals {
+		d.RecentProposals = append(d.RecentProposals, modelProposal(pr, false))
 	}
 
 	d.UpgradeName = chain.UpgradeName
@@ -586,6 +579,35 @@ func sourceExchangesFromFetch(exchanges []fetch.Exchange) []model.SourceExchange
 		})
 	}
 	return out
+}
+
+func modelProposal(pr fetch.ProposalInfo, voting bool) model.Proposal {
+	end := pr.DepositEnd
+	if voting || !pr.VotingEnd.IsZero() {
+		end = pr.VotingEnd
+	}
+	endStr := ""
+	if !end.IsZero() {
+		if voting {
+			endStr = end.UTC().Format("2006-01-02 15:04 UTC")
+		} else {
+			endStr = end.UTC().Format("2006-01-02")
+		}
+	}
+	return model.Proposal{
+		ID:           uint64(pr.ID),
+		Title:        pr.Title,
+		Summary:      pr.Summary,
+		Messages:     pr.Messages,
+		Status:       pr.StatusLabel(),
+		Expedited:    pr.Expedited,
+		End:          endStr,
+		TallyYes:     pr.Tally.Yes,
+		TallyNo:      pr.Tally.No,
+		TallyAbstain: pr.Tally.Abstain,
+		TallyVeto:    pr.Tally.NoWithVeto,
+		HasTally:     pr.Tally.Yes != "" || pr.Tally.No != "" || pr.Tally.Abstain != "" || pr.Tally.NoWithVeto != "",
+	}
 }
 
 func parseAppTomlUint(raw string) uint64 {

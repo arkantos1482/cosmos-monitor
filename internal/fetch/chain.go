@@ -31,15 +31,15 @@ type ChainSnapshot struct {
 	NextProposerMoniker string
 
 	// This node's validator identity from /status (empty if full node).
-	LocalConsensusAddr   string
-	LocalConsensusBech32 string
+	LocalConsensusAddr      string
+	LocalConsensusBech32    string
 	LocalAccountAddr        string
 	LocalAccountLiquidAmt   string
 	LocalAccountLiquidDenom string
 	LocalDelegations        []DelegationInfo
 	LocalUnbondings         []UnbondingDelegationInfo
-	LocalP2PDial       string
-	LocalVotingPower          int64
+	LocalP2PDial            string
+	LocalVotingPower        int64
 
 	Validators []ValidatorInfo
 
@@ -63,10 +63,11 @@ type ChainSnapshot struct {
 	ParentBlockTxGasWanted uint64 // Σ tx gas_wanted from parent block_results
 	ParentBlockGasWanted   uint64 // W from block_gas event or REST fallback
 	ParentBlockResultsOK   bool
-	ParentBaseFeeEvent   string // fee_market base_fee from begin_block at H (optional)
+	ParentBaseFeeEvent     string // fee_market base_fee from begin_block at H (optional)
 
 	VotingProposals  []ProposalInfo
 	DepositProposals []ProposalInfo
+	RecentProposals  []ProposalInfo
 
 	UpgradeName   string
 	UpgradeHeight int64
@@ -122,7 +123,10 @@ type ValidatorInfo struct {
 type ProposalInfo struct {
 	ID         uint64
 	Title      string
+	Summary    string
+	Messages   string
 	Status     string
+	Expedited  bool
 	VotingEnd  time.Time
 	DepositEnd time.Time
 	Tally      ProposalTally
@@ -150,6 +154,7 @@ type ChainParams struct {
 	CommunityTax             float64
 	WithdrawAddrEnabled      bool
 	VotingPeriod             time.Duration
+	ExpeditedVotingPeriod    time.Duration
 	Quorum                   float64
 	Threshold                float64
 	VetoThreshold            float64
@@ -329,25 +334,33 @@ type blockGasResp struct {
 }
 
 type proposalsResp struct {
-	Proposals []struct {
-		ProposalID string `json:"proposal_id"` // v1beta1
-		ID         string `json:"id"`          // v1
-		Title      string `json:"title"`       // v1
-		Content    struct {
-			Title string `json:"title"`
-		} `json:"content"` // v1beta1
-		Status         string `json:"status"`
-		VotingEndTime  string `json:"voting_end_time"`
-		DepositEndTime string `json:"deposit_end_time"`
-	} `json:"proposals"`
+	Proposals []rawProposal `json:"proposals"`
+}
+
+type rawProposal struct {
+	ProposalID     string            `json:"proposal_id"`
+	ID             string            `json:"id"`
+	Title          string            `json:"title"`
+	Summary        string            `json:"summary"`
+	Metadata       string            `json:"metadata"`
+	Expedited      bool              `json:"expedited"`
+	Status         string            `json:"status"`
+	Content        json.RawMessage   `json:"content"`
+	Messages       []json.RawMessage `json:"messages"`
+	VotingEndTime  string            `json:"voting_end_time"`
+	DepositEndTime string            `json:"deposit_end_time"`
 }
 
 type proposalTallyResp struct {
 	Tally struct {
-		Yes        string `json:"yes"`
-		No         string `json:"no"`
-		Abstain    string `json:"abstain"`
-		NoWithVeto string `json:"no_with_veto"`
+		Yes             string `json:"yes"`
+		No              string `json:"no"`
+		Abstain         string `json:"abstain"`
+		NoWithVeto      string `json:"no_with_veto"`
+		YesCount        string `json:"yes_count"`
+		NoCount         string `json:"no_count"`
+		AbstainCount    string `json:"abstain_count"`
+		NoWithVetoCount string `json:"no_with_veto_count"`
 	} `json:"tally"`
 }
 
@@ -419,6 +432,13 @@ type govVotingParamsResp struct {
 	VotingParams struct {
 		VotingPeriod string `json:"voting_period"`
 	} `json:"voting_params"`
+	Params struct {
+		VotingPeriod          string `json:"voting_period"`
+		ExpeditedVotingPeriod string `json:"expedited_voting_period"`
+		Quorum                string `json:"quorum"`
+		Threshold             string `json:"threshold"`
+		VetoThreshold         string `json:"veto_threshold"`
+	} `json:"params"`
 }
 
 type govTallyParamsResp struct {
@@ -647,31 +667,114 @@ func consAddrFromPubkey(pubkeyBase64 string) string {
 	return fmt.Sprintf("%x", h[:20])
 }
 
+type typedMsg struct {
+	Type        string `json:"@type"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+}
+
+func firstFilled(vals ...string) string {
+	for _, v := range vals {
+		if s := strings.TrimSpace(v); s != "" {
+			return s
+		}
+	}
+	return ""
+}
+
+func shortMsgType(typ string) string {
+	typ = strings.TrimSpace(typ)
+	if i := strings.LastIndex(typ, "."); i >= 0 && i+1 < len(typ) {
+		return typ[i+1:]
+	}
+	return strings.TrimPrefix(typ, "/")
+}
+
+func decodeTypedMsg(raw json.RawMessage) typedMsg {
+	var m typedMsg
+	if len(raw) == 0 {
+		return m
+	}
+	_ = json.Unmarshal(raw, &m)
+	return m
+}
+
+func proposalMessageTypes(p rawProposal) string {
+	var types []string
+	seen := map[string]bool{}
+	add := func(typ string) {
+		name := shortMsgType(typ)
+		if name == "" || seen[name] {
+			return
+		}
+		seen[name] = true
+		types = append(types, name)
+	}
+	for _, raw := range p.Messages {
+		add(decodeTypedMsg(raw).Type)
+	}
+	if len(types) == 0 {
+		add(decodeTypedMsg(p.Content).Type)
+	}
+	return strings.Join(types, ", ")
+}
+
+func parseTally(t proposalTallyResp) ProposalTally {
+	yes := firstFilled(t.Tally.Yes, t.Tally.YesCount)
+	no := firstFilled(t.Tally.No, t.Tally.NoCount)
+	abstain := firstFilled(t.Tally.Abstain, t.Tally.AbstainCount)
+	veto := firstFilled(t.Tally.NoWithVeto, t.Tally.NoWithVetoCount)
+	return ProposalTally{Yes: yes, No: no, Abstain: abstain, NoWithVeto: veto}
+}
+
+func (t ProposalTally) populated() bool {
+	return t.Yes != "" || t.No != "" || t.Abstain != "" || t.NoWithVeto != ""
+}
+
+func proposalStatusKind(status string) string {
+	s := strings.ToUpper(strings.TrimSpace(status))
+	switch {
+	case s == "2" || strings.Contains(s, "VOTING"):
+		return "voting"
+	case s == "1" || strings.Contains(s, "DEPOSIT"):
+		return "deposit"
+	default:
+		return "recent"
+	}
+}
+
+func proposalStatusLabel(status string) string {
+	s := strings.TrimPrefix(strings.TrimSpace(status), "PROPOSAL_STATUS_")
+	s = strings.ToLower(s)
+	s = strings.ReplaceAll(s, "_", " ")
+	if s == "" {
+		return "unknown"
+	}
+	return s
+}
+
+func (p ProposalInfo) StatusLabel() string {
+	return proposalStatusLabel(p.Status)
+}
+
 // parseProposal converts a raw proposal entry from the proposals API into a ProposalInfo.
-func parseProposal(p struct {
-	ProposalID string `json:"proposal_id"`
-	ID         string `json:"id"`
-	Title      string `json:"title"`
-	Content    struct {
-		Title string `json:"title"`
-	} `json:"content"`
-	Status         string `json:"status"`
-	VotingEndTime  string `json:"voting_end_time"`
-	DepositEndTime string `json:"deposit_end_time"`
-}) ProposalInfo {
+func parseProposal(p rawProposal) ProposalInfo {
 	idStr := p.ProposalID
 	if idStr == "" {
 		idStr = p.ID
 	}
 	id, _ := strconv.ParseUint(idStr, 10, 64)
-	title := p.Content.Title
-	if title == "" {
-		title = p.Title
-	}
+	content := decodeTypedMsg(p.Content)
+	msgs := proposalMessageTypes(p)
+	title := firstFilled(p.Title, content.Title, msgs)
+	summary := firstFilled(p.Summary, content.Description)
 	info := ProposalInfo{
-		ID:     id,
-		Title:  title,
-		Status: p.Status,
+		ID:        id,
+		Title:     title,
+		Summary:   summary,
+		Messages:  msgs,
+		Status:    p.Status,
+		Expedited: p.Expedited,
 	}
 	info.VotingEnd, _ = time.Parse(time.RFC3339Nano, p.VotingEndTime)
 	info.DepositEnd, _ = time.Parse(time.RFC3339Nano, p.DepositEndTime)
@@ -783,8 +886,18 @@ func FetchParams(rest string) ChainParams {
 	}
 
 	var gvp govVotingParamsResp
-	if err := doJSON(rest+"/cosmos/gov/v1beta1/params/voting", &gvp); err == nil {
-		p.VotingPeriod = parseDuration(gvp.VotingParams.VotingPeriod)
+	govErr := doJSON(rest+"/cosmos/gov/v1/params/voting", &gvp)
+	if govErr != nil {
+		gvp = govVotingParamsResp{}
+		govErr = doJSON(rest+"/cosmos/gov/v1beta1/params/voting", &gvp)
+	}
+	if govErr == nil {
+		period := gvp.Params.VotingPeriod
+		if period == "" {
+			period = gvp.VotingParams.VotingPeriod
+		}
+		p.VotingPeriod = parseDuration(period)
+		p.ExpeditedVotingPeriod = parseDuration(gvp.Params.ExpeditedVotingPeriod)
 	}
 
 	var gtp govTallyParamsResp

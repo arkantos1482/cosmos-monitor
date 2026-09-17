@@ -29,6 +29,9 @@ func govModuleCardHTML(d model.Report) string {
 	if d.VotingPeriod != "" {
 		ecoDomainRow(&b, "", "voting period", d.VotingPeriod, "max time in voting stage")
 	}
+	if d.ExpeditedVotingPeriod != "" {
+		ecoDomainRow(&b, "", "expedited voting period", d.ExpeditedVotingPeriod, "max time for expedited proposals")
+	}
 	if d.Quorum > 0 {
 		ecoDomainRow(&b, "", "quorum", fmt.Sprintf("%.1f%%", d.Quorum), "min turnout for proposal to pass")
 	}
