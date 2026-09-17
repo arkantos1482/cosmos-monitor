@@ -61,7 +61,8 @@ func TestGovernanceShowsProposalBody(t *testing.T) {
 			ID: 2, Title: "Set expedited voting period to 1 hour",
 			Summary:  "Copy live x/gov params and set only expedited_voting_period from 24h to 1h.",
 			Messages: "MsgUpdateParams", Expedited: true, End: "2026-09-18 12:16 UTC",
-			TallyYes: "1", HasTally: true,
+			MessagesJSON: "{\n  \"@type\": \"/cosmos.gov.v1.MsgUpdateParams\",\n  \"params\": {\"expedited_voting_period\": \"3600s\"}\n}",
+			TallyYes:     "1", HasTally: true,
 		}},
 		RecentProposals: []model.Proposal{{
 			ID: 1, Title: "Set feemarket min_gas_price to 1 apmt per gas",
@@ -74,6 +75,8 @@ func TestGovernanceShowsProposalBody(t *testing.T) {
 		"Copy live x/gov params and set only expedited_voting_period",
 		"expedited",
 		"MsgUpdateParams",
+		"messages JSON",
+		"expedited_voting_period",
 		"Recent Proposals",
 		"Set feemarket min_gas_price to 1 apmt per gas",
 	} {

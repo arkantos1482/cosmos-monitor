@@ -87,25 +87,7 @@ func writeGovernance(w Writer, d model.Report) {
 
 	if len(d.RecentProposals) > 0 {
 		w.Subsection(fmt.Sprintf("Recent Proposals  (%d)", len(d.RecentProposals)))
-		rows := make([][]string, 0, len(d.RecentProposals))
-		for _, pr := range d.RecentProposals {
-			kind := "standard"
-			if pr.Expedited {
-				kind = "expedited"
-			}
-			title := pr.Title
-			if title == "" {
-				title = pr.Messages
-			}
-			rows = append(rows, []string{
-				fmt.Sprintf("#%d", pr.ID),
-				title,
-				pr.Status,
-				kind,
-				pr.End,
-			})
-		}
-		w.Table([]string{"ID", "Title", "Status", "Kind", "Ended"}, rows)
+		w.WriteHTML(governanceProposalsHTML(d.RecentProposals, "ended"))
 	}
 
 	w.WriteHTML(governanceDomainCardsHTML(d))
@@ -145,6 +127,9 @@ func governanceProposalHTML(pr model.Proposal, endLabel string) string {
 	if pr.Messages != "" {
 		meta = append(meta, pr.Messages)
 	}
+	if pr.Status != "" {
+		meta = append(meta, pr.Status)
+	}
 	if pr.End != "" {
 		meta = append(meta, endLabel+" "+pr.End)
 	}
@@ -161,6 +146,15 @@ func governanceProposalHTML(pr model.Proposal, endLabel string) string {
 		fmt.Fprintf(&b, `<span class="gov-summary__tally-veto" title="veto">veto %s</span>`, html.EscapeString(pr.TallyVeto))
 		fmt.Fprintf(&b, `<span class="gov-summary__tally-abstain" title="abstain">abstain %s</span>`, html.EscapeString(pr.TallyAbstain))
 		b.WriteString(`</div>`)
+	}
+	if pr.MessagesJSON != "" {
+		id := fmt.Sprintf("gov-msg-%d", pr.ID)
+		fmt.Fprintf(&b, `<details class="dash-details gov-proposal__json" id="%s" data-details-key="%s" hx-preserve>`,
+			html.EscapeString(id), html.EscapeString(id))
+		b.WriteString(`<summary class="dash-details__summary">messages JSON</summary>`)
+		b.WriteString(`<div class="dash-details__body">`)
+		b.WriteString(jsonCodeBlock(pr.MessagesJSON, maxSourceJSONBytes))
+		b.WriteString(`</div></details>`)
 	}
 	b.WriteString(`</article>`)
 	return b.String()

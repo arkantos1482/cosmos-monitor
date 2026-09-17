@@ -2,6 +2,7 @@ package fetch
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -12,7 +13,7 @@ func TestParseProposalV1TitleAndSummary(t *testing.T) {
 		"summary": "Copy live x/gov params and set only expedited_voting_period from 24h to 1h.",
 		"status": "PROPOSAL_STATUS_VOTING_PERIOD",
 		"expedited": true,
-		"messages": [{"@type": "/cosmos.gov.v1.MsgUpdateParams"}],
+		"messages": [{"@type": "/cosmos.gov.v1.MsgUpdateParams", "params": {"expedited_voting_period": "3600s"}}],
 		"voting_end_time": "2026-09-18T12:16:48.542644779Z"
 	}`)
 	var p rawProposal
@@ -29,8 +30,8 @@ func TestParseProposalV1TitleAndSummary(t *testing.T) {
 	if got.Messages != "MsgUpdateParams" {
 		t.Fatalf("messages=%q", got.Messages)
 	}
-	if proposalStatusKind(got.Status) != "voting" {
-		t.Fatalf("kind=%s", proposalStatusKind(got.Status))
+	if !strings.Contains(got.MessagesJSON, `"expedited_voting_period": "3600s"`) {
+		t.Fatalf("messages json=%q", got.MessagesJSON)
 	}
 }
 
@@ -47,6 +48,9 @@ func TestParseProposalV1Beta1FallsBackToType(t *testing.T) {
 	got := parseProposal(p)
 	if got.Title != "MsgUpdateParams" {
 		t.Fatalf("title=%q want MsgUpdateParams", got.Title)
+	}
+	if !strings.Contains(got.MessagesJSON, `"authority": "cosmos1x"`) {
+		t.Fatalf("content json=%q", got.MessagesJSON)
 	}
 }
 

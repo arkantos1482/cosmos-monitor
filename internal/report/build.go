@@ -599,6 +599,7 @@ func modelProposal(pr fetch.ProposalInfo, voting bool) model.Proposal {
 		Title:        pr.Title,
 		Summary:      pr.Summary,
 		Messages:     pr.Messages,
+		MessagesJSON: pr.MessagesJSON,
 		Status:       pr.StatusLabel(),
 		Expedited:    pr.Expedited,
 		End:          endStr,

@@ -1510,6 +1510,14 @@ body::after {
   white-space: pre-wrap;
 }
 
+.gov-proposal__json {
+  margin: 0.7rem 0 0;
+}
+
+.gov-proposal__json .json-block {
+  margin: 0;
+}
+
 .gov-summary__empty {
   margin: 0 0 0.55rem;
   font-size: 0.82rem;

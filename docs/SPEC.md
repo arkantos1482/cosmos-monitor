@@ -211,6 +211,7 @@ One card per proposal:
 | title | proposal title (gov v1) |
 | summary | proposal body / description |
 | messages | short message type names |
+| messages JSON | collapsible pretty-printed proposal messages (`MsgUpdateParams` payload) |
 | expedited | badge when the proposal is expedited |
 | voting ends | datetime UTC |
 | tally | yes / no / veto / abstain counts `[gap]` |

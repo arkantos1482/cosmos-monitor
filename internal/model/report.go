@@ -264,6 +264,7 @@ type Proposal struct {
 	Title        string
 	Summary      string
 	Messages     string
+	MessagesJSON string
 	Status       string
 	Expedited    bool
 	End          string

@@ -121,15 +121,16 @@ type ValidatorInfo struct {
 
 // ProposalInfo holds governance proposal data.
 type ProposalInfo struct {
-	ID         uint64
-	Title      string
-	Summary    string
-	Messages   string
-	Status     string
-	Expedited  bool
-	VotingEnd  time.Time
-	DepositEnd time.Time
-	Tally      ProposalTally
+	ID           uint64
+	Title        string
+	Summary      string
+	Messages     string
+	MessagesJSON string
+	Status       string
+	Expedited    bool
+	VotingEnd    time.Time
+	DepositEnd   time.Time
+	Tally        ProposalTally
 }
 
 // TokenPairInfo holds ERC20 token pair data.
@@ -719,6 +720,33 @@ func proposalMessageTypes(p rawProposal) string {
 	return strings.Join(types, ", ")
 }
 
+func proposalMessagesJSON(p rawProposal) string {
+	var raw json.RawMessage
+	switch {
+	case len(p.Messages) == 1:
+		raw = p.Messages[0]
+	case len(p.Messages) > 1:
+		b, err := json.Marshal(p.Messages)
+		if err != nil {
+			return ""
+		}
+		raw = b
+	case len(p.Content) > 0:
+		raw = p.Content
+	default:
+		return ""
+	}
+	var v any
+	if err := json.Unmarshal(raw, &v); err != nil {
+		return strings.TrimSpace(string(raw))
+	}
+	out, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return strings.TrimSpace(string(raw))
+	}
+	return string(out)
+}
+
 func parseTally(t proposalTallyResp) ProposalTally {
 	yes := firstFilled(t.Tally.Yes, t.Tally.YesCount)
 	no := firstFilled(t.Tally.No, t.Tally.NoCount)
@@ -769,12 +797,13 @@ func parseProposal(p rawProposal) ProposalInfo {
 	title := firstFilled(p.Title, content.Title, msgs)
 	summary := firstFilled(p.Summary, content.Description)
 	info := ProposalInfo{
-		ID:        id,
-		Title:     title,
-		Summary:   summary,
-		Messages:  msgs,
-		Status:    p.Status,
-		Expedited: p.Expedited,
+		ID:           id,
+		Title:        title,
+		Summary:      summary,
+		Messages:     msgs,
+		MessagesJSON: proposalMessagesJSON(p),
+		Status:       p.Status,
+		Expedited:    p.Expedited,
 	}
 	info.VotingEnd, _ = time.Parse(time.RFC3339Nano, p.VotingEndTime)
 	info.DepositEnd, _ = time.Parse(time.RFC3339Nano, p.DepositEndTime)
