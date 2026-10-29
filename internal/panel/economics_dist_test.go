@@ -54,7 +54,6 @@ func TestDistributionEscrowBlockHTML(t *testing.T) {
 		`class="dist-escrow"`,
 		"distribution escrow",
 		"0.006854 PMT",
-		"matches",
 	} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("escrow block missing %q:\n%s", want, html)

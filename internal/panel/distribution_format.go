@@ -3,7 +3,6 @@ package panel
 import (
 	"fmt"
 	"html"
-	"math"
 	"strings"
 
 	"github.com/arkantos1482/cosmos-monitor/internal/fetch"
@@ -154,29 +153,4 @@ func amountUnit(s string) string {
 		return parts[1]
 	}
 	return economicsDenom(model.Report{})
-}
-
-func distributionEscrowReconcile(d model.Report) (effect string, warn bool) {
-	bank := distributionModuleBalance(d)
-	state := distributionUnclaimedTotal(d)
-	if bank == "" || state == "" {
-		return "", false
-	}
-	bankF, ok1 := economicsParseAmount(bank)
-	stateF, ok2 := economicsParseAmount(state)
-	if !ok1 || !ok2 {
-		return "", false
-	}
-	diff := stateF - bankF
-	if math.Abs(diff) < 1e-9 {
-		return "distribution escrow bank balance matches tracked unclaimed total", false
-	}
-	unit := amountUnit(state)
-	gap := fetch.FormatAmountUnit(math.Abs(diff), unit)
-	if diff > 0 {
-		return fmt.Sprintf(
-			"bank is %s short of state total — delegator and operator shares both escrow in this module until withdrawn; gap often clears at the next BeginBlock",
-			gap), true
-	}
-	return fmt.Sprintf("bank is %s above tracked unclaimed total", gap), true
 }

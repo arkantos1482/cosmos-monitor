@@ -231,8 +231,7 @@ var sectionTitles = map[string]string{
 	"staking":      "Staking",
 	"slashing":     "Slashing",
 	"feemarket":    "Fee market",
-	"rewards":      "Rewards",
-	"distribution": "Distribution",
+	"rewards": "Rewards",
 }
 
 func formatAlertMessage(node string, active map[string]panel.Finding, d model.Report) string {

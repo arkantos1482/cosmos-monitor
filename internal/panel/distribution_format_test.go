@@ -38,36 +38,3 @@ func TestLocalUnclaimedBreakdownHTML(t *testing.T) {
 	}
 }
 
-func TestDistributionEscrowReconcileMatchLiveChain(t *testing.T) {
-	d := model.Report{
-		UnclaimedDelegator:  "0.006169 PMT",
-		UnclaimedCommission: "0.000685 PMT",
-		ModuleAccounts: []model.ModuleAccountRow{
-			{Name: "distribution", Balance: "0.006854 PMT"},
-		},
-	}
-	effect, warn := distributionEscrowReconcile(d)
-	if warn {
-		t.Fatalf("expected no warn when bank matches total unclaimed, got %q", effect)
-	}
-	if !strings.Contains(effect, "matches") {
-		t.Fatalf("expected match message, got %q", effect)
-	}
-}
-
-func TestDistributionEscrowReconcileMatch(t *testing.T) {
-	d := model.Report{
-		UnclaimedDelegator:  "0.006 PMT",
-		UnclaimedCommission: "0.001 PMT",
-		ModuleAccounts: []model.ModuleAccountRow{
-			{Name: "distribution", Balance: "0.007 PMT"},
-		},
-	}
-	effect, warn := distributionEscrowReconcile(d)
-	if warn {
-		t.Fatalf("expected no warn when balanced, got %q", effect)
-	}
-	if !strings.Contains(effect, "matches") {
-		t.Fatalf("expected match message, got %q", effect)
-	}
-}

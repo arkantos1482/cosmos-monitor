@@ -845,19 +845,6 @@ body::after {
   min-width: 0;
 }
 
-.dist-escrow__note {
-  margin-top: 0.35rem;
-  font-size: 0.78rem;
-  color: var(--muted);
-  font-style: italic;
-}
-
-.dist-escrow__note--warn {
-  color: var(--warn);
-  font-style: normal;
-  font-weight: 500;
-}
-
 .rewards-summary__kpis {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));

@@ -41,31 +41,14 @@ func distributionParamsCardHTML(d model.Report) string {
 func distributionEscrowBlockHTML(d model.Report) string {
 	bal := moduleAccountBalance(d, "distribution")
 	addr := moduleAccountDisplayAddress(d, "distribution")
-	effect, warn := distributionEscrowReconcile(d)
-	if bal == "" && addr == "" && effect == "" {
+	if bal == "" && addr == "" {
 		return ""
 	}
 
 	var b strings.Builder
 	b.WriteString(`<div class="dist-escrow">`)
 	b.WriteString(`<div class="dist-escrow__label">distribution escrow</div>`)
-	if bal != "" || addr != "" {
-		fmt.Fprintf(&b, `<div class="dist-escrow__acct">%s</div>`, ecoBalanceAddrHTML(orEcoDash(bal), addr))
-	}
-	if effect != "" {
-		cls := "dist-escrow__note"
-		if warn {
-			cls += " dist-escrow__note--warn"
-		}
-		state := distributionUnclaimedTotal(d)
-		bank := distributionModuleBalance(d)
-		if state != "" && bank != "" && state != bank {
-			fmt.Fprintf(&b, `<div class="%s">%s — bank %s, state tracks %s</div>`,
-				cls, html.EscapeString(effect), html.EscapeString(bank), html.EscapeString(state))
-		} else {
-			fmt.Fprintf(&b, `<div class="%s">%s</div>`, cls, html.EscapeString(effect))
-		}
-	}
+	fmt.Fprintf(&b, `<div class="dist-escrow__acct">%s</div>`, ecoBalanceAddrHTML(orEcoDash(bal), addr))
 	b.WriteString(`</div>`)
 	return b.String()
 }

@@ -40,7 +40,6 @@ Web UI (`-web :7777`) and alerts can run together. Set `-web ""` for alert-only 
 | Slashing | local + network slashing KPIs, headroom low | as-today |
 | Fee market | base fee rising, disabled/pending | as-today |
 | Rewards | **transitions only**: enable↔disable (when params fetch healthy); pool empty↔refill | No steady-state “still disabled / still empty / inflation off”. Missing PMT params (REST off) is **not** “PMT disabled”. |
-| Distribution | escrow bank ≠ tracked unclaimed total | as-today |
 
 Evaluation lives in `internal/panel/findings.go` (plus rewards seeding in `internal/alert/engine.go`).
 

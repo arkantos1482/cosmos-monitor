@@ -129,7 +129,7 @@ func TestFindingsRewards(t *testing.T) {
 	}
 }
 
-func TestFindingsDistribution(t *testing.T) {
+func TestFindingsDistributionDoesNotPage(t *testing.T) {
 	d := model.Report{
 		ModuleAccounts: []model.ModuleAccountRow{{
 			Name:    "distribution",
@@ -138,8 +138,11 @@ func TestFindingsDistribution(t *testing.T) {
 		UnclaimedDelegator:  "80 PMT",
 		UnclaimedCommission: "30 PMT",
 	}
-	fs := Findings(d)
-	hasFinding(t, fs, "distribution", "escrow_mismatch", "warn")
+	for _, f := range Findings(d) {
+		if f.Section == "distribution" {
+			t.Fatalf("distribution escrow must not page: %+v", f)
+		}
+	}
 }
 
 func TestFindingsHealthyEmpty(t *testing.T) {

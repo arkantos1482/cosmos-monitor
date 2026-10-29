@@ -29,7 +29,6 @@ func Findings(d model.Report) []Finding {
 	slashingFindings(d, &out)
 	feemarketFindings(d, &out)
 	rewardsFindings(d, &out)
-	distributionFindings(d, &out)
 	return out
 }
 
@@ -43,7 +42,6 @@ func FindingsWithoutRewards(d model.Report) []Finding {
 	stakingFindings(d, &out)
 	slashingFindings(d, &out)
 	feemarketFindings(d, &out)
-	distributionFindings(d, &out)
 	return out
 }
 
@@ -158,13 +156,6 @@ func rewardsFindings(d model.Report, out *[]Finding) {
 	}
 	if d.PMTPoolEmpty {
 		appendFinding(out, "rewards", "pmt_not_emitting", "warn", "PMT not emitting")
-	}
-}
-
-func distributionFindings(d model.Report, out *[]Finding) {
-	effect, warn := distributionEscrowReconcile(d)
-	if warn {
-		appendFinding(out, "distribution", "escrow_mismatch", "warn", effect)
 	}
 }
 

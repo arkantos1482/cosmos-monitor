@@ -12,7 +12,7 @@ func writeDistribution(w Writer, d model.Report) {
 	writeEmbeddedSectionIntro(w, "Unclaimed staking rewards, where those coins sit on-chain, and x/distribution params from BeginBlock fee routing.")
 	writeDistributionSummary(w, d, SummaryEmbedded)
 
-	w.Hint("`unclaimed total`, `delegator share`, `operator commission` → derived (Σ per-validator outstanding_rewards + commission from distribution REST; delegator share adjusted when bank escrow matches Σ outstanding); `distribution escrow` → REST bank balance for the distribution module account; `community pool` → REST GET /cosmos/distribution/v1beta1/community_pool; `community_tax`, `withdraw_addr_enabled` → REST GET /cosmos/distribution/v1beta1/params; `escrow check` → derived (bank distribution balance vs unclaimed total); validator table → REST outstanding_rewards + commission per valoper; `comm. rate`, local validator → REST GET /cosmos/staking/v1beta1/validators; local identity → CometBFT GET /status.")
+	w.Hint("`unclaimed total`, `delegator share`, `operator commission` → derived (Σ per-validator outstanding_rewards + commission from distribution REST; delegator share adjusted when bank escrow matches Σ outstanding); `distribution escrow` → REST bank balance for the distribution module account; `community pool` → REST GET /cosmos/distribution/v1beta1/community_pool; `community_tax`, `withdraw_addr_enabled` → REST GET /cosmos/distribution/v1beta1/params; validator table → REST outstanding_rewards + commission per valoper; `comm. rate`, local validator → REST GET /cosmos/staking/v1beta1/validators; local identity → CometBFT GET /status.")
 
 	if d.Local.IsValidator {
 		w.Subsection("This validator")
